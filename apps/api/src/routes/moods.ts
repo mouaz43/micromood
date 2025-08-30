@@ -11,7 +11,9 @@ const MoodInput = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
   city: z.string().max(120).optional(),
-  country: z.string().max(120).optional()
+  country: z.string().max(120).optional(),
+  // NEW: short thought
+  message: z.string().min(1).max(150).optional(),
 });
 
 const BBoxQuery = z
@@ -37,7 +39,10 @@ router.post("/", async (req: Request, res: Response) => {
   try {
     const parsed = MoodInput.parse(req.body);
     const saved = await prisma.mood.create({ data: parsed });
-    return res.status(201).json({ id: saved.id, createdAt: saved.createdAt });
+    return res.status(201).json({
+      id: saved.id,
+      createdAt: saved.createdAt,
+    });
   } catch (err: unknown) {
     if (err && typeof err === "object" && "issues" in (err as any)) {
       return res
@@ -55,9 +60,7 @@ router.get("/", async (req: Request, res: Response) => {
   try {
     const bbox = parseBBox(req.query.bbox);
     const sinceMinutes = Number(req.query.sinceMinutes ?? "1440");
-    const sinceDate = minutesAgo(
-      Number.isFinite(sinceMinutes) ? sinceMinutes : 1440
-    );
+    const sinceDate = minutesAgo(Number.isFinite(sinceMinutes) ? sinceMinutes : 1440);
 
     const where: Record<string, unknown> = { createdAt: { gte: sinceDate } };
 
@@ -65,14 +68,16 @@ router.get("/", async (req: Request, res: Response) => {
       const [west, south, east, north] = bbox;
       (where as any).AND = [
         { lat: { gte: south, lte: north } },
-        { lng: { gte: west, lte: east } }
+        { lng: { gte: west, lte: east } },
       ];
     }
 
     const moods = await prisma.mood.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      take: 5000
+      take: 5000,
+      // include the message field
+      select: { id: true, createdAt: true, lat: true, lng: true, mood: true, energy: true, city: true, country: true, message: true },
     });
 
     return res.json({ data: moods });
@@ -95,26 +100,22 @@ router.get("/aggregate", async (req: Request, res: Response) => {
 
     const cellSize = Number(req.query.cellSize ?? "0.5");
     const sinceMinutes = Number(req.query.sinceMinutes ?? "1440");
-
     const [west, south, east, north] = bbox;
-    const sinceDate = minutesAgo(
-      Number.isFinite(sinceMinutes) ? sinceMinutes : 1440
-    );
+    const sinceDate = minutesAgo(Number.isFinite(sinceMinutes) ? sinceMinutes : 1440);
 
     const where: Record<string, unknown> = {
       createdAt: { gte: sinceDate },
       AND: [
         { lat: { gte: south, lte: north } },
-        { lng: { gte: west, lte: east } }
-      ]
+        { lng: { gte: west, lte: east } },
+      ],
     };
 
     const points = await prisma.mood.findMany({
       where,
-      select: { lat: true, lng: true, energy: true }
+      select: { lat: true, lng: true, energy: true },
     });
 
-    // Build a simple grid aggregate
     const grid: Record<string, { count: number; energySum: number }> = {};
     for (const p of points) {
       const gx = Math.floor((p.lng - west) / cellSize);
@@ -131,7 +132,7 @@ router.get("/aggregate", async (req: Request, res: Response) => {
         lng: west + gx * cellSize + cellSize / 2,
         lat: south + gy * cellSize + cellSize / 2,
         count: v.count,
-        avgEnergy: v.energySum / v.count
+        avgEnergy: v.energySum / v.count,
       };
     });
 
