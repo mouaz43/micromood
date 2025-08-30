@@ -28,7 +28,9 @@ export function MapView({
 }: {
   points: Array<Point>
   userCoords?: {lat:number; lng:number}
+  /** ids for which this browser already has the token saved */
   deletableIds?: Set<string>
+  /** request delete for an id (App decides whether to prompt for token) */
   onDelete?: (id: string) => void
 }) {
   // disable default PNG icons (we use divIcons)
@@ -50,12 +52,21 @@ export function MapView({
                 <div><strong>{p.mood}</strong> • energy {p.energy}</div>
                 {p.message && <div className="italic opacity-90">&ldquo;{p.message}&rdquo;</div>}
                 <div className="opacity-70">{new Date(p.createdAt).toLocaleString()}</div>
-                {deletableIds.has(p.id) && onDelete && (
+
+                {onDelete && (
                   <button
-                    className="mt-2 rounded-lg px-3 py-1 border border-red-400/50 text-red-300 hover:bg-red-500/10"
+                    className={`mt-2 rounded-lg px-3 py-1 border ${
+                      deletableIds.has(p.id)
+                        ? 'border-red-400/50 text-red-300 hover:bg-red-500/10'
+                        : 'border-amber-400/50 text-amber-300 hover:bg-amber-500/10'
+                    }`}
                     onClick={() => onDelete(p.id)}
+                    title={deletableIds.has(p.id)
+                      ? 'Delete (token saved in this browser)'
+                      : 'Delete with token (you will be asked to paste it)'
+                    }
                   >
-                    Delete this pulse
+                    {deletableIds.has(p.id) ? 'Delete this pulse' : 'Delete with token'}
                   </button>
                 )}
               </div>
