@@ -8,15 +8,16 @@ datasource db {
 }
 
 model Mood {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  lat       Float
-  lng       Float
-  mood      String
-  energy    Int
-  city      String?
-  country   String?
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  lat          Float
+  lng          Float
+  mood         String
+  energy       Int
+  city         String?
+  country      String?
+  message      String?
 
-  // NEW: optional short thought (up to ~150 chars)
-  message   String?
+  // allows the original sender to delete anonymously
+  deleteToken  String   @unique
 }
