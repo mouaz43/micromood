@@ -1,103 +1,48 @@
-/* Tailwind layers */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* -------------------------------------------------------
-   Global tweaks & tokens
-------------------------------------------------------- */
-
-:root {
-  /* “Aurora” accent palette used across the UI */
-  --aurora-1: #60a5fa; /* blue */
-  --aurora-2: #22d3ee; /* teal */
-  --aurora-3: #a78bfa; /* violet */
-  --aurora-4: #f472b6; /* pink */
-  --glass-bg: rgba(17, 24, 39, 0.60); /* slate-900 / 60% */
-  --glass-border: rgba(255, 255, 255, 0.08);
+:root{
+  --aurora-1:#60a5fa;
+  --aurora-2:#22d3ee;
+  --aurora-3:#a78bfa;
+  --aurora-4:#f472b6;
+  --glass-bg:rgba(17,24,39,0.60);
+  --glass-border:rgba(255,255,255,0.08);
 }
-
-html, body, #root {
-  height: 100%;
+html,body,#root{height:100%}
+body{
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+  color:#e5e7eb;
+  background:#0b0f1a;
 }
-
-body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  color: #e5e7eb; /* tailwind slate-200 */
-  background: #0b0f1a; /* fallback; main gradient is in App */
-}
-
-/* -------------------------------------------------------
-   Reusable utilities (used by components)
-------------------------------------------------------- */
-
-/* Subtle neon-ish shadow used on cards/buttons */
-.shadow-glow {
+.shadow-glow{
   box-shadow:
-    0 10px 30px rgba(167, 139, 250, 0.25),  /* violet */
-    0 0 40px rgba(96, 165, 250, 0.15);      /* blue */
+    0 10px 30px rgba(167,139,250,.25),
+    0 0 40px rgba(96,165,250,.15);
 }
-
-/* Frosted glass panel */
-.glass {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+.glass{
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
 }
+.border-aurora-2{border-color:var(--aurora-2)!important}
+.border-aurora-3{border-color:var(--aurora-3)!important}
+.text-aurora-3{color:var(--aurora-3)!important}
+.focus\:border-aurora-3:focus{border-color:var(--aurora-3)!important}
+.leaflet-container{background:#0b0f1a}
 
-/* Accent border helpers referenced in JSX */
-.border-aurora-2 { border-color: var(--aurora-2) !important; }
-.border-aurora-3 { border-color: var(--aurora-3) !important; }
-.text-aurora-3   { color: var(--aurora-3) !important; }
-
-/* Focus border helper used on inputs */
-.focus\:border-aurora-3:focus { border-color: var(--aurora-3) !important; }
-
-/* Make Leaflet map background dark while tiles load */
-.leaflet-container { background: #0b0f1a; }
-
-/* -------------------------------------------------------
-   Custom Glowing Map Pins
-------------------------------------------------------- */
-
-.mood-pin-wrap { /* wrapper kept empty intentionally */ }
-
-.mood-pin {
-  transform: translateY(-2px);
-  animation: pin-float 3s ease-in-out infinite;
-  pointer-events: none; /* let the parent marker handle pointer events */
+/* custom glowing map pins */
+.mood-pin-wrap{}
+.mood-pin{transform:translateY(-2px);animation:pin-float 3s ease-in-out infinite;pointer-events:none}
+.mood-pin__svg{display:block;pointer-events:none}
+.mood-pin__tag{
+  position:relative;top:-6px;left:50%;transform:translateX(-50%);
+  padding:2px 8px;border-radius:9999px;font-size:11px;line-height:1.1;
+  background:rgba(17,24,39,.75);border:1px solid rgba(255,255,255,.12);color:#fff;white-space:nowrap;
+  box-shadow:0 4px 24px rgba(0,0,0,.25);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)
 }
-
-.mood-pin__svg {
-  display: block;
-  pointer-events: none;
-}
-
-/* Small “thought” pill under the pin */
-.mood-pin__tag {
-  position: relative;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 2px 8px;
-  border-radius: 9999px;
-  font-size: 11px;
-  line-height: 1.1;
-  background: rgba(17, 24, 39, 0.75); /* slate-900/75 */
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
-  white-space: nowrap;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-/* Gentle float animation to make pins feel alive */
-@keyframes pin-float {
-  0%   { transform: translateY(-2px); }
-  50%  { transform: translateY(-6px); }
-  100% { transform: translateY(-2px); }
-}
+@keyframes pin-float{0%{transform:translateY(-2px)}50%{transform:translateY(-6px)}100%{transform:translateY(-2px)}}
