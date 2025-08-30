@@ -16,4 +16,7 @@ model Mood {
   energy    Int
   city      String?
   country   String?
+
+  // NEW: optional short thought (up to ~150 chars)
+  message   String?
 }
