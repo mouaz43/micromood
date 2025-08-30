@@ -37,34 +37,46 @@ export function App() {
     setLoading(true)
     try {
       const r = await submitMood({ mood, energy, ...coords, message: text })
+      // store delete token locally for this new pulse
       saveDeleteToken(r.id, r.deleteToken)
       setTokens(loadDeleteTokens())
-      setMessage('Mood sent!')
+      setMessage('Mood sent! (Delete token saved in this browser)')
       await refresh()
     } catch (e: any) {
       console.error(e)
       setMessage(e?.message || 'Failed to send mood.')
     } finally {
       setLoading(false)
-      setTimeout(() => setMessage(null), 2500)
+      setTimeout(() => setMessage(null), 3000)
     }
   }
 
+  // ids for which we already have a token saved locally
   const deletableIds = useMemo(() => new Set(Object.keys(tokens)), [tokens])
 
   const handleDelete = async (id: string) => {
-    const token = tokens[id]; if (!token) return
+    // if we have the token locally, use it; otherwise ask the user
+    let token = tokens[id]
+    if (!token) {
+      const input = window.prompt('Enter the delete token for this pulse:')
+      if (!input) return
+      token = input.trim()
+    }
+
     try {
       await deleteMood(id, token)
-      removeDeleteToken(id)
-      setTokens(loadDeleteTokens())
+      // if deletion succeeded and we had the token stored, remove it
+      if (tokens[id]) {
+        removeDeleteToken(id)
+        setTokens(loadDeleteTokens())
+      }
       await refresh()
       setMessage('Pulse deleted.')
       setTimeout(() => setMessage(null), 1500)
     } catch (e: any) {
       console.error(e)
-      setMessage(e?.message || 'Failed to delete.')
-      setTimeout(() => setMessage(null), 2500)
+      setMessage(e?.message || 'Failed to delete. Token may be invalid.')
+      setTimeout(() => setMessage(null), 3000)
     }
   }
 
@@ -83,7 +95,12 @@ export function App() {
           </motion.section>
 
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}>
-            <MapView points={points} userCoords={coords} deletableIds={deletableIds} onDelete={handleDelete} />
+            <MapView
+              points={points}
+              userCoords={coords}
+              deletableIds={deletableIds}
+              onDelete={handleDelete}
+            />
           </motion.section>
         </div>
       </main>
