@@ -1,3 +1,12 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")  // <-- correct env var name
+}
+
 model Mood {
   id           String   @id @default(cuid())
   createdAt    DateTime @default(now())
@@ -9,5 +18,6 @@ model Mood {
   country      String?
   message      String?
 
-  deleteToken  String?  @unique   // <- TEMP: optional
+  // allows the original sender to delete anonymously
+  deleteToken  String   @unique
 }
