@@ -1,16 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { TopNav } from './components/TopNav'
 import { MoodDial } from './components/MoodDial'
 import { MapView } from './components/MapView'
 import { SiteFooter } from './components/SiteFooter'
-import { submitMood, fetchMoods, MoodPoint } from './lib/api'
+import {
+  submitMood, fetchMoods, deleteMood,
+  loadDeleteTokens, saveDeleteToken, removeDeleteToken,
+  type MoodPoint
+} from './lib/api'
 
 export function App() {
   const [points, setPoints] = useState<MoodPoint[]>([])
   const [coords, setCoords] = useState<{lat:number; lng:number}>()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [tokens, setTokens] = useState<Record<string, string>>({})
+
+  useEffect(() => { setTokens(loadDeleteTokens()) }, [])
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -19,28 +26,21 @@ export function App() {
     )
   }, [])
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetchMoods({ sinceMinutes: 720 })
-        setPoints(res.data)
-      } catch (e) {
-        console.error(e)
-      }
-    })()
-  }, [])
+  async function refresh() {
+    const res = await fetchMoods({ sinceMinutes: 720 })
+    setPoints(res.data)
+  }
+  useEffect(() => { refresh().catch(console.error) }, [])
 
   const onSubmit = async (mood: string, energy: number, text?: string) => {
-    if (!coords) {
-      setMessage('Please allow location to send a mood.')
-      return
-    }
+    if (!coords) { setMessage('Please allow location to send a mood.'); return }
     setLoading(true)
     try {
-      await submitMood({ mood, energy, ...coords, message: text })
+      const r = await submitMood({ mood, energy, ...coords, message: text })
+      saveDeleteToken(r.id, r.deleteToken)
+      setTokens(loadDeleteTokens())
       setMessage('Mood sent!')
-      const res = await fetchMoods({ sinceMinutes: 720 })
-      setPoints(res.data)
+      await refresh()
     } catch (e: any) {
       console.error(e)
       setMessage(e?.message || 'Failed to send mood.')
@@ -50,37 +50,40 @@ export function App() {
     }
   }
 
+  const deletableIds = useMemo(() => new Set(Object.keys(tokens)), [tokens])
+
+  const handleDelete = async (id: string) => {
+    const token = tokens[id]; if (!token) return
+    try {
+      await deleteMood(id, token)
+      removeDeleteToken(id)
+      setTokens(loadDeleteTokens())
+      await refresh()
+      setMessage('Pulse deleted.')
+      setTimeout(() => setMessage(null), 1500)
+    } catch (e: any) {
+      console.error(e)
+      setMessage(e?.message || 'Failed to delete.')
+      setTimeout(() => setMessage(null), 2500)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black">
       <TopNav />
       <main className="pt-24 pb-16">
         <div className="mx-auto max-w-7xl px-4 grid lg:grid-cols-2 gap-6">
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-col gap-6"
-          >
-            <h1 className="text-4xl md:text-5xl font-semibold leading-tight">
-              Feel the world in real time.
-            </h1>
-            <p className="opacity-80 max-w-prose">
-              MicroMood lets anyone send an anonymous mood pulse that lights up the global map—with a short thought to make it human.
-            </p>
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="flex flex-col gap-6">
+            <h1 className="text-4xl md:text-5xl font-semibold leading-tight">Feel the world in real time.</h1>
+            <p className="opacity-80 max-w-prose">Share a mood with a short thought—anonymous, human, and alive.</p>
             <MoodDial onSubmit={onSubmit} loading={loading} />
             {message && <div className="text-sm opacity-90">{message}</div>}
-            <div className="text-xs opacity-60">
-              By sending a pulse you agree it’s anonymous and may be displayed on the map.
-            </div>
+            <div className="text-xs opacity-60">By sending a pulse you agree it’s anonymous and may be displayed on the map.</div>
             <SiteFooter />
           </motion.section>
 
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.05 }}
-          >
-            <MapView points={points} userCoords={coords} />
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}>
+            <MapView points={points} userCoords={coords} deletableIds={deletableIds} onDelete={handleDelete} />
           </motion.section>
         </div>
       </main>
