@@ -28,9 +28,7 @@ export function MapView({
 }: {
   points: Array<Point>
   userCoords?: {lat:number; lng:number}
-  /** ids for which this browser already has the token saved */
   deletableIds?: Set<string>
-  /** request delete for an id (App decides whether to prompt for token) */
   onDelete?: (id: string) => void
 }) {
   // disable default PNG icons (we use divIcons)
