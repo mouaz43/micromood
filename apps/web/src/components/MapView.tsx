@@ -8,18 +8,28 @@ function FitToUser({ coords }: { coords?: { lat: number; lng: number } }) {
   return null
 }
 
-export function MapView({ points, userCoords }: { points: Array<{lat:number; lng:number; mood:string; createdAt:string; energy:number}>, userCoords?: {lat:number; lng:number} }) {
+export function MapView({
+  points,
+  userCoords
+}: {
+  points: Array<{lat:number; lng:number; mood:string; createdAt:string; energy:number; message?: string | null}>
+  userCoords?: {lat:number; lng:number}
+}) {
   return (
     <div className="rounded-2xl overflow-hidden border border-white/10">
       <MapContainer center={[0,0]} zoom={2} style={{ height: 420 }}>
-        <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <TileLayer
+          attribution='&copy; OpenStreetMap contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
         <FitToUser coords={userCoords} />
         {points.map((p, i) => (
           <Marker position={[p.lat, p.lng]} key={i}>
             <Popup>
-              <div className="text-sm">
+              <div className="text-sm leading-snug">
                 <div><strong>{p.mood}</strong> • energy {p.energy}</div>
-                <div className="opacity-70">{new Date(p.createdAt).toLocaleString()}</div>
+                {p.message && <div className="mt-1 italic opacity-90">&ldquo;{p.message}&rdquo;</div>}
+                <div className="opacity-70 mt-1">{new Date(p.createdAt).toLocaleString()}</div>
               </div>
             </Popup>
           </Marker>
