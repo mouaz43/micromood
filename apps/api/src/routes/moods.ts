@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { z } from "zod";
+import crypto from "node:crypto";
 
 export const router = Router();
 
@@ -12,7 +13,6 @@ const MoodInput = z.object({
   lng: z.number().min(-180).max(180),
   city: z.string().max(120).optional(),
   country: z.string().max(120).optional(),
-  // NEW: short thought
   message: z.string().min(1).max(150).optional(),
 });
 
@@ -27,29 +27,26 @@ function parseBBox(bboxRaw: unknown): [number, number, number, number] | null {
   const parsed = BBoxQuery.safeParse(bboxRaw);
   return parsed.success ? parsed.data : null;
 }
-
 function minutesAgo(minutes: number): Date {
   return new Date(Date.now() - minutes * 60 * 1000);
 }
 
 /** ---------- Routes ---------- **/
 
-// POST /api/moods
+// POST /api/moods  -> returns { id, createdAt, deleteToken }
 router.post("/", async (req: Request, res: Response) => {
   try {
     const parsed = MoodInput.parse(req.body);
-    const saved = await prisma.mood.create({ data: parsed });
-    return res.status(201).json({
-      id: saved.id,
-      createdAt: saved.createdAt,
+    const deleteToken = crypto.randomUUID();
+    const saved = await prisma.mood.create({
+      data: { ...parsed, deleteToken },
+      select: { id: true, createdAt: true, deleteToken: true },
     });
-  } catch (err: unknown) {
-    if (err && typeof err === "object" && "issues" in (err as any)) {
-      return res
-        .status(400)
-        .json({ error: "Invalid payload", details: (err as any).issues });
+    return res.status(201).json(saved);
+  } catch (err: any) {
+    if (err?.issues) {
+      return res.status(400).json({ error: "Invalid payload", details: err.issues });
     }
-    // eslint-disable-next-line no-console
     console.error(err);
     return res.status(500).json({ error: "Unexpected error" });
   }
@@ -62,53 +59,68 @@ router.get("/", async (req: Request, res: Response) => {
     const sinceMinutes = Number(req.query.sinceMinutes ?? "1440");
     const sinceDate = minutesAgo(Number.isFinite(sinceMinutes) ? sinceMinutes : 1440);
 
-    const where: Record<string, unknown> = { createdAt: { gte: sinceDate } };
-
+    const where: any = { createdAt: { gte: sinceDate } };
     if (bbox) {
       const [west, south, east, north] = bbox;
-      (where as any).AND = [
-        { lat: { gte: south, lte: north } },
-        { lng: { gte: west, lte: east } },
-      ];
+      where.AND = [{ lat: { gte: south, lte: north } }, { lng: { gte: west, lte: east } }];
     }
 
     const moods = await prisma.mood.findMany({
       where,
       orderBy: { createdAt: "desc" },
       take: 5000,
-      // include the message field
-      select: { id: true, createdAt: true, lat: true, lng: true, mood: true, energy: true, city: true, country: true, message: true },
+      // never expose deleteToken here
+      select: {
+        id: true, createdAt: true, lat: true, lng: true,
+        mood: true, energy: true, city: true, country: true, message: true,
+      },
     });
 
     return res.json({ data: moods });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error(err);
     return res.status(500).json({ error: "Unexpected error" });
   }
 });
 
-// GET /api/moods/aggregate?bbox=west,south,east,north&cellSize=0.5&sinceMinutes=1440
+// DELETE /api/moods/:id  (requires x-delete-token or body.deleteToken)
+router.delete("/:id", async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    const token = (req.headers["x-delete-token"] as string | undefined)
+      || (req.body && (req.body as any).deleteToken);
+
+    if (!token) return res.status(400).json({ error: "Missing delete token" });
+
+    const mood = await prisma.mood.findUnique({
+      where: { id },
+      select: { id: true, deleteToken: true },
+    });
+    if (!mood) return res.status(404).json({ error: "Not found" });
+    if (mood.deleteToken !== token) return res.status(403).json({ error: "Invalid token" });
+
+    await prisma.mood.delete({ where: { id } });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Unexpected error" });
+  }
+});
+
+// GET /api/moods/aggregate … (unchanged minimal grid)
 router.get("/aggregate", async (req: Request, res: Response) => {
   try {
     const bbox = parseBBox(req.query.bbox);
-    if (!bbox) {
-      return res
-        .status(400)
-        .json({ error: "bbox=west,south,east,north is required" });
-    }
+    if (!bbox) return res.status(400).json({ error: "bbox=west,south,east,north is required" });
 
     const cellSize = Number(req.query.cellSize ?? "0.5");
     const sinceMinutes = Number(req.query.sinceMinutes ?? "1440");
     const [west, south, east, north] = bbox;
     const sinceDate = minutesAgo(Number.isFinite(sinceMinutes) ? sinceMinutes : 1440);
 
-    const where: Record<string, unknown> = {
+    const where: any = {
       createdAt: { gte: sinceDate },
-      AND: [
-        { lat: { gte: south, lte: north } },
-        { lng: { gte: west, lte: east } },
-      ],
+      AND: [{ lat: { gte: south, lte: north } }, { lng: { gte: west, lte: east } }],
     };
 
     const points = await prisma.mood.findMany({
@@ -127,7 +139,7 @@ router.get("/aggregate", async (req: Request, res: Response) => {
     }
 
     const cells = Object.entries(grid).map(([key, v]) => {
-      const [gx, gy] = key.split(":").map((n) => Number(n));
+      const [gx, gy] = key.split(":").map(Number);
       return {
         lng: west + gx * cellSize + cellSize / 2,
         lat: south + gy * cellSize + cellSize / 2,
@@ -138,7 +150,6 @@ router.get("/aggregate", async (req: Request, res: Response) => {
 
     return res.json({ cellSize, cells });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error(err);
     return res.status(500).json({ error: "Unexpected error" });
   }
