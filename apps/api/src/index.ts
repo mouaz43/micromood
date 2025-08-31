@@ -5,12 +5,11 @@ import { router as moodsRouter } from "./routes/moods.js";
 
 const app = express();
 
-// CORS – allow web app origin; fallback to * for now.
+// Allow your static site to call the API (DELETE included)
 app.use(cors({
-  origin: true,
-  credentials: false,
+  origin: true,                 // allow any origin or set your static site URL
   methods: ["GET", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "x-delete-token"]
+  allowedHeaders: ["Content-Type", "x-delete-token"],
 }));
 
 app.use(express.json());
@@ -23,7 +22,5 @@ app.use("/api/moods", moodsRouter);
 // default 404
 app.use((_req, res) => res.status(404).json({ error: "Not found" }));
 
-const PORT = process.env.PORT ? Number(process.env.PORT) : 10000;
-app.listen(PORT, () => {
-  console.log(`API listening on http://localhost:${PORT}`);
-});
+const PORT = Number(process.env.PORT || 10000);
+app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`));
