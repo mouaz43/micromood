@@ -1,3 +1,4 @@
+// Prisma + Postgres
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,13 +10,12 @@ datasource db {
 
 model Mood {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
+  mood        String   // "happy" | "sad" | "stressed" | "calm" | "energized" | "tired"
+  energy      Int      // 1..5
+  text        String?  @db.VarChar(160)
   lat         Float
   lng         Float
-  mood        String
-  energy      Int
-  city        String?
-  country     String?
-  message     String?
-  deleteToken  String?  @unique   // TEMP: optional so we can add & backfill
+  createdAt   DateTime @default(now())
+  deleteToken String   @unique
+  unlockAt    DateTime? // optional: future release hook
 }
