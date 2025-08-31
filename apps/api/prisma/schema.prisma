@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")  // <-- correct env var name
+  url      = env("DATABASE_URL")  // must exist in Render env
 }
 
 model Mood {
@@ -17,7 +17,5 @@ model Mood {
   city         String?
   country      String?
   message      String?
-
-  // allows the original sender to delete anonymously
-  deleteToken  String   @unique
+  deleteToken  String   @unique    // required; backfill existing rows once
 }
