@@ -1,98 +1,159 @@
-import { useMemo, useState } from "react";
-import { makeMoonSVG, energyToPhase, energyTint } from "../lib/moon";
+// src/components/MoodDial.tsx
+import React from "react";
 
-type Props = {
-  onSubmit: (mood: string, energy: number, text?: string) => void;
-  loading?: boolean;
+/**
+ * Map an energy value (0–100) to a moon phase index (0–7).
+ * 0=new, 4=full. Bins are ~12.5 wide.
+ */
+function energyToPhase(energy: number): Phase {
+  const e = Math.max(0, Math.min(100, Math.round(energy)));
+  return Math.min(7, Math.floor(e / 12.5)) as Phase;
+}
+
+type Phase = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+const PHASE_LABELS: Record<Phase, string> = {
+  0: "New",
+  1: "Waxing Crescent",
+  2: "First Quarter",
+  3: "Waxing Gibbous",
+  4: "Full",
+  5: "Waning Gibbous",
+  6: "Last Quarter",
+  7: "Waning Crescent",
 };
 
-const MOODS = ["Happy", "Sad", "Stressed", "Calm", "Energized", "Tired"];
+type MoodDialProps = {
+  /** 0–100 */
+  energy: number;
+  /** px size of the icon */
+  size?: number;
+  /** show label under the moon */
+  showLabel?: boolean;
+  /** optional className pass-through */
+  className?: string;
+};
 
-export function MoodDial({ onSubmit, loading }: Props) {
-  const [mood, setMood] = useState<string>("Happy");
-  const [energy, setEnergy] = useState<number>(3);
-  const [text, setText] = useState<string>("");
+/**
+ * SVG Moon icon for 8 phases, self-contained (no assets, no libs).
+ * Drawn as a circle with a dynamic clipping crescent using two arcs.
+ */
+function MoonIcon({ phase, size = 88 }: { phase: Phase; size?: number }) {
+  // colors are neutral; the parent can tint via CSS filters if needed
+  const bg = "#0B0B0D";
+  const moon = "#F4F6FA";
 
-  // live moon preview for current energy
-  const moonHtml = useMemo(() => {
-    const phase = energyToPhase(energy);
-    const tint = energyTint(energy);
-    // seed doesn't matter for preview; use a fixed string
-    return makeMoonSVG({ phase, tint, seed: `preview-${energy}`, size: 28 });
-  }, [energy]);
+  // We render a base circle (moon) and overlay a shadow circle shifted left/right.
+  // The amount of shift controls crescent thickness. Full = no shadow; New = fully covered.
+  // For quarter phases we fully clip half.
+  // shift is in [-1, 1]; negative = waxing (shadow on left), positive = waning (shadow on right).
+  const cfg: Record<Phase, { shift: number; half?: "left" | "right" | null }> = {
+    0: { shift: 0, half: "left" }, // New (fully dark via left half)
+    1: { shift: -0.6, half: null }, // Waxing Crescent
+    2: { shift: -1, half: "right" }, // First Quarter (right half lit)
+    3: { shift: -0.6, half: null }, // Waxing Gibbous
+    4: { shift: 0, half: null }, // Full (no shadow)
+    5: { shift: 0.6, half: null }, // Waning Gibbous
+    6: { shift: 1, half: "left" }, // Last Quarter (left half lit)
+    7: { shift: 0.6, half: null }, // Waning Crescent
+  };
 
-  const canSubmit = !!mood && !loading;
+  const s = size;
+  const r = s / 2;
+  const { shift, half } = cfg[phase];
 
   return (
-    <div className="rounded-2xl bg-white/5 backdrop-blur border border-white/10 p-5 sm:p-6">
-      <h2 className="text-xl font-semibold mb-4">How do you feel?</h2>
+    <svg
+      width={s}
+      height={s}
+      viewBox={`0 0 ${s} ${s}`}
+      role="img"
+      aria-label={`Moon phase: ${PHASE_LABELS[phase]}`}
+    >
+      {/* Background */}
+      <rect x="0" y="0" width={s} height={s} rx={r * 0.2} fill={bg} />
 
-      {/* mood buttons (no emojis) */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        {MOODS.map((m) => {
-          const active = m === mood;
-          return (
-            <button
-              key={m}
-              onClick={() => setMood(m)}
-              className={[
-                "flex items-center gap-2 rounded-xl px-4 py-3 text-left transition",
-                active
-                  ? "bg-white/10 border border-white/20 shadow-inner"
-                  : "bg-white/0 border border-white/10 hover:bg-white/5",
-              ].join(" ")}
-            >
-              {/* tiny live moon preview */}
-              <span
-                className="shrink-0"
-                dangerouslySetInnerHTML={{ __html: moonHtml }}
-              />
-              <span className="font-medium">{m}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Full moon circle */}
+      <circle cx={r} cy={r} r={r * 0.72} fill={moon} />
 
-      {/* energy slider */}
-      <div className="mb-2 text-sm opacity-80">Energy: {energy}</div>
-      <input
-        type="range"
-        min={1}
-        max={5}
-        step={1}
-        value={energy}
-        onChange={(e) => setEnergy(parseInt(e.target.value, 10))}
-        className="w-full accent-white"
+      {/* Shadow logic */}
+      {half ? (
+        // Hard half mask (quarters & new)
+        <rect
+          x={half === "left" ? 0 : r}
+          y={r - r * 0.72}
+          width={r}
+          height={r * 1.44}
+          fill={bg}
+        />
+      ) : phase === 4 ? null : (
+        // Soft crescent mask: a same-size circle shifted horizontally
+        <circle
+          cx={r + shift * r * 0.72}
+          cy={r}
+          r={r * 0.72}
+          fill={bg}
+        />
+      )}
+
+      {/* subtle outline */}
+      <circle
+        cx={r}
+        cy={r}
+        r={r * 0.72}
+        fill="none"
+        stroke="#22242A"
+        strokeWidth={Math.max(1, s * 0.012)}
       />
+    </svg>
+  );
+}
 
-      {/* optional thought */}
-      <label className="block mt-5 text-sm opacity-80">
-        What’s on your mind? <span className="opacity-60">(optional)</span>
-      </label>
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        maxLength={150}
-        placeholder="A short thought, feeling, or moment (max 150 chars)"
-        className="mt-2 w-full rounded-xl bg-black/20 border border-white/10 px-4 py-3 outline-none focus:border-white/25"
-        rows={3}
-      />
+export default function MoodDial({
+  energy,
+  size = 88,
+  showLabel = true,
+  className,
+}: MoodDialProps) {
+  const phase = energyToPhase(energy);
+  const label = PHASE_LABELS[phase];
 
-      {/* submit */}
-      <div className="mt-5">
-        <button
-          disabled={!canSubmit}
-          onClick={() => onSubmit(mood, energy, text.trim() || undefined)}
-          className={[
-            "rounded-xl px-5 py-2.5 font-medium transition",
-            canSubmit
-              ? "bg-white text-black hover:opacity-90"
-              : "bg-white/30 text-black/70 cursor-not-allowed",
-          ].join(" ")}
-        >
-          {loading ? "Sending…" : "Send pulse"}
-        </button>
-      </div>
+  return (
+    <div
+      className={className}
+      style={{
+        display: "inline-flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+        userSelect: "none",
+      }}
+    >
+      <MoonIcon phase={phase} size={size} />
+      {showLabel && (
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              fontSize: Math.max(12, Math.round(size * 0.18)),
+              lineHeight: 1.1,
+              fontWeight: 600,
+              color: "#EAECEF",
+            }}
+          >
+            {label}
+          </div>
+          <div
+            style={{
+              fontSize: Math.max(10, Math.round(size * 0.14)),
+              lineHeight: 1.1,
+              opacity: 0.8,
+              color: "#9AA3AE",
+            }}
+          >
+            Energy: {Math.max(0, Math.min(100, Math.round(energy)))}%
+          </div>
+        </div>
+      )}
     </div>
   );
 }
