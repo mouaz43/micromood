@@ -1,12 +1,3 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 model Mood {
   id           String   @id @default(cuid())
   createdAt    DateTime @default(now())
@@ -17,6 +8,5 @@ model Mood {
   city         String?
   country      String?
   message      String?
-
-  deleteToken  String   @unique
+  deleteToken  String?  @unique   // <- VORÜBERGEHEND optional!
 }
