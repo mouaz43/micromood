@@ -3,27 +3,27 @@ import L, { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { deleteMood, getRecentMoods, MoodOut } from "../lib/api";
 
-// simple moon-like circle marker
-function moonIcon(tint: string) {
+// energy tint (1..5)
+const tint = (e: number) => ["#6b7280","#60a5fa","#34d399","#f59e0b","#ef4444"][Math.max(0,Math.min(4,e-1))];
+
+function moonIcon(color: string) {
   return L.divIcon({
     className: "moon-pin",
-    html: `<div class="moon" style="--tint:${tint}"></div>`,
+    html: `<div class="moon" style="--tint:${color}"></div>`,
     iconSize: [18, 18],
     iconAnchor: [9, 9],
   });
 }
 
-// tint by energy (1..5)
-const energyTint = (e: number) => ["#6b7280","#60a5fa","#34d399","#f59e0b","#ef4444"][Math.max(0,Math.min(4,e-1))];
+type Props = { center: [number, number]; ownerCode?: string };
 
-type Props = { center: [number, number] };
-
-export default function MapView({ center }: Props) {
+export default function MapView({ center, ownerCode }: Props) {
   const mapRef = useRef<LeafletMap | null>(null);
-  const [points, setPoints] = useState<MoodOut[]>([]);
-  const myTokens = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("mm_tokens") || "{}") as Record<number,string>; }
-    catch { return {} as Record<number,string>; }
+  const [pts, setPts] = useState<MoodOut[]>([]);
+
+  const tokens = useMemo<Record<number,string>>(() => {
+    try { return JSON.parse(localStorage.getItem("mm_tokens") || "{}"); }
+    catch { return {}; }
   }, []);
 
   useEffect(() => {
@@ -35,106 +35,81 @@ export default function MapView({ center }: Props) {
     mapRef.current = m;
   }, [center]);
 
-  // load points and draw
   useEffect(() => {
-    (async () => {
-      const data = await getRecentMoods(1440);
-      setPoints(data);
-    })().catch(console.error);
+    (async () => setPts(await getRecentMoods(1440)))().catch(console.error);
   }, []);
 
   useEffect(() => {
-    const m = mapRef.current;
-    if (!m) return;
+    const m = mapRef.current; if (!m) return;
 
-    // clear old layers (but keep base tile layer)
-    m.eachLayer(l => {
-      if ((l as any).getAttribution) return; // skip tile layer
-      m.removeLayer(l);
-    });
+    // clear (keep tiles)
+    m.eachLayer(l => { if (!(l as any).getAttribution) m.removeLayer(l); });
 
-    // add markers
-    const groupByEnergy: Record<number, L.LatLng[]> = {};
-    points.forEach(p => {
-      const marker = L.marker([p.lat, p.lng], { icon: moonIcon(energyTint(p.energy)) }).addTo(m);
-
-      // popup with delete if token matches
-      const canDelete = myTokens[p.id] != null;
+    // markers
+    const groups: Record<number, L.LatLng[]> = {};
+    pts.forEach(p => {
+      const mk = L.marker([p.lat, p.lng], { icon: moonIcon(tint(p.energy)) }).addTo(m);
+      const mine = tokens[p.id] != null;
       const time = new Date(p.createdAt).toLocaleString();
-      const text = p.text ? `<div class="text">${escapeHtml(p.text)}</div>` : "";
-      const delBtn = canDelete ? `<button id="del_${p.id}" class="del-btn">Delete</button>` : "";
-      marker.bindPopup(`
+      const txt = p.text ? `<div class="txt">${esc(p.text)}</div>` : "";
+      const delBtn = mine || ownerCode ? `<button class="act" id="del_${p.id}">Delete</button>` : "";
+
+      mk.bindPopup(`
         <div class="popup">
-          <div class="em">${escapeHtml(p.mood)}</div>
-          ${text}
+          <div class="row"><div class="em">${esc(p.mood)}</div><div class="small">• energy ${p.energy}</div></div>
+          ${txt}
           <div class="time">${time}</div>
           ${delBtn}
         </div>
       `);
 
-      if (canDelete) {
-        marker.on("popupopen", () => {
-          const el = document.getElementById(`del_${p.id}`);
-          if (!el) return;
-          el.onclick = async () => {
+      if (mine || ownerCode) {
+        mk.on("popupopen", () => {
+          const btn = document.getElementById(`del_${p.id}`);
+          if (!btn) return;
+          btn.onclick = async () => {
             try {
-              await deleteMood(p.id, myTokens[p.id]);
-              marker.removeFrom(m);
-              // remove local token record
-              const next = { ...myTokens }; delete next[p.id];
-              localStorage.setItem("mm_tokens", JSON.stringify(next));
-            } catch (e) {
-              alert("Failed to delete");
-            }
+              await deleteMood(p.id, tokens[p.id], ownerCode);
+              mk.removeFrom(m);
+              if (tokens[p.id]) {
+                const next = { ...tokens }; delete next[p.id];
+                localStorage.setItem("mm_tokens", JSON.stringify(next));
+              }
+            } catch { alert("Delete failed"); }
           };
         });
       }
 
-      // collect for lines
-      groupByEnergy[p.energy] ||= [];
-      groupByEnergy[p.energy].push(L.latLng(p.lat, p.lng));
+      (groups[p.energy] ||= []).push(L.latLng(p.lat, p.lng));
     });
 
-    // connect same-energy within ~75km chaining nearest neighbors
-    Object.values(groupByEnergy).forEach(lls => {
+    // connect lines (≤75km)
+    Object.values(groups).forEach(lls => {
       if (lls.length < 2) return;
-      const lines = connectNearby(lls, 75_000);
-      lines.forEach(seg => L.polyline(seg, { weight: 1.5, opacity: 0.35 }).addTo(m));
+      chains(lls, 75_000).forEach(seg => L.polyline(seg, { weight: 1.4, opacity: .35 }).addTo(m));
     });
-  }, [points, myTokens]);
+  }, [pts, tokens, ownerCode]);
 
-  return <div id="map" className="map" aria-label="mood map" />;
+  return <div id="map" className="map" />;
 }
 
-// utilities
+// utils
+const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
 
-function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
-}
+const hav = (a: L.LatLng, b: L.LatLng) => {
+  const R=6371e3, toR=(d:number)=>d*Math.PI/180;
+  const dLat=toR(b.lat-a.lat), dLng=toR(b.lng-a.lng);
+  const s1=Math.sin(dLat/2)**2 + Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s1));
+};
 
-function haversine(a: L.LatLng, b: L.LatLng) {
-  const R = 6371e3, toR = (d:number)=>d*Math.PI/180;
-  const dLat = toR(b.lat - a.lat);
-  const dLng = toR(b.lng - a.lng);
-  const s1 = Math.sin(dLat/2)**2 + Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dLng/2)**2;
-  return 2 * R * Math.asin(Math.sqrt(s1));
-}
-
-function connectNearby(points: L.LatLng[], maxDist: number): L.LatLng[][] {
-  // greedy chain: repeatedly connect nearest neighbors under maxDist
-  const remaining = points.slice();
-  const segs: L.LatLng[][] = [];
-  while (remaining.length > 1) {
-    const start = remaining.shift()!;
-    let nearestIdx = -1, nearest = Infinity;
-    for (let i = 0; i < remaining.length; i++) {
-      const d = haversine(start, remaining[i]);
-      if (d < nearest) { nearest = d; nearestIdx = i; }
-    }
-    if (nearestIdx >= 0 && nearest <= maxDist) {
-      segs.push([start, remaining[nearestIdx]]);
-      remaining.splice(nearestIdx, 1);
-    }
+function chains(points: L.LatLng[], max: number): L.LatLng[][] {
+  const left = points.slice(); const segs: L.LatLng[][] = [];
+  while (left.length>1) {
+    const a = left.shift()!;
+    let j=-1, best=Infinity;
+    for (let i=0;i<left.length;i++){ const d=hav(a,left[i]); if(d<best){best=d;j=i;} }
+    if (j>=0 && best<=max) { segs.push([a, left[j]]); left.splice(j,1); }
   }
   return segs;
 }
