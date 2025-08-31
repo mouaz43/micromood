@@ -1,25 +1,19 @@
 // apps/web/src/App.tsx
+// App wired to components/* and lib/api, default export.
 
 import { useEffect, useMemo, useState } from "react";
-
-// OPTION A (files live in apps/web/src/)
-import TopNav from "./TopNav";
-import MapView from "./MapView";
-
-// OPTION B (if your files are under apps/web/src/components/)
-// import TopNav from "./components/TopNav";
-// import MapView from "./components/MapView";
-
+import TopNav from "./components/TopNav";
+import MapView from "./components/MapView";
 import MoodDial from "./components/MoodDial";
+
 import { sendMood, getRecentMoods, type MoodPoint } from "./lib/api";
 
 export default function App() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sending, setSending] = useState(false);
   const [moods, setMoods] = useState<MoodPoint[]>([]);
-  const [sinceMinutes] = useState(720); // 12h
+  const [sinceMinutes] = useState(720);
 
-  // get location
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (p) => setCoords({ lat: p.coords.latitude, lng: p.coords.longitude }),
@@ -28,14 +22,13 @@ export default function App() {
     );
   }, []);
 
-  // poll moods
   useEffect(() => {
-    let stop = false;
+    let alive = true;
 
     const load = async () => {
       try {
         const data = await getRecentMoods({ sinceMinutes });
-        if (!stop) setMoods(data);
+        if (alive) setMoods(data);
       } catch (e) {
         console.error("Failed to fetch moods", e);
       }
@@ -44,7 +37,7 @@ export default function App() {
     load();
     const t = setInterval(load, 30_000);
     return () => {
-      stop = true;
+      alive = false;
       clearInterval(t);
     };
   }, [sinceMinutes]);
@@ -89,7 +82,6 @@ export default function App() {
           <MoodDial onSubmit={handleSubmit} loading={sending} />
           <MapView center={center} points={moods} />
         </section>
-
         <footer className="mt-14 text-sm opacity-60 text-center">
           Built by Mouaz Almjarkesh
         </footer>
