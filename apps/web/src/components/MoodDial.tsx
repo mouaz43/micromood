@@ -1,6 +1,8 @@
 // apps/web/src/components/MoodDial.tsx
-// Emoji-free mood picker with a live, realistic moon preview driven by energy.
-// Uses the procedural moon utilities (makeMoonSVG, energyToPhaseFraction, energyTint).
+// Emoji-free picker that stays in sync with lib/moon.ts
+// - Uses energyToPhaseFraction(energy) for the live moon preview
+// - Uses energyTint(energy)
+// - Calls makeMoonSVG({ phaseFrac, tint, size }) exactly as defined in lib/moon.ts
 
 import { useMemo, useState } from "react";
 import { makeMoonSVG, energyToPhaseFraction, energyTint } from "../lib/moon";
@@ -12,17 +14,17 @@ type Props = {
 
 const MOODS = ["Happy", "Sad", "Stressed", "Calm", "Energized", "Tired"];
 
-export function MoodDial({ onSubmit, loading }: Props) {
+export default function MoodDial({ onSubmit, loading }: Props) {
   const [mood, setMood] = useState<string>("Happy");
   const [energy, setEnergy] = useState<number>(3);
   const [text, setText] = useState<string>("");
 
-  // live procedural moon preview (continuous phase, textured)
+  // Live moon preview — driven 1:1 by energy (kept in sync with lib/moon.ts)
   const moonHtml = useMemo(() => {
     const phaseFrac = energyToPhaseFraction(energy); // 0..1
     const tint = energyTint(energy);
-    // seed can be anything stable; we use current energy so it updates as you slide
-    return makeMoonSVG({ phaseFrac, tint, seed: `preview-${energy}`, size: 28 });
+    // seed doesn’t affect phase; using energy so the preview updates as you slide
+    return makeMoonSVG({ phaseFrac, tint, size: 28 });
   }, [energy]);
 
   const canSubmit = !!mood && !loading;
@@ -36,7 +38,7 @@ export function MoodDial({ onSubmit, loading }: Props) {
     >
       <h2 className="text-xl font-semibold mb-4">How do you feel?</h2>
 
-      {/* Mood choices (no emojis) */}
+      {/* Mood choices (no emojis; each shows the live moon preview) */}
       <div className="grid grid-cols-2 gap-3 mb-5">
         {MOODS.map((m) => {
           const active = m === mood;
@@ -51,11 +53,12 @@ export function MoodDial({ onSubmit, loading }: Props) {
                   ? "bg-white/10 border border-white/20 shadow-inner"
                   : "bg-white/0 border border-white/10 hover:bg-white/5",
               ].join(" ")}
+              aria-pressed={active}
             >
-              {/* tiny live moon preview */}
               <span
                 className="shrink-0"
                 aria-hidden="true"
+                // the SVG string from makeMoonSVG
                 dangerouslySetInnerHTML={{ __html: moonHtml }}
               />
               <span className="font-medium">{m}</span>
@@ -64,7 +67,7 @@ export function MoodDial({ onSubmit, loading }: Props) {
         })}
       </div>
 
-      {/* Energy slider */}
+      {/* Energy slider (1..5) */}
       <div className="mb-2 text-sm opacity-80">Energy: {energy}</div>
       <input
         type="range"
@@ -115,5 +118,3 @@ export function MoodDial({ onSubmit, loading }: Props) {
     </div>
   );
 }
-
-export default MoodDial;
