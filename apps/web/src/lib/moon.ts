@@ -1,43 +1,48 @@
-// apps/web/src/lib/moon.ts
-// Generate realistic moon phases as inline SVG
+// Moon drawing + mapping. phaseFrac 0=new, 0.5=full, 1=new.
+import React from "react";
 
-export function energyToPhaseFraction(energy: number): number {
-  // map 1..5 energy to 0..1 (new → full)
-  return (energy - 1) / 4;
+export function phaseForMood(mood: string): number {
+  const order = ["happy","sad","stressed","calm","energized","tired"];
+  const idx = Math.max(0, order.indexOf(mood.toLowerCase()));
+  return [0.1,0.28,0.42,0.58,0.72,0.9][idx] ?? 0.5;
 }
 
 export function energyTint(energy: number): string {
-  const shades = ["#222831", "#393E46", "#6B7280", "#E5E7EB", "#F9FAFB"];
-  return shades[energy - 1] || "#E5E7EB";
+  // 1..5 → hues (cyan→violet)
+  const hues = [185, 200, 220, 265, 300];
+  return `hsl(${hues[Math.max(0,Math.min(4,energy-1))]}, 90%, 65%)`;
 }
 
-export function makeMoonSVG({
+export function MoonIcon({
+  size = 28,
   phaseFrac,
-  tint,
-  size = 32,
-}: {
-  phaseFrac: number; // 0..1 (0=new, 0.5=full, 1=new again)
-  tint: string;
-  size?: number;
-}): string {
-  const r = size / 2;
-  const cx = r;
-  const cy = r;
-
-  // illumination offset (how much shadow)
-  const offset = Math.cos(phaseFrac * 2 * Math.PI) * r;
-
-  return `
-    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+  tint = "#8bd3ff",
+  ring = false
+}: { size?: number; phaseFrac: number; tint?: string; ring?: boolean }) {
+  const r = size/2;
+  // simple “shadow disc” algorithm
+  const k = Math.cos(phaseFrac * Math.PI * 2); // -1..1
+  const cx = r + (r*0.6)*k;                    // offset for terminator
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
       <defs>
-        <clipPath id="moon-clip">
-          <circle cx="${cx}" cy="${cy}" r="${r}" />
-        </clipPath>
+        <radialGradient id="mcore" cx="50%" cy="35%">
+          <stop offset="0%" stopColor="white"/>
+          <stop offset="100%" stopColor="#d7e3ff"/>
+        </radialGradient>
+        <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.6"/>
+        </filter>
       </defs>
-      <!-- full moon background -->
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${tint}" />
-      <!-- shadow disk shifted horizontally -->
-      <circle cx="${cx + offset}" cy="${cy}" r="${r}" fill="black" clip-path="url(#moon-clip)" />
+      {ring && (
+        <circle cx={r} cy={r} r={r-1} fill="none" stroke={tint} strokeOpacity="0.35" strokeWidth="2"/>
+      )}
+      {/* lit disc */}
+      <circle cx={r} cy={r} r={r-2} fill="url(#mcore)" />
+      {/* shadow disc */}
+      <circle cx={cx} cy={r} r={r-2} fill={phaseFrac<0.5 ? "#0a0f1e" : "url(#mcore)"} filter="url(#soft)"/>
+      {/* glow */}
+      <circle cx={r} cy={r} r={r-2} fill="none" stroke={tint} strokeOpacity=".25" />
     </svg>
-  `;
+  );
 }
