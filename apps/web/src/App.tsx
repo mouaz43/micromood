@@ -2,9 +2,20 @@ import React, { useEffect, useMemo, useState } from "react";
 import TopNav from "./components/TopNav";
 import Hero from "./components/Hero";
 import MoodDial, { MoodKind } from "./components/MoodDial";
-import MapView, { MapPoint } from "./components/MapView";
+import MapView from "./components/MapView";
 
-// If you already have a central API util, you can swap these with those functions.
+/** Define locally to avoid type-export issues during build. */
+type MapPoint = {
+  id: string;
+  lat: number;
+  lng: number;
+  mood: MoodKind;
+  energy: number;
+  text?: string;
+  createdAt?: string;
+};
+
+// Minimal API helpers (works with your existing /api/moods)
 async function sendMoodToApi(payload: {
   mood: MoodKind;
   energy: number;
@@ -32,7 +43,6 @@ async function fetchRecentMoods(sinceMinutes = 720): Promise<MapPoint[]> {
   const res = await fetch(url);
   if (!res.ok) return [];
   const data = await res.json();
-  // adapt to MapPoint shape if needed
   return (data?.data || data || []).map((d: any) => ({
     id: d.id ?? crypto.randomUUID(),
     lat: d.lat ?? d.latitude,
@@ -45,6 +55,7 @@ async function fetchRecentMoods(sinceMinutes = 720): Promise<MapPoint[]> {
 }
 
 export default function App() {
+  // allow tuple center to keep MapView happy
   const [center, setCenter] = useState<[number, number]>([0, 0]);
   const [points, setPoints] = useState<MapPoint[]>([]);
 
@@ -64,11 +75,9 @@ export default function App() {
   }, []);
 
   const handleSend = async (mood: MoodKind, energy: number, text?: string) => {
-    const [lat, lng] = center;
-    if (!lat && !lng) {
-      // Try to fetch a quick geolocation if we don't have one yet
+    // ensure we have some coordinates
+    if (center[0] === 0 && center[1] === 0 && navigator.geolocation) {
       await new Promise<void>((resolve) => {
-        if (!navigator.geolocation) return resolve();
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             setCenter([pos.coords.latitude, pos.coords.longitude]);
@@ -78,21 +87,20 @@ export default function App() {
         );
       });
     }
-    const [useLat, useLng] = center;
+    const [lat, lng] = center;
 
-    const created = await sendMoodToApi({ mood, energy, text, lat: useLat, lng: useLng });
+    const created = await sendMoodToApi({ mood, energy, text, lat, lng });
 
     const newPoint: MapPoint = {
       id: created?.id ?? crypto.randomUUID(),
-      lat: useLat,
-      lng: useLng,
+      lat,
+      lng,
       mood,
       energy,
       text,
       createdAt: new Date().toISOString(),
     };
 
-    // optimistic update
     setPoints((p) => [newPoint, ...p]);
   };
 
@@ -104,6 +112,7 @@ export default function App() {
       <Hero />
       <main className="content mx-auto max-w-6xl px-6 pb-20">
         <MoodDial onSend={handleSend} />
+        {/* MapView now accepts tuple center OR {lat,lng}. We pass the tuple. */}
         <MapView center={center} points={memoPoints} />
       </main>
     </>
