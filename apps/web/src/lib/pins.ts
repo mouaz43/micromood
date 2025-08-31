@@ -1,13 +1,12 @@
-// apps/web/src/lib/pins.ts
 import * as L from "leaflet";
 import type { MoodPoint } from "./api";
 import { makeMoonSVG, energyTint, energyToPhaseFraction } from "./moon";
 
-// Renders a realistic moon marker (continuous phase, seeded texture)
+// Marker icon: moon with continuous phase based on energy
 export function iconForPoint(p: MoodPoint) {
   const phaseFrac = energyToPhaseFraction(p.energy); // 0..1
   const tint = energyTint(p.energy);
-  const svg = makeMoonSVG({ phaseFrac, tint, seed: p.id, size: 56 });
+  const svg = makeMoonSVG({ phaseFrac, tint, size: 56 }); // ← no 'seed'
 
   return L.divIcon({
     className: "moon-pin",
