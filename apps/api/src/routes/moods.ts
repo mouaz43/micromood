@@ -1,11 +1,11 @@
 import { Router } from "express";
 import type { PrismaClient } from "@prisma/client";
-import crypto from "node:crypto";
+import crypto from "crypto"; // use 'crypto' (not 'node:crypto') for TS compatibility
 
 export function buildMoodsRouter(prisma: PrismaClient) {
   const r = Router();
 
-  // GET /moods?sinceMinutes=720 (max 24h)
+  // GET /moods?sinceMinutes=720 (max 24h window)
   r.get("/", async (req, res) => {
     try {
       const sinceMinutes = Math.min(
@@ -13,15 +13,13 @@ export function buildMoodsRouter(prisma: PrismaClient) {
         Math.max(5, Number(req.query.sinceMinutes) || 720)
       );
       const since = new Date(Date.now() - sinceMinutes * 60_000);
-      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
       const items = await prisma.mood.findMany({
-        where: {
-          createdAt: { gte: since, gt: dayAgo }
-        },
+        where: { createdAt: { gte: since, gt: cutoff } },
         orderBy: { createdAt: "desc" },
         take: 1500,
-        // NOTE: do NOT select non-existent fields like "city"
+        // Select only fields that actually exist in the schema
         select: {
           id: true,
           mood: true,
@@ -42,9 +40,8 @@ export function buildMoodsRouter(prisma: PrismaClient) {
   // POST /moods
   r.post("/", async (req, res) => {
     try {
-      const { mood, energy, text, lat, lng, unlockAt } = req.body || {};
+      const { mood, energy, text, lat, lng, unlockAt } = req.body ?? {};
       if (
-        !mood ||
         typeof mood !== "string" ||
         !Number.isInteger(energy) ||
         energy < 1 ||
@@ -71,12 +68,12 @@ export function buildMoodsRouter(prisma: PrismaClient) {
       });
 
       res.status(201).json({ data: created });
-    } catch (e: any) {
+    } catch {
       res.status(500).json({ error: "Unexpected error" });
     }
   });
 
-  // DELETE /moods/:id   (header: x-delete-token)
+  // DELETE /moods/:id  (header: x-delete-token)
   r.delete("/:id", async (req, res) => {
     try {
       const id = String(req.params.id);
@@ -88,8 +85,9 @@ export function buildMoodsRouter(prisma: PrismaClient) {
         select: { id: true, deleteToken: true }
       });
 
-      if (!found || found.deleteToken !== token)
+      if (!found || found.deleteToken !== token) {
         return res.status(403).json({ error: "Forbidden" });
+      }
 
       await prisma.mood.delete({ where: { id } });
       res.json({ ok: true });
