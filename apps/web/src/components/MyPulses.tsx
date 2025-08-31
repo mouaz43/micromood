@@ -1,27 +1,21 @@
-import type { MoodPoint } from '../lib/api'
+// apps/web/src/components/MyPulses.tsx
+import type { MoodPoint } from "../lib/api";
 
-export function MyPulses({ points, deletableIds, onDelete }:{
-  points: MoodPoint[]; deletableIds: Set<string>; onDelete: (id:string)=>void;
-}) {
-  const mine = points.filter(p => deletableIds.has(p.id))
-  if (!mine.length) return null
+export default function MyPulses({ items }: { items: MoodPoint[] }) {
+  if (!items?.length) {
+    return <div className="text-sm opacity-70">No pulses yet.</div>;
+  }
   return (
-    <div className="glass rounded-2xl p-4 shadow-glow">
-      <h3 className="text-sm font-semibold mb-3">My pulses (this browser)</h3>
-      <ul className="space-y-2">
-        {mine.map(p => (
-          <li key={p.id} className="flex items-center justify-between gap-3">
-            <div className="text-sm min-w-0">
-              <div className="truncate"><strong>{p.mood}</strong> • {p.message || '—'}</div>
-              <div className="opacity-60 text-xs">{new Date(p.createdAt).toLocaleString()}</div>
-            </div>
-            <button className="rounded-lg px-3 py-1 border border-red-400/50 text-red-300 hover:bg-red-500/10" onClick={() => onDelete(p.id)}>
-              Delete
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="opacity-60 text-xs mt-3">Only pulses created in this browser appear here.</div>
-    </div>
-  )
+    <ul className="space-y-3">
+      {items.map((p) => (
+        <li key={p.id} className="rounded-lg border border-white/10 p-3 bg-white/5">
+          <div className="flex items-center justify-between">
+            <div className="font-medium">{p.mood} <span className="opacity-60 text-xs">energy {p.energy}</span></div>
+            <div className="opacity-60 text-xs">{new Date(p.createdAt).toLocaleString()}</div>
+          </div>
+          {p.text && <div className="text-sm mt-1 opacity-90">{p.text}</div>}
+        </li>
+      ))}
+    </ul>
+  );
 }
