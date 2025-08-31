@@ -1,115 +1,82 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import type { MoodPoint } from "../lib/api";
-import { iconForPoint, energyColor } from "../lib/pins";
+import React, { useEffect, useRef } from "react";
 
-type Props = {
-  center: { lat: number; lng: number };
-  points: MoodPoint[] | any;
+export type MoodKind = "happy" | "sad" | "stressed" | "calm" | "energized" | "tired";
+
+export type MapPoint = {
+  id: string;
+  lat: number;
+  lng: number;
+  mood: MoodKind;
+  energy: number;
+  text?: string;
+  createdAt?: string;
 };
 
-export default function MapView({ center, points }: Props) {
-  const host = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const groupRef = useRef<L.LayerGroup | null>(null);
-  const [showLinks, setShowLinks] = useState(true);
+/** Accept both tuple and object centers to avoid TS mismatches. */
+type Center = [number, number] | { lat: number; lng: number };
 
-  // normalize array
-  const arr: MoodPoint[] = useMemo(() => {
-    if (Array.isArray(points)) return points;
-    if (Array.isArray(points?.items)) return points.items;
-    if (Array.isArray(points?.data)) return points.data;
-    return [];
-  }, [points]);
+type Props = {
+  center?: Center;          // defaults to [0,0]
+  points?: MapPoint[];      // defaults to []
+};
 
-  useEffect(() => {
-    if (!host.current || mapRef.current) return;
-    const map = L.map(host.current, { center: [center.lat, center.lng], zoom: 12, zoomControl: true });
-    mapRef.current = map;
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "© OpenStreetMap contributors"
-    }).addTo(map);
-
-    groupRef.current = L.layerGroup().addTo(map);
-  }, []);
-
-  useEffect(()=>{ if (mapRef.current) mapRef.current.setView([center.lat, center.lng]); }, [center.lat, center.lng]);
-
-  // render markers + energy polylines
-  useEffect(() => {
-    const g = groupRef.current; if (!g) return;
-    g.clearLayers();
-
-    // markers
-    arr.forEach((p) => {
-      const marker = L.marker([p.lat, p.lng], { icon: iconForPoint(p) });
-      const text = p.text ? `<div class="text-sm">${escapeHtml(p.text)}</div>` : "";
-      const when = new Date(p.createdAt).toLocaleString();
-      const del = p.deleteToken
-        ? `<button data-id="${p.id}" data-token="${p.deleteToken}" class="del-btn">Delete</button>`
-        : "";
-      marker.bindPopup(
-        `<div class="font-medium">${escapeHtml(p.mood)} (energy ${p.energy})</div>${text}
-         <div class="opacity-60 text-xs mt-1">${when}</div>
-         ${del}`
-      );
-      marker.addTo(g);
-    });
-
-    // energy links
-    if (showLinks && arr.length > 1) {
-      const byEnergy = new Map<number, MoodPoint[]>();
-      for (const p of arr) {
-        const list = byEnergy.get(p.energy) ?? [];
-        list.push(p);
-        byEnergy.set(p.energy, list);
-      }
-      byEnergy.forEach((list, energy) => {
-        // sort oldest→newest for nice ribbons
-        list.sort((a,b)=> new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        const latlngs = list.map(p => [p.lat, p.lng]) as L.LatLngExpression[];
-        L.polyline(latlngs, { color: energyColor(energy), weight: 2, opacity: 0.7 }).addTo(g);
-      });
-    }
-
-    // bind deletion (event delegation on popupopen)
-    const onOpen = (e: any) => {
-      const node: HTMLElement | null = (e as any).popup?.getElement?.();
-      if (!node) return;
-      const btn = node.querySelector<HTMLButtonElement>(".del-btn");
-      if (!btn) return;
-      btn.onclick = async () => {
-        const id = btn.dataset.id!, token = btn.dataset.token!;
-        try {
-          await fetch(`${import.meta.env.VITE_API_URL}/api/moods/${id}?token=${encodeURIComponent(token)}`, { method: "DELETE" });
-          // simple refresh: remove from map by refiltering parent state — just reload points via location reload event
-          window.dispatchEvent(new CustomEvent("micromood:deleted", { detail: { id } }));
-        } catch (err) {
-          alert("Delete failed.");
-        }
-      };
-    };
-    mapRef.current?.on("popupopen", onOpen);
-    return () => { mapRef.current?.off("popupopen", onOpen); };
-  }, [arr, showLinks]);
-
-  return (
-    <div className="card">
-      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
-        <div style={{fontWeight:700}}>Map</div>
-        <label className="small" style={{display:"flex", alignItems:"center", gap:8, cursor:"pointer"}}>
-          <input type="checkbox" checked={showLinks} onChange={(e)=> setShowLinks(e.target.checked)} />
-          Connect same-energy pulses
-        </label>
-      </div>
-      <div ref={host} className="leaf-wrap" />
-    </div>
-  );
+function normalizeCenter(c?: Center): [number, number] {
+  if (!c) return [0, 0];
+  return Array.isArray(c) ? c : [c.lat, c.lng];
 }
 
-function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
+/**
+ * Lightweight Leaflet wrapper with graceful fallback if Leaflet isn't on the page.
+ */
+export default function MapView({ center, points = [] }: Props) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+
+  useEffect(() => {
+    const L = (window as any).L;
+    const el = containerRef.current;
+    if (!el) return;
+
+    if (!L) {
+      el.innerHTML =
+        '<div style="padding:16px;border:1px dashed rgba(255,255,255,.15);border-radius:12px;color:#cfe0ff;">Map unavailable (Leaflet not loaded).</div>';
+      return;
+    }
+
+    const [lat, lng] = normalizeCenter(center);
+
+    if (!mapRef.current) {
+      mapRef.current = L.map(el, { zoomControl: true }).setView([lat, lng], 11);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(mapRef.current);
+    } else {
+      mapRef.current.setView([lat, lng]);
+    }
+
+    // clear markers
+    markersRef.current.forEach((m) => mapRef.current.removeLayer(m));
+    markersRef.current = [];
+
+    points.forEach((p) => {
+      const m = L.circleMarker([p.lat, p.lng], {
+        radius: 8 + (p.energy ?? 0),
+        color: "rgba(102, 225, 255, 0.9)",
+        weight: 2,
+        fillColor: "rgba(102, 225, 255, 0.25)",
+        fillOpacity: 0.6,
+      })
+        .bindPopup(
+          `<div class="font-medium">${p.mood}</div>` +
+            (p.text ? `<div class="opacity-60 text-xs mt-1">${p.text}</div>` : ``)
+        )
+        .addTo(mapRef.current);
+
+      markersRef.current.push(m);
+    });
+  }, [center, points]);
+
+  return <div ref={containerRef} style={{ height: 360, borderRadius: 12, overflow: "hidden" }} />;
 }
