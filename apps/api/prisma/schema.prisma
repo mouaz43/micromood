@@ -1,12 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model Mood {
-  id           String   @id @default(cuid())
-  createdAt    DateTime @default(now())
-  lat          Float
-  lng          Float
-  mood         String
-  energy       Int
-  city         String?
-  country      String?
-  message      String?
-  deleteToken  String   @unique   // <- jetzt pflichtig
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  lat         Float
+  lng         Float
+  mood        String
+  energy      Int
+  city        String?
+  country     String?
+  message     String?
+  deleteToken String   @unique   // required after backfill
 }
