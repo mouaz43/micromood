@@ -1,6 +1,9 @@
 // apps/web/src/components/MoodDial.tsx
+// Emoji-free mood picker with a live, realistic moon preview driven by energy.
+// Uses the procedural moon utilities (makeMoonSVG, energyToPhaseFraction, energyTint).
+
 import { useMemo, useState } from "react";
-import { makeMoonSVG, energyToPhase, energyTint } from "../lib/moon";
+import { makeMoonSVG, energyToPhaseFraction, energyTint } from "../lib/moon";
 
 type Props = {
   onSubmit: (mood: string, energy: number, text?: string) => void;
@@ -14,25 +17,33 @@ export function MoodDial({ onSubmit, loading }: Props) {
   const [energy, setEnergy] = useState<number>(3);
   const [text, setText] = useState<string>("");
 
+  // live procedural moon preview (continuous phase, textured)
   const moonHtml = useMemo(() => {
-    const phase = energyToPhase(energy);
+    const phaseFrac = energyToPhaseFraction(energy); // 0..1
     const tint = energyTint(energy);
-    return makeMoonSVG({ phase, tint, seed: `preview-${energy}`, size: 28 });
+    // seed can be anything stable; we use current energy so it updates as you slide
+    return makeMoonSVG({ phaseFrac, tint, seed: `preview-${energy}`, size: 28 });
   }, [energy]);
 
   const canSubmit = !!mood && !loading;
+  const remaining = 150 - text.length;
 
   return (
-    <div className="rounded-2xl bg-white/5 backdrop-blur border border-white/10 p-5 sm:p-6">
+    <div
+      className="rounded-2xl bg-white/5 backdrop-blur border border-white/10 p-5 sm:p-6"
+      role="form"
+      aria-label="Share your current mood"
+    >
       <h2 className="text-xl font-semibold mb-4">How do you feel?</h2>
 
-      {/* mood buttons (no emojis) */}
+      {/* Mood choices (no emojis) */}
       <div className="grid grid-cols-2 gap-3 mb-5">
         {MOODS.map((m) => {
           const active = m === mood;
           return (
             <button
               key={m}
+              type="button"
               onClick={() => setMood(m)}
               className={[
                 "flex items-center gap-2 rounded-xl px-4 py-3 text-left transition",
@@ -41,8 +52,10 @@ export function MoodDial({ onSubmit, loading }: Props) {
                   : "bg-white/0 border border-white/10 hover:bg-white/5",
               ].join(" ")}
             >
+              {/* tiny live moon preview */}
               <span
                 className="shrink-0"
+                aria-hidden="true"
                 dangerouslySetInnerHTML={{ __html: moonHtml }}
               />
               <span className="font-medium">{m}</span>
@@ -51,6 +64,7 @@ export function MoodDial({ onSubmit, loading }: Props) {
         })}
       </div>
 
+      {/* Energy slider */}
       <div className="mb-2 text-sm opacity-80">Energy: {energy}</div>
       <input
         type="range"
@@ -60,8 +74,14 @@ export function MoodDial({ onSubmit, loading }: Props) {
         value={energy}
         onChange={(e) => setEnergy(parseInt(e.target.value, 10))}
         className="w-full accent-white"
+        aria-label="Energy level"
       />
+      <div className="flex justify-between text-xs opacity-60 mt-1">
+        <span>Low</span>
+        <span>High</span>
+      </div>
 
+      {/* Optional thought */}
       <label className="block mt-5 text-sm opacity-80">
         What’s on your mind? <span className="opacity-60">(optional)</span>
       </label>
@@ -72,10 +92,14 @@ export function MoodDial({ onSubmit, loading }: Props) {
         placeholder="A short thought, feeling, or moment (max 150 chars)"
         className="mt-2 w-full rounded-xl bg-black/20 border border-white/10 px-4 py-3 outline-none focus:border-white/25"
         rows={3}
+        aria-label="Short thought"
       />
+      <div className="text-right text-xs opacity-60 mt-1">{remaining} chars left</div>
 
+      {/* Submit */}
       <div className="mt-5">
         <button
+          type="button"
           disabled={!canSubmit}
           onClick={() => onSubmit(mood, energy, text.trim() || undefined)}
           className={[
@@ -91,3 +115,5 @@ export function MoodDial({ onSubmit, loading }: Props) {
     </div>
   );
 }
+
+export default MoodDial;
