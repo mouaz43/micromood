@@ -1,6 +1,29 @@
+// apps/web/src/lib/moon.tsx
 import React from "react";
 
-/** phaseFrac: 0 new, 0.25 first quarter, 0.5 full, 0.75 last quarter */
+/** Map moods to a representative moon phase (0=new, .5=full) */
+export function phaseForMood(mood: string): number {
+  switch (mood) {
+    case "happy": return 0.50;      // full
+    case "sad": return 0.00;        // new
+    case "stressed": return 0.20;   // waxing crescent
+    case "calm": return 0.75;       // waning gibbous/last quarter-ish
+    case "energized": return 0.25;  // first quarter
+    case "tired": return 0.85;      // waning crescent
+    default: return 0.33;
+  }
+}
+
+/** Subtle color hint by energy 1..5 */
+export function energyTint(e: number): string {
+  const clamp = (x: number) => Math.max(1, Math.min(5, x));
+  const n = clamp(e);
+  // cyan -> teal -> lime-ish
+  const palette = ["#93c5fd", "#7dd3fc", "#5eead4", "#a7f3d0", "#d9f99d"];
+  return palette[n - 1];
+}
+
+/** SVG moon with a dynamic phase cutout */
 export function Moon({
   phaseFrac,
   tint = "#a7f3d0",
