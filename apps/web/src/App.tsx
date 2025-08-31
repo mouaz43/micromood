@@ -1,73 +1,85 @@
-import { useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
-import { TopNav } from './components/TopNav'
-import { MoodDial } from './components/MoodDial'
-import { MapView } from './components/MapView'
-import { SiteFooter } from './components/SiteFooter'
-import { MyPulses } from './components/MyPulses'
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { TopNav } from "./components/TopNav";
+import { MoodDial } from "./components/MoodDial";
+import { MapView } from "./components/MapView";
+import { SiteFooter } from "./components/SiteFooter";
 import {
   submitMood, fetchMoods, deleteMood,
   loadDeleteTokens, saveDeleteToken, removeDeleteToken,
-  type MoodPoint
-} from './lib/api'
+  type MoodPoint, adminDeleteMood
+} from "./lib/api";
 
 export function App() {
-  const [points, setPoints] = useState<MoodPoint[]>([])
-  const [coords, setCoords] = useState<{lat:number; lng:number}>()
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [tokens, setTokens] = useState<Record<string, string>>({})
+  const [points, setPoints] = useState<MoodPoint[]>([]);
+  const [coords, setCoords] = useState<{ lat:number; lng:number }>();
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<Record<string, string>>({});
 
-  useEffect(() => { setTokens(loadDeleteTokens()) }, [])
+  useEffect(() => { setTokens(loadDeleteTokens()); }, []);
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
-      (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (p) => setCoords({ lat: p.coords.latitude, lng: p.coords.longitude }),
       () => setCoords(undefined)
-    )
-  }, [])
+    );
+  }, []);
 
   async function refresh() {
-    const res = await fetchMoods({ sinceMinutes: 720 })
-    setPoints(res.data)
+    const r = await fetchMoods({ sinceMinutes: 720 });
+    setPoints(r.data);
   }
-  useEffect(() => { refresh().catch(console.error) }, [])
+  useEffect(() => { refresh().catch(console.error); }, []);
 
-  const onSubmit = async (mood: string, energy: number, text?: string) => {
-    if (!coords) { setMessage('Please allow location to send a mood.'); return }
-    setLoading(true)
+  const deletableIds = useMemo(() => new Set(Object.keys(tokens)), [tokens]);
+
+  const onSubmit = async (mood:string, energy:number, text?:string) => {
+    if (!coords) { setMsg("Please allow location to send a mood."); return; }
+    setLoading(true);
     try {
-      const r = await submitMood({ mood, energy, ...coords, message: text })
-      saveDeleteToken(r.id, r.deleteToken)
-      setTokens(loadDeleteTokens())
-      setMessage('Mood sent! (Delete token copied to clipboard)')
-      try { await navigator.clipboard.writeText(r.deleteToken) } catch {}
-      await refresh()
-    } catch (e: any) {
-      console.error(e); setMessage(e?.message || 'Failed to send mood.')
+      const r = await submitMood({ mood, energy, ...coords, message: text });
+      saveDeleteToken(r.id, r.deleteToken);
+      setTokens(loadDeleteTokens());
+      try { await navigator.clipboard.writeText(r.deleteToken); } catch {}
+      setMsg("Mood sent! Delete code copied to clipboard.");
+      await refresh();
+    } catch (e:any) {
+      console.error(e); setMsg(e?.message || "Failed to send mood.");
     } finally {
-      setLoading(false); setTimeout(()=>setMessage(null), 3500)
+      setLoading(false); setTimeout(()=>setMsg(null), 3500);
     }
-  }
+  };
 
-  const deletableIds = useMemo(() => new Set(Object.keys(tokens)), [tokens])
-
-  const handleDelete = async (id: string) => {
-    let token = tokens[id]
-    if (!token) {
-      const input = window.prompt('Enter the delete token for this pulse:')
-      if (!input) return
-      token = input.trim()
-    }
+  const deleteOwn = async (id:string) => {
+    const token = tokens[id]; if (!token) return;
     try {
-      await deleteMood(id, token)
-      if (tokens[id]) { removeDeleteToken(id); setTokens(loadDeleteTokens()) }
-      await refresh()
-      setMessage('Pulse deleted.'); setTimeout(()=>setMessage(null), 1500)
-    } catch (e: any) {
-      console.error(e); setMessage(e?.message || 'Failed to delete. Token may be invalid.')
-      setTimeout(()=>setMessage(null), 3000)
+      await deleteMood(id, token);
+      removeDeleteToken(id);
+      setTokens(loadDeleteTokens());
+      await refresh();
+      setMsg("Pulse deleted.");
+    } catch (e:any) {
+      console.error(e); setMsg(e?.message || "Delete failed.");
+    } finally {
+      setTimeout(()=>setMsg(null), 2500);
     }
-  }
+  };
+
+  const deleteWithCode = async (id:string, code:string) => {
+    try {
+      await deleteMood(id, code);
+      if (tokens[id]) removeDeleteToken(id);
+      setTokens(loadDeleteTokens());
+      await refresh();
+      setMsg("Pulse deleted.");
+    } catch (e:any) {
+      // Optional admin shortcut: hold Alt when clicking in MapView and paste your ADMIN secret here,
+      // or call adminDeleteMood(id, adminSecret) if you set ADMIN_SECRET on the API.
+      console.error(e); setMsg(e?.message || "Delete failed (invalid code).");
+    } finally {
+      setTimeout(()=>setMsg(null), 2500);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black">
@@ -78,17 +90,21 @@ export function App() {
             <h1 className="text-4xl md:text-5xl font-semibold leading-tight">Feel the world in real time.</h1>
             <p className="opacity-80 max-w-prose">Share a mood with a short thought—anonymous, human, and alive.</p>
             <MoodDial onSubmit={onSubmit} loading={loading} />
-            {message && <div className="text-sm opacity-90">{message}</div>}
-            <MyPulses points={points} deletableIds={deletableIds} onDelete={handleDelete} />
+            {msg && <div className="text-sm opacity-90">{msg}</div>}
             <div className="text-xs opacity-60">By sending a pulse you agree it’s anonymous and may be displayed on the map.</div>
             <SiteFooter />
           </motion.section>
 
           <motion.section initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.6, delay:0.05 }}>
-            <MapView points={points} userCoords={coords} deletableIds={deletableIds} onDelete={handleDelete} />
+            <MapView
+              points={points}
+              deletableIds={deletableIds}
+              onDeleteOwn={deleteOwn}
+              onDeleteWithCode={deleteWithCode}
+            />
           </motion.section>
         </div>
       </main>
     </div>
-  )
+  );
 }
