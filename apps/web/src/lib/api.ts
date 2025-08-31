@@ -1,63 +1,61 @@
-// apps/web/src/lib/api.ts
-export type MoodPayload = {
-  mood: string;            // "happy" | "sad" | ...
-  energy: number;          // 1..5
+export type SendPayload = {
+  mood: string;
+  energy: number;
   text?: string;
   lat: number;
   lng: number;
+  unlockAt?: string;
 };
 
 export type MoodPoint = {
   id: string;
   mood: string;
   energy: number;
-  text?: string;
+  text?: string | null;
   lat: number;
   lng: number;
   createdAt: string;
 };
 
-const BASE =
-  import.meta.env.VITE_API_URL?.replace(/\/+$/, "") || "/api";
+const BASE = import.meta.env.VITE_API_URL!.replace(/\/+$/, "");
 
-export async function sendMood(
-  p: MoodPayload
-): Promise<{ id: string; deleteToken?: string }> {
+export async function getRecentMoods(sinceMinutes = 720): Promise<MoodPoint[]> {
+  const r = await fetch(`${BASE}/moods?sinceMinutes=${sinceMinutes}`);
+  if (!r.ok) throw new Error("Failed to fetch moods");
+  const j = await r.json();
+  return j.data as MoodPoint[];
+}
+
+export async function sendMood(payload: SendPayload): Promise<{ id: string; deleteToken: string }> {
   const r = await fetch(`${BASE}/moods`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(p),
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
   });
-  if (!r.ok) throw new Error(await r.text());
-  const data = await r.json();
-
-  // Remember token locally so the user can delete their own dots later.
-  if (data?.id && data?.deleteToken) {
-    const map = JSON.parse(localStorage.getItem("mm_tokens") || "{}");
-    map[data.id] = data.deleteToken;
-    localStorage.setItem("mm_tokens", JSON.stringify(map));
-  }
-
-  return data;
+  if (!r.ok) throw new Error("Failed to send mood");
+  return (await r.json()).data;
 }
 
-export async function getRecentMoods(
-  sinceMinutes = 720
-): Promise<MoodPoint[]> {
-  const r = await fetch(`${BASE}/moods?sinceMinutes=${sinceMinutes}`);
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-}
-
-export async function deleteMood(id: string, token?: string) {
-  if (!token) {
-    const map = JSON.parse(localStorage.getItem("mm_tokens") || "{}");
-    token = map[id];
-  }
+export async function deleteMood(id: string, token: string) {
   const r = await fetch(`${BASE}/moods/${id}`, {
     method: "DELETE",
-    headers: token ? { "x-delete-token": token } : {},
+    headers: { "x-delete-token": token },
   });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+  if (!r.ok) throw new Error("Failed to delete");
+}
+
+export async function ownerDelete(
+  b: { north: number; south: number; east: number; west: number },
+  ownerKey: string
+) {
+  const r = await fetch(`${BASE}/owner/moods`, {
+    method: "DELETE",
+    headers: {
+      "content-type": "application/json",
+      "x-owner-key": ownerKey,
+    },
+    body: JSON.stringify(b),
+  });
+  if (!r.ok) throw new Error("Owner delete failed");
+  return (await r.json()).deleted as number;
 }
