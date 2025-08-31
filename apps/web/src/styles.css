@@ -2,42 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Starry sky backdrop */
-body {
-  background: radial-gradient(1200px 600px at 50% -10%, #0b1221 0%, #060b18 40%, #030712 100%);
-}
+/* ——— Night sky background ——— */
+body{background:radial-gradient(1200px 600px at 50% -10%,#0b1221 0%,#060b18 45%,#030712 100%);}
 
-.content {
-  @apply relative;
-}
-
-/* subtle stars */
-.content::before {
-  content: "";
-  position: absolute;
-  inset: -200px -40px;
+.content{position:relative;}
+.content::before{
+  content:"";
+  position:absolute; inset:-220px -60px;
   background:
-    radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,.6) 0 50%, transparent 51%) repeat,
-    radial-gradient(1.5px 1.5px at 70% 10%, rgba(255,255,255,.45) 0 50%, transparent 51%) repeat,
+    radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,.65) 0 50%, transparent 51%) repeat,
+    radial-gradient(1.6px 1.6px at 70% 10%, rgba(255,255,255,.45) 0 50%, transparent 51%) repeat,
     radial-gradient(1.2px 1.2px at 40% 70%, rgba(255,255,255,.35) 0 50%, transparent 51%) repeat;
-  background-size: 180px 180px, 220px 220px, 260px 260px;
-  opacity: .45;
-  pointer-events: none;
-  filter: drop-shadow(0 0 2px rgba(255,255,255,.4));
+  background-size:180px 180px, 240px 240px, 300px 300px;
+  opacity:.45; pointer-events:none; filter:drop-shadow(0 0 2px rgba(255,255,255,.35));
+  z-index:0;
 }
+.content>*{position:relative; z-index:1}
 
-/* cards */
-.card {
-  @apply rounded-2xl bg-slate-900/40 ring-1 ring-white/10 backdrop-blur-md;
-}
+/* ——— UI chrome ——— */
+.card{@apply rounded-2xl bg-slate-900/40 ring-1 ring-white/10 backdrop-blur-md;}
+.btn{@apply inline-flex items-center justify-center rounded-xl px-4 py-2 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20 ring-1 ring-cyan-400/30 transition font-medium;}
+.leaflet-container{border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.05);}
 
-/* buttons */
-.btn {
-  @apply rounded-xl px-4 py-2 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20 ring-1 ring-cyan-400/30 transition;
-}
+/* ——— Logo ——— */
+.mm-logo{display:inline-flex; align-items:center; gap:.5rem; font-weight:800; letter-spacing:.4px;}
+.mm-logo svg{width:28px;height:28px;}
 
-/* map container shadow */
-.leaflet-container {
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.05);
-}
+/* ——— Mood grid & moons ——— */
+.mood-grid{@apply grid grid-cols-1 sm:grid-cols-2 gap-4;}
+.mood-btn{@apply flex items-center gap-4 rounded-xl px-4 py-4 bg-slate-800/40 ring-1 ring-white/10 hover:bg-slate-800/60 transition text-left;}
+.mood-btn[aria-pressed="true"]{@apply ring-2 ring-cyan-300/70 bg-slate-800/70;}
+.moon{width:36px; height:36px; display:inline-block;}
+/* badge under TopNav to toggle owner mode */
+.badge{@apply rounded-md px-2 py-1 text-xs font-medium bg-amber-400/10 text-amber-200 ring-1 ring-amber-300/30;}
