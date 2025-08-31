@@ -5,10 +5,13 @@ import { MoodDial } from "./components/MoodDial";
 import { MapView } from "./components/MapView";
 import { SiteFooter } from "./components/SiteFooter";
 import {
-  submitMood, fetchMoods, deleteMood,
+  submitMood, fetchMoods,
   loadDeleteTokens, saveDeleteToken, removeDeleteToken,
-  type MoodPoint, adminDeleteMood
+  deleteMoodByToken, deleteMoodAsOwner,
+  type MoodPoint
 } from "./lib/api";
+
+const OWNER_SECRET_KEY = "micromood_owner_secret";
 
 export function App() {
   const [points, setPoints] = useState<MoodPoint[]>([]);
@@ -16,6 +19,8 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [tokens, setTokens] = useState<Record<string, string>>({});
+  const [ownerSecret, setOwnerSecret] = useState<string>(() => sessionStorage.getItem(OWNER_SECRET_KEY) || "");
+  const ownerMode = !!ownerSecret;
 
   useEffect(() => { setTokens(loadDeleteTokens()); }, []);
   useEffect(() => {
@@ -46,16 +51,21 @@ export function App() {
     } catch (e:any) {
       console.error(e); setMsg(e?.message || "Failed to send mood.");
     } finally {
-      setLoading(false); setTimeout(()=>setMsg(null), 3500);
+      setLoading(false); setTimeout(()=>setMsg(null), 3000);
     }
   };
 
-  const deleteOwn = async (id:string) => {
-    const token = tokens[id]; if (!token) return;
+  const onDelete = async (id:string) => {
     try {
-      await deleteMood(id, token);
-      removeDeleteToken(id);
-      setTokens(loadDeleteTokens());
+      if (ownerMode) {
+        await deleteMoodAsOwner(id, ownerSecret);
+      } else {
+        const token = tokens[id];
+        if (!token) { setMsg("No delete code found for this pulse."); return; }
+        await deleteMoodByToken(id, token);
+        removeDeleteToken(id);
+        setTokens(loadDeleteTokens());
+      }
       await refresh();
       setMsg("Pulse deleted.");
     } catch (e:any) {
@@ -65,19 +75,20 @@ export function App() {
     }
   };
 
-  const deleteWithCode = async (id:string, code:string) => {
-    try {
-      await deleteMood(id, code);
-      if (tokens[id]) removeDeleteToken(id);
-      setTokens(loadDeleteTokens());
-      await refresh();
-      setMsg("Pulse deleted.");
-    } catch (e:any) {
-      // Optional admin shortcut: hold Alt when clicking in MapView and paste your ADMIN secret here,
-      // or call adminDeleteMood(id, adminSecret) if you set ADMIN_SECRET on the API.
-      console.error(e); setMsg(e?.message || "Delete failed (invalid code).");
-    } finally {
-      setTimeout(()=>setMsg(null), 2500);
+  const toggleOwner = () => {
+    if (ownerMode) {
+      sessionStorage.removeItem(OWNER_SECRET_KEY);
+      setOwnerSecret("");
+      setMsg("Owner mode off");
+      setTimeout(()=>setMsg(null), 1500);
+    } else {
+      const s = window.prompt("Enter ADMIN_SECRET to enable owner mode:");
+      if (s && s.trim()) {
+        sessionStorage.setItem(OWNER_SECRET_KEY, s.trim());
+        setOwnerSecret(s.trim());
+        setMsg("Owner mode on");
+        setTimeout(()=>setMsg(null), 1500);
+      }
     }
   };
 
@@ -87,7 +98,17 @@ export function App() {
       <main className="pt-24 pb-16">
         <div className="mx-auto max-w-7xl px-4 grid lg:grid-cols-2 gap-6">
           <motion.section initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.6 }} className="flex flex-col gap-6">
-            <h1 className="text-4xl md:text-5xl font-semibold leading-tight">Feel the world in real time.</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-4xl md:text-5xl font-semibold leading-tight">Feel the world in real time.</h1>
+              <button
+                onClick={toggleOwner}
+                className={`text-xs px-3 py-1 rounded border ${ownerMode ? "border-emerald-400/60 text-emerald-300" : "border-white/20 text-white/70"} hover:bg-white/5`}
+                title="Owner mode lets you delete any pulse"
+              >
+                {ownerMode ? "Owner mode: ON" : "Owner mode: OFF"}
+              </button>
+            </div>
+
             <p className="opacity-80 max-w-prose">Share a mood with a short thought—anonymous, human, and alive.</p>
             <MoodDial onSubmit={onSubmit} loading={loading} />
             {msg && <div className="text-sm opacity-90">{msg}</div>}
@@ -99,8 +120,8 @@ export function App() {
             <MapView
               points={points}
               deletableIds={deletableIds}
-              onDeleteOwn={deleteOwn}
-              onDeleteWithCode={deleteWithCode}
+              ownerMode={ownerMode}
+              onDelete={onDelete}
             />
           </motion.section>
         </div>
