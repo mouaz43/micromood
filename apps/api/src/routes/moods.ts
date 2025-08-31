@@ -44,15 +44,27 @@ router.post("/", async (req: Request, res: Response) => {
     });
     return res.status(201).json(saved);
   } catch (err: any) {
+    // Make errors visible so we can fix fast
+    console.error("POST /api/moods failed:", err);
+
+    // Prisma known request errors
+    if (err?.code && typeof err.code === "string") {
+      return res
+        .status(500)
+        .json({ error: "PrismaError", code: err.code, meta: err.meta ?? null });
+    }
+
+    // Zod validation
     if (err?.issues) {
       return res.status(400).json({ error: "Invalid payload", details: err.issues });
     }
-    console.error(err);
-    return res.status(500).json({ error: "Unexpected error" });
+
+    // Fallback
+    return res.status(500).json({ error: "Unexpected error", message: String(err?.message ?? err) });
   }
 });
 
-// GET /api/moods?bbox=west,south,east,north&sinceMinutes=1440
+// GET /api/moods
 router.get("/", async (req: Request, res: Response) => {
   try {
     const bbox = parseBBox(req.query.bbox);
@@ -69,7 +81,6 @@ router.get("/", async (req: Request, res: Response) => {
       where,
       orderBy: { createdAt: "desc" },
       take: 5000,
-      // never expose deleteToken here
       select: {
         id: true, createdAt: true, lat: true, lng: true,
         mood: true, energy: true, city: true, country: true, message: true,
@@ -78,7 +89,7 @@ router.get("/", async (req: Request, res: Response) => {
 
     return res.json({ data: moods });
   } catch (err) {
-    console.error(err);
+    console.error("GET /api/moods failed:", err);
     return res.status(500).json({ error: "Unexpected error" });
   }
 });
@@ -101,13 +112,16 @@ router.delete("/:id", async (req: Request, res: Response) => {
 
     await prisma.mood.delete({ where: { id } });
     return res.json({ ok: true });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Unexpected error" });
+  } catch (err: any) {
+    console.error("DELETE /api/moods failed:", err);
+    if (err?.code) {
+      return res.status(500).json({ error: "PrismaError", code: err.code, meta: err.meta ?? null });
+    }
+    return res.status(500).json({ error: "Unexpected error", message: String(err?.message ?? err) });
   }
 });
 
-// GET /api/moods/aggregate … (unchanged minimal grid)
+// GET /api/moods/aggregate
 router.get("/aggregate", async (req: Request, res: Response) => {
   try {
     const bbox = parseBBox(req.query.bbox);
@@ -150,7 +164,7 @@ router.get("/aggregate", async (req: Request, res: Response) => {
 
     return res.json({ cellSize, cells });
   } catch (err) {
-    console.error(err);
+    console.error("GET /api/moods/aggregate failed:", err);
     return res.status(500).json({ error: "Unexpected error" });
   }
 });
