@@ -1,6 +1,4 @@
 // apps/web/src/App.tsx
-// Wires the picker to the API and the map. Imports MoodDial as DEFAULT export.
-
 import { useEffect, useMemo, useState } from "react";
 import MoodDial from "./components/MoodDial";
 import TopNav from "./TopNav";
@@ -11,9 +9,8 @@ export default function App() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sending, setSending] = useState(false);
   const [moods, setMoods] = useState<MoodPoint[]>([]);
-  const [sinceMinutes] = useState(720); // 12h window like before
+  const [sinceMinutes] = useState(720);
 
-  // grab location once
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (p) => setCoords({ lat: p.coords.latitude, lng: p.coords.longitude }),
@@ -22,7 +19,6 @@ export default function App() {
     );
   }, []);
 
-  // fetch recent moods periodically
   useEffect(() => {
     let stop = false;
 
@@ -31,7 +27,6 @@ export default function App() {
         const data = await getRecentMoods({ sinceMinutes });
         if (!stop) setMoods(data);
       } catch (e) {
-        // no-op (keep UI running)
         console.error("Failed to fetch moods", e);
       }
     };
@@ -47,13 +42,12 @@ export default function App() {
   const center = useMemo(
     () =>
       coords ?? {
-        lat: 50.1109, // Frankfurt fallback
+        lat: 50.1109,
         lng: 8.6821,
       },
     [coords]
   );
 
-  // called by MoodDial
   async function handleSubmit(mood: string, energy: number, text?: string) {
     if (!coords) {
       alert("Please allow location to send a mood.");
@@ -68,7 +62,6 @@ export default function App() {
         lng: coords.lng,
         text,
       });
-      // optimistic update: add the new mood to the list so it appears immediately
       setMoods((prev) => [created, ...prev]);
     } catch (e: any) {
       console.error(e);
