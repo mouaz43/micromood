@@ -1,14 +1,43 @@
-/* --- TopNav --- */
-.topnav{
-  display:flex; align-items:center; gap:16px;
-  padding:16px 20px; position:sticky; top:0; z-index:50;
-  background: linear-gradient(180deg, rgba(3,7,18,.85), rgba(3,7,18,.35) 60%, transparent);
-  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(140,200,255,.06);
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Starry sky backdrop */
+body {
+  background: radial-gradient(1200px 600px at 50% -10%, #0b1221 0%, #060b18 40%, #030712 100%);
 }
-.topnav .spacer{ flex:1; }
-.topnav .brand img{ display:block; }
-.topnav .builtby{
-  font-size:13px; color:#cfe0ff; opacity:.85; text-decoration:none;
+
+.content {
+  @apply relative;
 }
-.topnav .builtby strong{ color:#66d1ff; }
+
+/* subtle stars */
+.content::before {
+  content: "";
+  position: absolute;
+  inset: -200px -40px;
+  background:
+    radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,.6) 0 50%, transparent 51%) repeat,
+    radial-gradient(1.5px 1.5px at 70% 10%, rgba(255,255,255,.45) 0 50%, transparent 51%) repeat,
+    radial-gradient(1.2px 1.2px at 40% 70%, rgba(255,255,255,.35) 0 50%, transparent 51%) repeat;
+  background-size: 180px 180px, 220px 220px, 260px 260px;
+  opacity: .45;
+  pointer-events: none;
+  filter: drop-shadow(0 0 2px rgba(255,255,255,.4));
+}
+
+/* cards */
+.card {
+  @apply rounded-2xl bg-slate-900/40 ring-1 ring-white/10 backdrop-blur-md;
+}
+
+/* buttons */
+.btn {
+  @apply rounded-xl px-4 py-2 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20 ring-1 ring-cyan-400/30 transition;
+}
+
+/* map container shadow */
+.leaflet-container {
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.05);
+}
