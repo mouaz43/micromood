@@ -1,100 +1,96 @@
-import { Router } from "express";
-import type { PrismaClient } from "@prisma/client";
-import crypto from "crypto"; // use 'crypto' (not 'node:crypto') for TS compatibility
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+import crypto from 'crypto';
+import { z } from 'zod';
 
-export function buildMoodsRouter(prisma: PrismaClient) {
-  const r = Router();
+const prisma = new PrismaClient();
+export const moodsRouter = Router();
 
-  // GET /moods?sinceMinutes=720 (max 24h window)
-  r.get("/", async (req, res) => {
-    try {
-      const sinceMinutes = Math.min(
-        24 * 60,
-        Math.max(5, Number(req.query.sinceMinutes) || 720)
-      );
-      const since = new Date(Date.now() - sinceMinutes * 60_000);
-      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+// Shared schemas
+const MoodEnum = z.enum(['happy', 'sad', 'stressed', 'calm', 'energized', 'tired']);
 
-      const items = await prisma.mood.findMany({
-        where: { createdAt: { gte: since, gt: cutoff } },
-        orderBy: { createdAt: "desc" },
-        take: 1500,
-        // Select only fields that actually exist in the schema
-        select: {
-          id: true,
-          mood: true,
-          energy: true,
-          text: true,
-          lat: true,
-          lng: true,
-          createdAt: true
-        }
-      });
+const postSchema = z.object({
+  mood: MoodEnum,
+  energy: z.number().int().min(1).max(5),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  text: z.string().trim().max(150).optional()
+});
 
-      res.json({ data: items });
-    } catch {
-      res.status(500).json({ error: "Unexpected error" });
+const getSchema = z.object({
+  sinceMinutes: z.coerce.number().int().min(1).max(60 * 24).default(720)
+});
+
+// ---- POST /moods  ------------------------------------------------
+// Returns { id, deleteToken } so the client can delete later
+moodsRouter.post('/', async (req, res, next) => {
+  try {
+    const body = postSchema.parse(req.body);
+    const deleteToken = crypto.randomBytes(24).toString('hex');
+
+    const created = await prisma.mood.create({
+      data: {
+        mood: body.mood,
+        energy: body.energy,
+        lat: body.lat,
+        lng: body.lng,
+        text: body.text ?? null,
+        deleteToken
+      },
+      select: { id: true, deleteToken: true, createdAt: true }
+    });
+
+    res.status(201).json(created);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---- GET /moods  -------------------------------------------------
+// Public list; does NOT return deleteToken
+moodsRouter.get('/', async (req, res, next) => {
+  try {
+    const { sinceMinutes } = getSchema.parse(req.query);
+    const since = new Date(Date.now() - sinceMinutes * 60 * 1000);
+
+    const rows = await prisma.mood.findMany({
+      where: { createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        mood: true,
+        energy: true,
+        lat: true,
+        lng: true,
+        text: true,
+        createdAt: true
+      },
+      take: 1000
+    });
+
+    res.json({ data: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---- DELETE /moods/:id  -----------------------------------------
+// Client must pass ?token=... that matches deleteToken saved at creation
+moodsRouter.delete('/:id', async (req, res, next) => {
+  try {
+    const id = z.string().parse(req.params.id);
+    const token = z.string().min(10).parse(req.query.token);
+
+    const row = await prisma.mood.findUnique({ where: { id } });
+    if (!row) return res.status(404).json({ error: 'Not found' });
+
+    if (row.deleteToken !== token) {
+      return res.status(403).json({ error: 'Invalid token' });
     }
-  });
 
-  // POST /moods
-  r.post("/", async (req, res) => {
-    try {
-      const { mood, energy, text, lat, lng, unlockAt } = req.body ?? {};
-      if (
-        typeof mood !== "string" ||
-        !Number.isInteger(energy) ||
-        energy < 1 ||
-        energy > 5 ||
-        typeof lat !== "number" ||
-        typeof lng !== "number"
-      ) {
-        return res.status(400).json({ error: "Invalid payload" });
-      }
-
-      const deleteToken = crypto.randomBytes(24).toString("base64url");
-
-      const created = await prisma.mood.create({
-        data: {
-          mood,
-          energy,
-          text: typeof text === "string" ? text.slice(0, 160) : null,
-          lat,
-          lng,
-          deleteToken,
-          unlockAt: unlockAt ? new Date(unlockAt) : null
-        },
-        select: { id: true, deleteToken: true }
-      });
-
-      res.status(201).json({ data: created });
-    } catch {
-      res.status(500).json({ error: "Unexpected error" });
-    }
-  });
-
-  // DELETE /moods/:id  (header: x-delete-token)
-  r.delete("/:id", async (req, res) => {
-    try {
-      const id = String(req.params.id);
-      const token = String(req.header("x-delete-token") || "");
-      if (!token) return res.status(401).json({ error: "Missing token" });
-
-      const found = await prisma.mood.findUnique({
-        where: { id },
-        select: { id: true, deleteToken: true }
-      });
-
-      if (!found || found.deleteToken !== token) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
-
-      await prisma.mood.delete({ where: { id } });
-      res.json({ ok: true });
-    } catch {
-      res.status(500).json({ error: "Unexpected error" });
-    }
-  });
-
-  return r;
-}
+    await prisma.mood.delete({ where: { id } });
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
