@@ -1,50 +1,46 @@
-export type MoodPoint = {
-  id: string;
-  mood: string;
-  energy: number;
+export type MoodPayload = {
+  mood: string;            // "happy" | ... (string on wire)
+  energy: number;          // 1..5
+  text?: string;
   lat: number;
   lng: number;
-  text?: string | null;
-  createdAt: string;          // ISO
-  deleteToken?: string;       // present for owner
 };
 
-const API_BASE = import.meta.env.VITE_API_URL?.trim() || "";
+const BASE = import.meta.env.VITE_API_URL?.replace(/\/+$/,"") || "/api";
 
-function url(p: string) { return `${API_BASE}${p}`; }
-
-function toArray<T>(j: any): T[] {
-  if (Array.isArray(j)) return j;
-  if (Array.isArray(j?.items)) return j.items;
-  if (Array.isArray(j?.data)) return j.data;
-  return [];
-}
-
-export async function getRecentMoods(opts: { sinceMinutes: number }): Promise<MoodPoint[]> {
-  const res = await fetch(url(`/api/moods?sinceMinutes=${encodeURIComponent(opts.sinceMinutes)}`), {
-    headers: { Accept: "application/json" }
-  });
-  if (!res.ok) throw new Error(`fetch moods failed: ${res.status}`);
-  const j = await res.json();
-  return toArray<MoodPoint>(j);
-}
-
-export async function sendMood(input: {
-  mood: string; energy: number; lat: number; lng: number; text?: string;
-}): Promise<MoodPoint> {
-  const res = await fetch(url("/api/moods"), {
+export async function sendMood(p: MoodPayload): Promise<{ id: string; deleteToken?: string; }> {
+  const r = await fetch(`${BASE}/moods`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(input)
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(p),
   });
-  if (!res.ok) throw new Error(`send mood failed: ${res.status}`);
-  return res.json();
+  if (!r.ok) throw new Error(await r.text());
+  const data = await r.json();
+  // stash token locally so the owner can delete later without typing it
+  if (data?.id && data?.deleteToken) {
+    const map = JSON.parse(localStorage.getItem("mm_tokens") || "{}");
+    map[data.id] = data.deleteToken;
+    localStorage.setItem("mm_tokens", JSON.stringify(map));
+  }
+  return data;
 }
 
-export async function deleteMood(id: string, token: string): Promise<{ ok: true }> {
-  const res = await fetch(url(`/api/moods/${encodeURIComponent(id)}?token=${encodeURIComponent(token)}`), {
-    method: "DELETE", headers: { Accept: "application/json" }
+export async function getRecentMoods(sinceMinutes = 720) {
+  const r = await fetch(`${BASE}/moods?sinceMinutes=${sinceMinutes}`);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+export async function deleteMood(id: string, token?: string) {
+  // prefer token from local storage if not provided
+  if (!token) {
+    const map = JSON.parse(localStorage.getItem("mm_tokens") || "{}");
+    token = map[id];
+  }
+  const r = await fetch(`${BASE}/moods/${id}`, {
+    method: "DELETE",
+    headers: token ? { "x-delete-token": token } : {},
   });
-  if (!res.ok) throw new Error(`delete mood failed: ${res.status}`);
-  return res.json();
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
 }
