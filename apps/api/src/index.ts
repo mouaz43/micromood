@@ -1,67 +1,59 @@
-import express from "express";
-import cors from "cors";
-import rateLimit from "express-rate-limit";
-import { PrismaClient } from "@prisma/client";
-import { buildMoodsRouter } from "./routes/moods.js";
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
-const prisma = new PrismaClient();
+import { moodsRouter } from './routes/moods';
+
+// ---- Config -----------------------------------------------------
+const PORT = Number(process.env.PORT || 10000);
+
+// Allow your static site origin (and localhost for testing)
+const WEB_ORIGIN = process.env.WEB_ORIGIN ?? '*';
+
+// ---- App --------------------------------------------------------
 const app = express();
 
-// Allow your web origin (or * while testing)
-const WEB_ORIGIN = process.env.WEB_ORIGIN || "*";
-const OWNER_KEY = process.env.OWNER_KEY || "";
+// security + body parsing
+app.use(helmet());
+app.use(express.json({ limit: '100kb' }));
 
-app.use(cors({ origin: WEB_ORIGIN }));
-app.use(express.json({ limit: "256kb" }));
-
-// Basic rate limiting to avoid spam
+// CORS
 app.use(
+  cors({
+    origin: WEB_ORIGIN === '*' ? true : [WEB_ORIGIN],
+    credentials: false
+  })
+);
+
+// Rate limit (basic)
+app.use(
+  '/moods',
   rateLimit({
-    windowMs: 30_000,
-    max: 6,
-    standardHeaders: true,
+    windowMs: 60 * 1000,
+    limit: 40,
+    standardHeaders: 'draft-7',
     legacyHeaders: false
   })
 );
 
-app.get("/healthz", (_req, res) => res.send("ok"));
+// Health
+app.get('/healthz', (_req, res) => res.status(200).send('OK'));
 
-// moods routes
-app.use("/moods", buildMoodsRouter(prisma));
+// API
+app.use('/moods', moodsRouter);
 
-// owner bulk delete by rectangle (requires x-owner-key header)
-app.delete("/owner/moods", async (req, res) => {
-  try {
-    const key = String(req.header("x-owner-key") || "");
-    if (!OWNER_KEY || key !== OWNER_KEY) {
-      return res.status(401).json({ error: "Invalid owner key" });
-    }
-    const { north, south, east, west } = req.body ?? {};
-    if (
-      [north, south, east, west].some((v) => typeof v !== "number") ||
-      south > north ||
-      west > east
-    ) {
-      return res.status(400).json({ error: "Invalid bounds" });
-    }
+// 404
+app.use((_req, res) => res.status(404).send('Not found'));
 
-    const deletedCount = await prisma.$executeRawUnsafe(
-      `DELETE FROM "Mood"
-       WHERE "lat" BETWEEN $1 AND $2
-         AND "lng" BETWEEN $3 AND $4`,
-      south,
-      north,
-      west,
-      east
-    );
-
-    res.json({ deleted: Number(deletedCount) || 0 });
-  } catch {
-    res.status(500).json({ error: "Unexpected error" });
-  }
+// Error handler
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: 'Unexpected error' });
 });
 
-const PORT = Number(process.env.PORT || 10000);
 app.listen(PORT, () => {
-  console.log(`API listening on http://localhost:${PORT}`);
+  console.log(`API listening on :${PORT}`);
 });
