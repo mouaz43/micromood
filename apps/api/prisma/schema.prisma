@@ -8,5 +8,5 @@ model Mood {
   city         String?
   country      String?
   message      String?
-  deleteToken  String?  @unique   // <- VORÜBERGEHEND optional!
+  deleteToken  String   @unique   // <- jetzt pflichtig
 }
