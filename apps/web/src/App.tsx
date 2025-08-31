@@ -1,90 +1,62 @@
 // apps/web/src/App.tsx
-// App wired to components/* and lib/api, default export.
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import TopNav from "./components/TopNav";
-import MapView from "./components/MapView";
 import MoodDial from "./components/MoodDial";
-
-import { sendMood, getRecentMoods, type MoodPoint } from "./lib/api";
+import MapView from "./components/MapView";
+import { getRecentMoods, sendMood, type MoodPoint } from "./lib/api";
 
 export default function App() {
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [sending, setSending] = useState(false);
-  const [moods, setMoods] = useState<MoodPoint[]>([]);
-  const [sinceMinutes] = useState(720);
+  const [points, setPoints] = useState<MoodPoint[]>([]);
+  const [center, setCenter] = useState({ lat: 50.1109, lng: 8.6821 }); // default: Frankfurt
 
+  // fetch moods
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (p) => setCoords({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => setCoords(null),
-      { enableHighAccuracy: true, maximumAge: 30_000, timeout: 10_000 }
-    );
+    async function load() {
+      try {
+        const moods = await getRecentMoods({ sinceMinutes: 720 });
+        setPoints(moods);
+      } catch (err) {
+        console.error("Failed to fetch moods:", err);
+      }
+    }
+    load();
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-
-    const load = async () => {
-      try {
-        const data = await getRecentMoods({ sinceMinutes });
-        if (alive) setMoods(data);
-      } catch (e) {
-        console.error("Failed to fetch moods", e);
-      }
-    };
-
-    load();
-    const t = setInterval(load, 30_000);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, [sinceMinutes]);
-
-  const center = useMemo(
-    () =>
-      coords ?? {
-        lat: 50.1109, // Frankfurt fallback
-        lng: 8.6821,
-      },
-    [coords]
-  );
-
-  async function handleSubmit(mood: string, energy: number, text?: string) {
-    if (!coords) {
-      alert("Please allow location to send a mood.");
-      return;
-    }
-    setSending(true);
+  const handleSend = async (mood: string, energy: number, text?: string) => {
     try {
-      const created = await sendMood({
-        mood,
-        energy,
-        lat: coords.lat,
-        lng: coords.lng,
-        text,
+      if (!navigator.geolocation) {
+        alert("Location permission required.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const newPoint = await sendMood({
+          mood,
+          energy,
+          text,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+        setPoints((prev) => [...prev, newPoint]);
       });
-      setMoods((prev) => [created, ...prev]);
-    } catch (e: any) {
-      console.error(e);
-      alert(`Failed to submit mood (500): ${e?.message ?? "Unexpected error"}`);
-    } finally {
-      setSending(false);
+    } catch (err) {
+      console.error("Send mood failed:", err);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0b0f1a] to-[#0d1020] text-white">
+    <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black text-white">
       <TopNav />
-      <main className="max-w-6xl mx-auto px-4 md:px-6 pb-20">
-        <section className="grid md:grid-cols-2 gap-8 md:gap-10 items-start mt-10">
-          <MoodDial onSubmit={handleSubmit} loading={sending} />
-          <MapView center={center} points={moods} />
-        </section>
-        <footer className="mt-14 text-sm opacity-60 text-center">
-          Built by Mouaz Almjarkesh
-        </footer>
+      <main className="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">Feel the world in real time.</h1>
+          <p className="opacity-80 mb-6">
+            Share a mood with a short thought—anonymous, human, and alive.
+          </p>
+          <MoodDial onSend={handleSend} />
+        </div>
+        <div>
+          <MapView center={center} points={points} />
+        </div>
       </main>
     </div>
   );
