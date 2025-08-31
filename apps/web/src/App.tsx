@@ -1,16 +1,25 @@
 // apps/web/src/App.tsx
+
 import { useEffect, useMemo, useState } from "react";
-import MoodDial from "./components/MoodDial";
+
+// OPTION A (files live in apps/web/src/)
 import TopNav from "./TopNav";
 import MapView from "./MapView";
+
+// OPTION B (if your files are under apps/web/src/components/)
+// import TopNav from "./components/TopNav";
+// import MapView from "./components/MapView";
+
+import MoodDial from "./components/MoodDial";
 import { sendMood, getRecentMoods, type MoodPoint } from "./lib/api";
 
 export default function App() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sending, setSending] = useState(false);
   const [moods, setMoods] = useState<MoodPoint[]>([]);
-  const [sinceMinutes] = useState(720);
+  const [sinceMinutes] = useState(720); // 12h
 
+  // get location
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (p) => setCoords({ lat: p.coords.latitude, lng: p.coords.longitude }),
@@ -19,6 +28,7 @@ export default function App() {
     );
   }, []);
 
+  // poll moods
   useEffect(() => {
     let stop = false;
 
@@ -42,7 +52,7 @@ export default function App() {
   const center = useMemo(
     () =>
       coords ?? {
-        lat: 50.1109,
+        lat: 50.1109, // Frankfurt fallback
         lng: 8.6821,
       },
     [coords]
