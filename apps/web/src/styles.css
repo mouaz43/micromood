@@ -15,27 +15,17 @@ body{
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
   text-rendering:optimizeLegibility;
-  color:#e5e7eb;
-  background:#0b0f1a;
+  color:#e5e7eb; background:#0b0f1a;
 }
-.shadow-glow{
-  box-shadow:
-    0 10px 30px rgba(167,139,250,.25),
-    0 0 40px rgba(96,165,250,.15);
-}
-.glass{
-  background:var(--glass-bg);
-  border:1px solid var(--glass-border);
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
-}
+.shadow-glow{ box-shadow:0 10px 30px rgba(167,139,250,.25), 0 0 40px rgba(96,165,250,.15) }
+.glass{ background:var(--glass-bg); border:1px solid var(--glass-border); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px) }
 .border-aurora-2{border-color:var(--aurora-2)!important}
 .border-aurora-3{border-color:var(--aurora-3)!important}
 .text-aurora-3{color:var(--aurora-3)!important}
 .focus\:border-aurora-3:focus{border-color:var(--aurora-3)!important}
 .leaflet-container{background:#0b0f1a}
 
-/* custom glowing map pins */
+/* custom glowing pins */
 .mood-pin-wrap{}
 .mood-pin{transform:translateY(-2px);animation:pin-float 3s ease-in-out infinite;pointer-events:none}
 .mood-pin__svg{display:block;pointer-events:none}
