@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") // must exist in Render env
+  url      = env("DATABASE_URL")
 }
 
 model Mood {
@@ -18,6 +18,5 @@ model Mood {
   country      String?
   message      String?
 
-  // TEMPORARY: make optional so we can add the column without failing
-  deleteToken  String?  @unique
+  deleteToken  String   @unique
 }
