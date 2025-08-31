@@ -1,67 +1,92 @@
 import React, { useState } from "react";
-import { MoonIcon, phaseForMood, energyTint } from "../lib/moon";
+
+export type MoodKind = "happy" | "sad" | "stressed" | "calm" | "energized" | "tired";
 
 type Props = {
-  onSend: (mood: string, energy: number, text?: string) => void | Promise<void>;
-  loading?: boolean;
+  /** Called when the user submits a mood. If not provided, it will no-op. */
+  onSend?: (mood: MoodKind, energy: number, text?: string) => Promise<void> | void;
 };
 
-const MOODS = ["Happy","Sad","Stressed","Calm","Energized","Tired"];
+const MOODS: { key: MoodKind; label: string }[] = [
+  { key: "happy",     label: "Happy" },
+  { key: "sad",       label: "Sad" },
+  { key: "stressed",  label: "Stressed" },
+  { key: "calm",      label: "Calm" },
+  { key: "energized", label: "Energized" },
+  { key: "tired",     label: "Tired" },
+];
 
-export default function MoodDial({ onSend, loading }: Props) {
-  const [mood, setMood] = useState<string>("Happy");
+export default function MoodDial({ onSend }: Props) {
+  const [mood, setMood] = useState<MoodKind>("happy");
   const [energy, setEnergy] = useState<number>(3);
-  const [text, setText] = useState("");
+  const [text, setText] = useState<string>("");
+
+  const handleSubmit = async () => {
+    try {
+      if (onSend) {
+        await onSend(mood, energy, text.trim() || undefined);
+      }
+    } catch (err) {
+      console.error("Failed to send mood:", err);
+      alert("Failed to send mood.");
+    }
+  };
 
   return (
-    <div className="card">
-      <h2 className="h1" style={{fontSize:22, marginBottom:10}}>How do you feel?</h2>
+    <section className="mx-auto max-w-3xl px-6 py-6">
+      <h2 className="text-2xl font-semibold mb-4">How do you feel?</h2>
 
-      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12}}>
-        {MOODS.map((m) => {
-          const selected = m === mood;
-          const tint = energyTint(energy);
-          return (
-            <button
-              key={m}
-              type="button"
-              className={`mood-btn ${selected ? "active" : ""}`}
-              onClick={() => setMood(m)}
-            >
-              <MoonIcon phaseFrac={phaseForMood(m)} tint={tint} ring={selected}/>
-              <span>{m}</span>
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+        {MOODS.map((m) => (
+          <button
+            key={m.key}
+            type="button"
+            onClick={() => setMood(m.key)}
+            className={`rounded-xl border px-4 py-4 text-left transition ${
+              mood === m.key
+                ? "border-cyan-400/60 bg-white/5"
+                : "border-white/10 bg-white/0 hover:bg-white/5"
+            }`}
+          >
+            <span className="text-base">{m.label}</span>
+          </button>
+        ))}
       </div>
 
-      <div style={{marginTop:16}}>
-        <div className="small">Energy: {energy}</div>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <span className="opacity-80">Energy: {energy}</span>
+          <span className="opacity-60 text-sm">1–5</span>
+        </div>
         <input
-          type="range" min={1} max={5} value={energy}
-          onChange={(e)=> setEnergy(parseInt(e.target.value))}
-          style={{width:"100%"}}
+          type="range"
+          min={1}
+          max={5}
+          value={energy}
+          onChange={(e) => setEnergy(Number(e.target.value))}
+          className="w-full accent-cyan-400"
         />
       </div>
 
-      <div style={{marginTop:14}}>
-        <div className="small">What’s on your mind? (optional)</div>
+      <div className="mb-6">
+        <label className="block opacity-80 mb-2 text-sm">What’s on your mind? (optional)</label>
         <textarea
-          rows={3}
-          placeholder="A short thought, feeling, or moment (max 150 chars)"
-          maxLength={150}
           value={text}
-          onChange={(e)=> setText(e.target.value)}
-          className="card"
-          style={{width:"100%", resize:"vertical"}}
+          onChange={(e) => setText(e.target.value)}
+          rows={3}
+          maxLength={150}
+          placeholder="A short thought, feeling, or moment (max 150 chars)"
+          className="w-full rounded-xl border border-white/10 bg-black/20 p-3 outline-none focus:border-cyan-400/60"
         />
       </div>
 
-      <div style={{display:"flex", justifyContent:"flex-end", marginTop:12}}>
-        <button className="btn" disabled={loading} onClick={()=> onSend(mood.toLowerCase(), energy, text || undefined)}>
-          {loading ? "Sending…" : "Send pulse"}
-        </button>
-      </div>
-    </div>
+      <button
+        type="button"
+        onClick={handleSubmit}
+        className="rounded-xl bg-cyan-500/90 hover:bg-cyan-400 text-black font-medium px-5 py-3"
+      >
+        Send pulse
+      </button>
+    </section>
   );
 }
