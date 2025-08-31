@@ -1,12 +1,28 @@
 {
-  "name": "micromood",
-  "private": true,
-  "workspaces": ["apps/*"],
+  "name": "micromood-api",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
-    "build": "npm run -w apps/api build && npm run -w apps/web build",
-    "dev": "concurrently -k -n API,WEB -c yellow,cyan \"npm run -w apps/api dev\" \"npm run -w apps/web dev\""
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "prisma": "prisma",
+    "predeploy": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.15.1",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "prisma": "^5.15.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.12.7"
   }
 }
