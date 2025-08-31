@@ -1,8 +1,5 @@
 // apps/web/src/components/MoodDial.tsx
-// Emoji-free picker that stays in sync with lib/moon.ts
-// - Uses energyToPhaseFraction(energy) for the live moon preview
-// - Uses energyTint(energy)
-// - Calls makeMoonSVG({ phaseFrac, tint, size }) exactly as defined in lib/moon.ts
+// Emoji-free picker synced with lib/moon.ts (continuous moon phase preview)
 
 import { useMemo, useState } from "react";
 import { makeMoonSVG, energyToPhaseFraction, energyTint } from "../lib/moon";
@@ -19,11 +16,10 @@ export default function MoodDial({ onSubmit, loading }: Props) {
   const [energy, setEnergy] = useState<number>(3);
   const [text, setText] = useState<string>("");
 
-  // Live moon preview — driven 1:1 by energy (kept in sync with lib/moon.ts)
+  // Live procedural moon preview (continuous phase, same logic as pins.ts)
   const moonHtml = useMemo(() => {
     const phaseFrac = energyToPhaseFraction(energy); // 0..1
     const tint = energyTint(energy);
-    // seed doesn’t affect phase; using energy so the preview updates as you slide
     return makeMoonSVG({ phaseFrac, tint, size: 28 });
   }, [energy]);
 
@@ -38,7 +34,7 @@ export default function MoodDial({ onSubmit, loading }: Props) {
     >
       <h2 className="text-xl font-semibold mb-4">How do you feel?</h2>
 
-      {/* Mood choices (no emojis; each shows the live moon preview) */}
+      {/* Mood choices (show the same moon preview for consistency) */}
       <div className="grid grid-cols-2 gap-3 mb-5">
         {MOODS.map((m) => {
           const active = m === mood;
@@ -58,7 +54,6 @@ export default function MoodDial({ onSubmit, loading }: Props) {
               <span
                 className="shrink-0"
                 aria-hidden="true"
-                // the SVG string from makeMoonSVG
                 dangerouslySetInnerHTML={{ __html: moonHtml }}
               />
               <span className="font-medium">{m}</span>
