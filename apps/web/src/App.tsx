@@ -4,6 +4,7 @@ import { TopNav } from './components/TopNav'
 import { MoodDial } from './components/MoodDial'
 import { MapView } from './components/MapView'
 import { SiteFooter } from './components/SiteFooter'
+import { MyPulses } from './components/MyPulses'
 import {
   submitMood, fetchMoods, deleteMood,
   loadDeleteTokens, saveDeleteToken, removeDeleteToken,
@@ -37,25 +38,24 @@ export function App() {
     setLoading(true)
     try {
       const r = await submitMood({ mood, energy, ...coords, message: text })
-      // store delete token locally for this new pulse
       saveDeleteToken(r.id, r.deleteToken)
       setTokens(loadDeleteTokens())
-      setMessage('Mood sent! (Delete token saved in this browser)')
+      setMessage('Mood sent! Delete token copied to clipboard.')
+      // try to copy token to clipboard to keep it safe for the user too
+      try { await navigator.clipboard.writeText(r.deleteToken) } catch {}
       await refresh()
     } catch (e: any) {
       console.error(e)
       setMessage(e?.message || 'Failed to send mood.')
     } finally {
       setLoading(false)
-      setTimeout(() => setMessage(null), 3000)
+      setTimeout(() => setMessage(null), 3500)
     }
   }
 
-  // ids for which we already have a token saved locally
   const deletableIds = useMemo(() => new Set(Object.keys(tokens)), [tokens])
 
   const handleDelete = async (id: string) => {
-    // if we have the token locally, use it; otherwise ask the user
     let token = tokens[id]
     if (!token) {
       const input = window.prompt('Enter the delete token for this pulse:')
@@ -65,7 +65,6 @@ export function App() {
 
     try {
       await deleteMood(id, token)
-      // if deletion succeeded and we had the token stored, remove it
       if (tokens[id]) {
         removeDeleteToken(id)
         setTokens(loadDeleteTokens())
@@ -85,16 +84,34 @@ export function App() {
       <TopNav />
       <main className="pt-24 pb-16">
         <div className="mx-auto max-w-7xl px-4 grid lg:grid-cols-2 gap-6">
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="flex flex-col gap-6">
-            <h1 className="text-4xl md:text-5xl font-semibold leading-tight">Feel the world in real time.</h1>
-            <p className="opacity-80 max-w-prose">Share a mood with a short thought—anonymous, human, and alive.</p>
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col gap-6"
+          >
+            <h1 className="text-4xl md:text-5xl font-semibold leading-tight">
+              Feel the world in real time.
+            </h1>
+            <p className="opacity-80 max-w-prose">
+              Share a mood with a short thought—anonymous, human, and alive.
+            </p>
+
             <MoodDial onSubmit={onSubmit} loading={loading} />
             {message && <div className="text-sm opacity-90">{message}</div>}
-            <div className="text-xs opacity-60">By sending a pulse you agree it’s anonymous and may be displayed on the map.</div>
+            <MyPulses points={points} deletableIds={deletableIds} onDelete={handleDelete} />
+
+            <div className="text-xs opacity-60">
+              By sending a pulse you agree it’s anonymous and may be displayed on the map.
+            </div>
             <SiteFooter />
           </motion.section>
 
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}>
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.05 }}
+          >
             <MapView
               points={points}
               userCoords={coords}
