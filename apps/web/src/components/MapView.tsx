@@ -1,177 +1,140 @@
-import React, { useEffect, useRef } from "react";
-import * as L from "leaflet";
+import { useEffect, useMemo, useRef, useState } from "react";
+import L, { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { deleteMood, getRecentMoods, MoodOut } from "../lib/api";
 
-export type MapPoint = {
-  id: string;
-  mood: string;
-  energy: number;
-  text?: string | null;
-  lat: number;
-  lng: number;
-  createdAt: string;
-};
-
-export type Bounds = { north: number; south: number; east: number; west: number };
-
-type Props = {
-  center: [number, number];
-  points: MapPoint[];
-  owner: boolean;
-  onDeleteSelf: (id: string) => Promise<void>;
-  onOwnerDelete: (b: Bounds) => Promise<void>;
-};
-
-const MOOD_COLORS: Record<string, string> = {
-  happy: "#6cffc7",
-  sad: "#89a2ff",
-  stressed: "#ff9a8b",
-  calm: "#9bffd0",
-  energized: "#ffd66b",
-  tired: "#c6c6ff",
-};
-
-export default function MapView({ center, points, owner, onDeleteSelf, onOwnerDelete }: Props) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const layerRef = useRef<L.LayerGroup | null>(null);
-  const lineRef = useRef<L.LayerGroup | null>(null);
-
-  // init map
-  useEffect(() => {
-    if (!ref.current || mapRef.current) return;
-    const map = L.map(ref.current, {
-      center,
-      zoom: 12,
-      zoomControl: false,
-      attributionControl: false,
-    });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      crossOrigin: true,
-    }).addTo(map);
-
-    L.control.zoom({ position: "topright" }).addTo(map);
-    mapRef.current = map;
-    layerRef.current = L.layerGroup().addTo(map);
-    lineRef.current = L.layerGroup().addTo(map);
-  }, []);
-
-  // recenter when geolocated
-  useEffect(() => {
-    mapRef.current?.setView(center, 12);
-  }, [center]);
-
-  // draw points & connections
-  useEffect(() => {
-    const lg = layerRef.current;
-    const lg2 = lineRef.current;
-    if (!lg || !lg2) return;
-    lg.clearLayers();
-    lg2.clearLayers();
-
-    // index by mood for constellations
-    const byMood: Record<string, L.LatLng[]> = {};
-
-    points.forEach((p) => {
-      const color = MOOD_COLORS[p.mood] || "#b3c7ff";
-      const r = 6 + p.energy * 2;
-
-      const m = L.circleMarker([p.lat, p.lng], {
-        radius: r,
-        color: "transparent",
-        fillColor: color,
-        fillOpacity: 0.75,
-        className: "lantern",
-      }).addTo(lg);
-
-      const html = `
-        <div class="popup">
-          <div class="font-medium">${p.mood}</div>
-          ${p.text ? `<div class="text-sm mt-1">${escapeHtml(p.text)}</div>` : ""}
-          <div class="text-xs opacity-70 mt-1">${new Date(p.createdAt).toLocaleString()}</div>
-          <button class="pop-delete" data-id="${p.id}">Delete mine</button>
-        </div>
-      `;
-      m.bindPopup(html, { closeButton: true });
-
-      m.on("popupopen", (e) => {
-        const el = (e as any).popup._container as HTMLElement;
-        const btn = el.querySelector<HTMLButtonElement>(".pop-delete");
-        if (btn) btn.onclick = () => onDeleteSelf(btn.dataset.id!);
-      });
-
-      (byMood[p.mood] ||= []).push(new L.LatLng(p.lat, p.lng));
-    });
-
-    // draw faint constellations between nearby same-mood points
-    const dist = (a: L.LatLng, b: L.LatLng) => a.distanceTo(b); // meters
-    const MAX = 18_000; // 18km
-
-    Object.entries(byMood).forEach(([mood, arr]) => {
-      for (let i = 0; i < arr.length; i++) {
-        for (let j = i + 1; j < arr.length; j++) {
-          if (dist(arr[i], arr[j]) < MAX) {
-            L.polyline([arr[i], arr[j]], {
-              color: MOOD_COLORS[mood] || "#b3c7ff",
-              weight: 1.5,
-              opacity: 0.25,
-            }).addTo(lg2);
-          }
-        }
-      }
-    });
-  }, [points, onDeleteSelf]);
-
-  // OWNER moonbeam rectangle (Shift+Drag)
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    let start: L.LatLng | null = null;
-    let rect: L.Rectangle | null = null;
-
-    function down(ev: L.LeafletMouseEvent) {
-      if (!owner || !ev.originalEvent.shiftKey) return;
-      start = ev.latlng;
-      rect = L.rectangle([start, start], {
-        color: "#70e1ff",
-        weight: 1,
-        opacity: 0.8,
-        fillOpacity: 0.08,
-      }).addTo(map);
-    }
-    function move(ev: L.LeafletMouseEvent) {
-      if (!start || !rect) return;
-      rect.setBounds(L.latLngBounds(start, ev.latlng));
-    }
-    async function up(ev: L.LeafletMouseEvent) {
-      if (!start || !rect) return;
-      const b = rect.getBounds();
-      const bounds = {
-        north: b.getNorth(),
-        south: b.getSouth(),
-        east: b.getEast(),
-        west: b.getWest(),
-      };
-      rect.remove();
-      start = null;
-      rect = null;
-      await onOwnerDelete(bounds);
-    }
-
-    map.on("mousedown", down);
-    map.on("mousemove", move);
-    map.on("mouseup", up);
-    return () => {
-      map.off("mousedown", down);
-      map.off("mousemove", move);
-      map.off("mouseup", up);
-    };
-  }, [owner, onOwnerDelete]);
-
-  return <div className="mapwrap"><div ref={ref} className="map" /></div>;
+// simple moon-like circle marker
+function moonIcon(tint: string) {
+  return L.divIcon({
+    className: "moon-pin",
+    html: `<div class="moon" style="--tint:${tint}"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
 }
 
+// tint by energy (1..5)
+const energyTint = (e: number) => ["#6b7280","#60a5fa","#34d399","#f59e0b","#ef4444"][Math.max(0,Math.min(4,e-1))];
+
+type Props = { center: [number, number] };
+
+export default function MapView({ center }: Props) {
+  const mapRef = useRef<LeafletMap | null>(null);
+  const [points, setPoints] = useState<MoodOut[]>([]);
+  const myTokens = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("mm_tokens") || "{}") as Record<number,string>; }
+    catch { return {} as Record<number,string>; }
+  }, []);
+
+  useEffect(() => {
+    if (mapRef.current) return;
+    const m = L.map("map", { zoomControl: true }).setView(center, 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(m);
+    mapRef.current = m;
+  }, [center]);
+
+  // load points and draw
+  useEffect(() => {
+    (async () => {
+      const data = await getRecentMoods(1440);
+      setPoints(data);
+    })().catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    const m = mapRef.current;
+    if (!m) return;
+
+    // clear old layers (but keep base tile layer)
+    m.eachLayer(l => {
+      if ((l as any).getAttribution) return; // skip tile layer
+      m.removeLayer(l);
+    });
+
+    // add markers
+    const groupByEnergy: Record<number, L.LatLng[]> = {};
+    points.forEach(p => {
+      const marker = L.marker([p.lat, p.lng], { icon: moonIcon(energyTint(p.energy)) }).addTo(m);
+
+      // popup with delete if token matches
+      const canDelete = myTokens[p.id] != null;
+      const time = new Date(p.createdAt).toLocaleString();
+      const text = p.text ? `<div class="text">${escapeHtml(p.text)}</div>` : "";
+      const delBtn = canDelete ? `<button id="del_${p.id}" class="del-btn">Delete</button>` : "";
+      marker.bindPopup(`
+        <div class="popup">
+          <div class="em">${escapeHtml(p.mood)}</div>
+          ${text}
+          <div class="time">${time}</div>
+          ${delBtn}
+        </div>
+      `);
+
+      if (canDelete) {
+        marker.on("popupopen", () => {
+          const el = document.getElementById(`del_${p.id}`);
+          if (!el) return;
+          el.onclick = async () => {
+            try {
+              await deleteMood(p.id, myTokens[p.id]);
+              marker.removeFrom(m);
+              // remove local token record
+              const next = { ...myTokens }; delete next[p.id];
+              localStorage.setItem("mm_tokens", JSON.stringify(next));
+            } catch (e) {
+              alert("Failed to delete");
+            }
+          };
+        });
+      }
+
+      // collect for lines
+      groupByEnergy[p.energy] ||= [];
+      groupByEnergy[p.energy].push(L.latLng(p.lat, p.lng));
+    });
+
+    // connect same-energy within ~75km chaining nearest neighbors
+    Object.values(groupByEnergy).forEach(lls => {
+      if (lls.length < 2) return;
+      const lines = connectNearby(lls, 75_000);
+      lines.forEach(seg => L.polyline(seg, { weight: 1.5, opacity: 0.35 }).addTo(m));
+    });
+  }, [points, myTokens]);
+
+  return <div id="map" className="map" aria-label="mood map" />;
+}
+
+// utilities
+
 function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+  return s.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
+}
+
+function haversine(a: L.LatLng, b: L.LatLng) {
+  const R = 6371e3, toR = (d:number)=>d*Math.PI/180;
+  const dLat = toR(b.lat - a.lat);
+  const dLng = toR(b.lng - a.lng);
+  const s1 = Math.sin(dLat/2)**2 + Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(s1));
+}
+
+function connectNearby(points: L.LatLng[], maxDist: number): L.LatLng[][] {
+  // greedy chain: repeatedly connect nearest neighbors under maxDist
+  const remaining = points.slice();
+  const segs: L.LatLng[][] = [];
+  while (remaining.length > 1) {
+    const start = remaining.shift()!;
+    let nearestIdx = -1, nearest = Infinity;
+    for (let i = 0; i < remaining.length; i++) {
+      const d = haversine(start, remaining[i]);
+      if (d < nearest) { nearest = d; nearestIdx = i; }
+    }
+    if (nearestIdx >= 0 && nearest <= maxDist) {
+      segs.push([start, remaining[nearestIdx]]);
+      remaining.splice(nearestIdx, 1);
+    }
+  }
+  return segs;
 }
