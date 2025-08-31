@@ -17,5 +17,5 @@ model Mood {
   city        String?
   country     String?
   message     String?
-  deleteToken String   @unique   // required after backfill
+  deleteToken  String?  @unique   // TEMP: optional so we can add & backfill
 }
