@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../lib/prisma';
-import { cleanExpired } from '../lib/cleanup';
+import { prisma } from '../lib/prisma.js';
+import { cleanExpired } from '../lib/cleanup.js';
 
 const router = Router();
 
@@ -54,7 +54,6 @@ router.post('/', async (req, res) => {
   if (!body.success) return res.status(400).json({ error: body.error.flatten() });
 
   const { mood, energy, text, lat, lng, city } = body.data;
-  // privacy: round coords to ~100m grid
   const round = (v: number, step = 0.001) => Math.round(v / step) * step;
 
   const pulse = await prisma.moodPulse.create({
