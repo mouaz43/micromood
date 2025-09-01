@@ -7,15 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Mood {
-  id          Int      @id @default(autoincrement())
-  mood        String
+enum Mood {
+  HAPPY
+  SAD
+  STRESSED
+  CALM
+  ENERGIZED
+  TIRED
+}
+
+model MoodPulse {
+  id          String   @id @default(cuid())
+  mood        Mood
   energy      Int
-  text        String?
+  text        String?  @db.VarChar(150)
   lat         Float
   lng         Float
-  deleteToken String?  @unique
+  city        String?
+  deleteToken String   @unique
   createdAt   DateTime @default(now())
+  expiresAt   DateTime
 
   @@index([createdAt])
+  @@index([lat, lng])
 }
