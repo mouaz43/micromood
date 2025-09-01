@@ -1,80 +1,89 @@
-import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
-import crypto from "crypto";
+import { Router } from 'express';
+import { z } from 'zod';
+import { prisma } from '../lib/prisma';
+import { cleanExpired } from '../lib/cleanup';
 
-const prisma = new PrismaClient();
 const router = Router();
 
-const OWNER_CODE = process.env.OWNER_CODE || "";
-
-// helpers
-const sinceDate = (mins = 1440) => new Date(Date.now() - mins * 60_000);
-const cleanup = async () => {
-  const cut = sinceDate(1440);
-  await prisma.mood.deleteMany({ where: { createdAt: { lt: cut } } });
-};
-
-// GET /moods?sinceMinutes=1440
-router.get("/", async (req, res) => {
-  try {
-    await cleanup();
-    const since = Number(req.query.sinceMinutes ?? 1440);
-    const data = await prisma.mood.findMany({
-      where: { createdAt: { gte: sinceDate(since) } },
-      orderBy: { createdAt: "desc" },
-      take: 2000,
-      select: { id:true, mood:true, energy:true, text:true, lat:true, lng:true, createdAt:true }
-    });
-    res.json({ data });
-  } catch (e:any) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to fetch moods" });
-  }
+const createSchema = z.object({
+  mood: z.enum(['HAPPY','SAD','STRESSED','CALM','ENERGIZED','TIRED']),
+  energy: z.number().int().min(1).max(5),
+  text: z.string().trim().max(150).optional(),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  city: z.string().max(120).optional(),
 });
 
-// POST /moods
-router.post("/", async (req, res) => {
-  try {
-    await cleanup();
-    const { mood, energy, text, lat, lng } = req.body ?? {};
-    if (!mood || typeof energy !== "number" || typeof lat !== "number" || typeof lng !== "number") {
-      return res.status(400).json({ error: "Invalid payload" });
-    }
-    const deleteToken = crypto.randomBytes(24).toString("hex");
-    const created = await prisma.mood.create({
-      data: { mood, energy, text: text?.slice(0,150) ?? null, lat, lng, deleteToken },
-      select: { id:true, deleteToken:true }
-    });
-    res.status(201).json(created);
-  } catch (e:any) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to create mood" });
-  }
+const listSchema = z.object({
+  sinceMinutes: z.coerce.number().int().min(5).max(60*24).default(60*12),
+  mood: z.enum(['HAPPY','SAD','STRESSED','CALM','ENERGIZED','TIRED']).optional(),
+  bbox: z.string().optional(), // "west,south,east,north"
 });
 
-// DELETE /moods/:id  (supports token OR owner header)
-router.delete("/:id", async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!id) return res.status(400).json({ error: "Missing id" });
+router.get('/', async (req, res) => {
+  const q = listSchema.safeParse(req.query);
+  if (!q.success) return res.status(400).json({ error: q.error.flatten() });
 
-    const owner = String(req.header("x-owner-code") || "");
-    if (owner && OWNER_CODE && owner === OWNER_CODE) {
-      await prisma.mood.delete({ where: { id } });
-      return res.json({ ok: true, owner: true });
-    }
+  const { sinceMinutes, mood, bbox } = q.data;
+  const since = new Date(Date.now() - sinceMinutes * 60_000);
 
-    const token = String(req.query.token || "");
-    const found = await prisma.mood.findUnique({ where: { id } });
-    if (!found) return res.status(404).json({ error: "Not found" });
-    if (!token || found.deleteToken !== token) return res.status(403).json({ error: "Forbidden" });
+  const bboxFilter = (() => {
+    if (!bbox) return undefined;
+    const [w, s, e, n] = bbox.split(',').map(Number);
+    if ([w, s, e, n].some((v) => Number.isNaN(v))) return undefined;
+    return { AND: [{ lng: { gte: w } }, { lng: { lte: e } }, { lat: { gte: s } }, { lat: { lte: n } }] };
+  })();
 
-    await prisma.mood.delete({ where: { id } });
-    res.json({ ok: true });
-  } catch (e:any) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to delete mood" });
-  }
+  await cleanExpired(); // opportunistic cleanup
+
+  const pulses = await prisma.moodPulse.findMany({
+    where: {
+      createdAt: { gte: since },
+      ...(mood ? { mood } : {}),
+      ...(bboxFilter ?? {}),
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 1000,
+  });
+
+  res.json(pulses);
+});
+
+router.post('/', async (req, res) => {
+  const body = createSchema.safeParse(req.body);
+  if (!body.success) return res.status(400).json({ error: body.error.flatten() });
+
+  const { mood, energy, text, lat, lng, city } = body.data;
+  // privacy: round coords to ~100m grid
+  const round = (v: number, step = 0.001) => Math.round(v / step) * step;
+
+  const pulse = await prisma.moodPulse.create({
+    data: {
+      mood,
+      energy,
+      text: text?.trim() || null,
+      lat: round(lat),
+      lng: round(lng),
+      city: city ?? null,
+      deleteToken: crypto.randomUUID(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
+
+  res.status(201).json({ id: pulse.id, deleteToken: pulse.deleteToken });
+});
+
+router.delete('/:id', async (req, res) => {
+  const id = req.params.id;
+  const token = (req.query.token as string) ?? '';
+  if (!id || !token) return res.status(400).json({ error: 'id and token required' });
+
+  const found = await prisma.moodPulse.findUnique({ where: { id } });
+  if (!found) return res.status(404).json({ error: 'Not found' });
+  if (found.deleteToken !== token) return res.status(401).json({ error: 'Invalid token' });
+
+  await prisma.moodPulse.delete({ where: { id } });
+  res.json({ ok: true });
 });
 
 export default router;
