@@ -14,8 +14,9 @@ enum Mood {
   CALM
   ENERGIZED
   TIRED
-}
 
+  @@map("Mood") // tells Prisma to use the existing Postgres enum named "Mood"
+}
 model MoodPulse {
   id          String   @id @default(cuid())
   mood        Mood
