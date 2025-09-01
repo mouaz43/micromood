@@ -4,17 +4,18 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import bodyParser from 'body-parser';
-import moods from './routes/moods';
-import { makeLimiter } from './lib/rateLimit';
-import { requireOwner } from './lib/auth';
-import { cleanExpired } from './lib/cleanup';
+
+import moods from './routes/moods.js';
+import { makeLimiter } from './lib/rateLimit.js';
+import { requireOwner } from './lib/auth.js';
+import { cleanExpired } from './lib/cleanup.js';
 
 const app = express();
 
 const WEB_ORIGIN = process.env.WEB_ORIGIN || '*';
 
 app.use(helmet());
-app.use(cors({ origin: WEB_ORIGIN, methods: ['GET','POST','DELETE'] }));
+app.use(cors({ origin: WEB_ORIGIN, methods: ['GET', 'POST', 'DELETE'] }));
 app.use(bodyParser.json({ limit: '100kb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(makeLimiter(60_000, 120));
