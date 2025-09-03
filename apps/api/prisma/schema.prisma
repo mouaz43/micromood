@@ -16,7 +16,7 @@ enum Mood {
   TIRED
 }
 
-model Mood {
+model Pulse {
   id          String   @id @default(cuid())
   createdAt   DateTime @default(now())
   lat         Float
@@ -26,7 +26,6 @@ model Mood {
   text        String?  @db.VarChar(150)
   deleteToken String   @unique
   expiresAt   DateTime
-  city        String?
 
   @@index([createdAt])
   @@index([lat, lng])
