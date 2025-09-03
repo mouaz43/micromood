@@ -1,53 +1,54 @@
-import { Router, type Request, type Response } from 'express';
-import { PrismaClient, Mood as MoodEnum } from '@prisma/client';
+import { Router, Request, Response } from 'express';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import crypto from 'node:crypto';
+import { PulseDTO } from '../lib/types';
 
 const prisma = new PrismaClient();
-export const router = Router();
+const r = Router();
 
-// Validation
-const MoodCreate = z.object({
+const CreatePulse = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
-  mood: z.enum(['HAPPY', 'SAD', 'STRESSED', 'CALM', 'ENERGIZED', 'TIRED']),
+  mood: z.enum(['HAPPY','SAD','STRESSED','CALM','ENERGIZED','TIRED']).or(
+    z.enum(['happy','sad','stressed','calm','energized','tired'])
+  ),
   energy: z.number().int().min(1).max(5),
-  text: z.string().trim().max(150).optional(),
-  city: z.string().trim().max(80).optional()
+  text: z.string().trim().max(150).optional()
 });
 
-router.get('/', async (req: Request, res: Response) => {
-  const sinceMinutes = Number(req.query.sinceMinutes ?? 720); // last 12h
+const toEnum = (s: string): Prisma.Mood => Prisma.Mood[s.toUpperCase() as keyof typeof Prisma.Mood];
+
+r.get('/', async (req: Request, res: Response) => {
+  const sinceMinutes = Number(req.query.sinceMinutes ?? 720);
   const since = new Date(Date.now() - sinceMinutes * 60_000);
-
-  const rows = await prisma.mood.findMany({
-    where: {
-      createdAt: { gt: since },
-      expiresAt: { gt: new Date() }
-    },
+  const rows = await prisma.pulse.findMany({
+    where: { createdAt: { gte: since }, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: 'desc' },
-    take: 500
+    take: 1000
   });
-
-  res.json(rows);
+  const data: PulseDTO[] = rows.map(m => ({
+    id: m.id, lat: m.lat, lng: m.lng,
+    mood: m.mood as any, energy: m.energy, text: m.text ?? null,
+    createdAt: m.createdAt.toISOString()
+  }));
+  res.json({ data });
 });
 
-router.post('/', async (req: Request, res: Response) => {
-  const parsed = MoodCreate.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() });
-  }
+r.post('/', async (req: Request, res: Response) => {
+  const parsed = CreatePulse.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
-  const { lat, lng, mood, energy, text, city } = parsed.data;
-  const deleteToken = cryptoRandom(32);
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h self-delete
+  const { lat, lng, mood, energy, text } = parsed.data;
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const deleteToken = crypto.randomBytes(24).toString('hex');
 
-  const created = await prisma.mood.create({
+  const created = await prisma.pulse.create({
     data: {
       lat, lng,
-      mood: mood as MoodEnum,
+      mood: toEnum(mood as string),
       energy,
       text: text ?? null,
-      city: city ?? null,
       deleteToken,
       expiresAt
     },
@@ -57,21 +58,17 @@ router.post('/', async (req: Request, res: Response) => {
   res.status(201).json(created);
 });
 
-router.delete('/:id', async (req: Request, res: Response) => {
+r.delete('/:id', async (req: Request, res: Response) => {
   const id = String(req.params.id);
   const token = String(req.query.token ?? '');
+  if (!token) return res.status(400).json({ error: 'token required' });
 
-  if (!token) return res.status(400).json({ error: 'Missing token' });
+  const found = await prisma.pulse.findUnique({ where: { id } });
+  if (!found) return res.status(404).json({ error: 'not found' });
+  if (found.deleteToken !== token) return res.status(403).json({ error: 'invalid token' });
 
-  const found = await prisma.mood.findUnique({ where: { id } });
-  if (!found) return res.status(404).json({ error: 'Not found' });
-  if (found.deleteToken !== token) return res.status(401).json({ error: 'Invalid token' });
-
-  await prisma.mood.delete({ where: { id } });
+  await prisma.pulse.delete({ where: { id } });
   res.json({ ok: true });
 });
 
-function cryptoRandom(bytes = 32) {
-  return [...crypto.getRandomValues(new Uint8Array(bytes))]
-    .map(b => b.toString(16).padStart(2, '0')).join('');
-}
+export default r;
