@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Micromood — under the same sky</title>
-  <meta name="description" content="Express your mood, see the world feel with you. No login. Anonymous. Dots vanish after 24h." />
+  <meta name="description" content="Express your mood. Anonymous, 24-hour dots on a live world map.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -34,6 +34,12 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+  <!-- Leaflet plugins: heatmap + markercluster (for clustering) -->
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
   <!-- Socket.IO client -->
   <script src="/socket.io/socket.io.js"></script>
 
@@ -57,6 +63,9 @@
     </div>
   </header>
 
+  <!-- Toasts -->
+  <div id="toastHost" class="fixed left-1/2 -translate-x-1/2 top-4 z-50 flex flex-col gap-2"></div>
+
   <!-- Main -->
   <main class="max-w-6xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
 
@@ -68,12 +77,12 @@
         <!-- Mood picker -->
         <div>
           <label id="ui-howFeel" class="block text-sm text-white/70 mb-1"></label>
-          <div id="moodPicker" class="grid grid-cols-5 gap-2">
-            <button data-mood="-2" class="mood-btn" aria-label="Very low">😢</button>
-            <button data-mood="-1" class="mood-btn" aria-label="Low">🙁</button>
-            <button data-mood="0"  class="mood-btn" aria-label="Neutral">😐</button>
-            <button data-mood="1"  class="mood-btn" aria-label="Good">🙂</button>
-            <button data-mood="2"  class="mood-btn" aria-label="Great">🤩</button>
+          <div id="moodPicker" class="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Mood">
+            <button data-mood="-2" class="mood-btn" aria-label="Very low" role="radio">😢</button>
+            <button data-mood="-1" class="mood-btn" aria-label="Low" role="radio">🙁</button>
+            <button data-mood="0"  class="mood-btn" aria-label="Neutral" role="radio">😐</button>
+            <button data-mood="1"  class="mood-btn" aria-label="Good" role="radio">🙂</button>
+            <button data-mood="2"  class="mood-btn" aria-label="Great" role="radio">🤩</button>
           </div>
         </div>
 
@@ -87,20 +96,23 @@
         </div>
 
         <!-- Location controls -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <button id="useMyLocation" class="px-3 py-2 rounded-xl bg-brand-500/80 hover:bg-brand-500 transition"></button>
           <span class="text-sm text-white/60" id="ui-orClickMap"></span>
+          <button id="toggleCrosshair" class="text-xs px-2 py-1 rounded bg-white/10 hover:bg-white/20 ml-auto">Crosshair ⌖</button>
         </div>
         <div id="chosenSpot" class="text-xs text-white/60">No spot selected yet.</div>
 
-        <!-- Consent & connect toggle for my dot -->
+        <!-- Consent, submit, share -->
         <label class="flex items-center gap-2 text-sm text-white/80 select-none">
           <input type="checkbox" id="connectConsent" class="accent-brand-500" />
           <span id="ui-allowConnect"></span>
         </label>
 
-        <!-- Submit -->
-        <button id="submitMood" class="w-full mt-2 px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-white/90 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled></button>
+        <div class="flex gap-2">
+          <button id="submitMood" class="flex-1 mt-2 px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-white/90 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled></button>
+          <button id="shareLink" class="mt-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-50" disabled>Share</button>
+        </div>
 
         <!-- Tiny info -->
         <p class="text-xs text-white/50" id="ui-postsInfo"></p>
@@ -127,8 +139,22 @@
             <option value="6" id="ui-6h">6h</option>
           </select>
         </label>
+        <label class="flex items-center gap-2 text-xs">
+          <input type="checkbox" id="toggleHeat" class="accent-brand-500" />
+          <span>Heatmap</span>
+        </label>
+        <label class="flex items-center gap-2 text-xs">
+          <input type="checkbox" id="toggleCluster" class="accent-brand-500" />
+          <span>Cluster</span>
+        </label>
       </div>
       <div id="map" class="h-[70vh] w-full"></div>
+
+      <!-- Crosshair overlay -->
+      <div id="crosshair" class="pointer-events-none hidden">
+        <div class="crosshair-vert"></div>
+        <div class="crosshair-horiz"></div>
+      </div>
     </section>
   </main>
 
