@@ -1,15 +1,25 @@
-export type MoodKind = 'HAPPY'|'SAD'|'STRESSED'|'CALM'|'ENERGIZED'|'TIRED';
+export type MoodName =
+  | 'happy'
+  | 'sad'
+  | 'stressed'
+  | 'calm'
+  | 'energized'
+  | 'tired';
 
-export type PulseDTO = {
-  id: string;
+export interface NewPulseInput {
+  mood: MoodName;
+  energy: number;        // 1..5
+  text?: string;         // <=150
   lat: number;
   lng: number;
-  mood: MoodKind;
-  energy: number;
-  text: string | null;
-  createdAt: string;
-};
+}
 
-export function isMood(x: string): x is MoodKind {
-  return ['HAPPY','SAD','STRESSED','CALM','ENERGIZED','TIRED'].includes(x.toUpperCase());
+export interface PulseDTO {
+  id: string;
+  mood: MoodName;
+  energy: number;
+  text?: string;
+  lat: number;
+  lng: number;
+  createdAt: string;   // ISO
 }
