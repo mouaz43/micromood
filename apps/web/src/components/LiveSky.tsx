@@ -1,48 +1,39 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 export default function LiveSky() {
-  const ref = useRef<HTMLCanvasElement>(null);
+  const ref = useRef<HTMLCanvasElement|null>(null);
 
   useEffect(() => {
     const c = ref.current!;
-    const dpr = window.devicePixelRatio || 1;
     const ctx = c.getContext('2d')!;
-    const resize = () => {
-      c.width = c.clientWidth * dpr;
-      c.height = c.clientHeight * dpr;
-    };
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const resize = () => { c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; };
     resize();
-    let raf = 0;
-    const stars = Array.from({ length: 300 }, () => ({
-      x: Math.random(),
-      y: Math.random(),
-      s: Math.random() * 1.5 + 0.2,
-      p: Math.random()
+    const onResize = () => resize();
+    window.addEventListener('resize', onResize);
+
+    const stars = Array.from({ length: 320 }, () => ({
+      x: Math.random(), y: Math.random(), r: 0.5 + Math.random()*1.4, p: Math.random()
     }));
-    const loop = () => {
-      ctx.clearRect(0, 0, c.width, c.height);
-      ctx.fillStyle = '#0b1020';
-      ctx.fillRect(0, 0, c.width, c.height);
-      const t = performance.now() / 1000;
-      for (const st of stars) {
-        const tw = (Math.sin(t * 2 + st.p * 6.28) + 1) * 0.5;
-        ctx.globalAlpha = 0.3 + 0.7 * tw;
-        ctx.fillStyle = 'white';
+
+    let raf = 0;
+    const loop = (t: number) => {
+      ctx.fillStyle = '#070c16';
+      ctx.fillRect(0,0,c.width,c.height);
+      const T = t*0.001;
+      for (const s of stars) {
+        const a = 0.35 + 0.65 * (0.5+0.5*Math.sin(T*2 + s.p*6.283));
         ctx.beginPath();
-        ctx.arc(st.x * c.width, st.y * c.height, st.s * dpr, 0, Math.PI * 2);
+        ctx.arc(s.x*c.width, s.y*c.height, s.r*dpr, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
         ctx.fill();
       }
-      ctx.globalAlpha = 1;
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
-    const onResize = () => resize();
-    window.addEventListener('resize', onResize);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', onResize);
-    };
+
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); };
   }, []);
 
-  return <canvas ref={ref} className="live-sky" />;
+  return <canvas className="live-sky" ref={ref} aria-hidden="true" />;
 }
