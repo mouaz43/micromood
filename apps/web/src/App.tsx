@@ -1,100 +1,131 @@
-import { useEffect, useMemo, useState } from "react";
-import Sky from "./components/Sky";
-import MapView from "./components/MapView";
-import { sendMood } from "./lib/api";
-
-type MoodKind = "Happy" | "Sad" | "Stressed" | "Calm" | "Energized" | "Tired";
-
-const MOODS: MoodKind[] = ["Happy","Sad","Stressed","Calm","Energized","Tired"];
+import React, { useEffect, useState } from 'react';
+import TopNav from './components/TopNav';
+import LiveSky from './components/LiveSky';
+import MoodDial from './components/MoodDial';
+import MapView from './components/MapView';
+import { getRecentMoods, sendMood, deleteMood, type Mood, type Pulse } from './lib/api';
 
 export default function App() {
-  const [mood, setMood] = useState<MoodKind>("Happy");
+  const [center, setCenter] = useState<[number, number]>([50.1109, 8.6821]); // Frankfurt fallback
+  const [points, setPoints] = useState<Pulse[]>([]);
+  const [mood, setMood] = useState<Mood>('HAPPY');
   const [energy, setEnergy] = useState(3);
-  const [text, setText] = useState("");
-  const [center, setCenter] = useState<[number,number]>([50.1109, 8.6821]); // Frankfurt default
-  const [owner, setOwner] = useState("");
-  const ownerCode = useMemo(() => {
-    const fromEnv = import.meta.env.VITE_OWNER_CODE as string | undefined;
-    return owner || fromEnv || undefined;
-  }, [owner]);
+  const [text, setText] = useState('');
+  const [myDeletes, setMyDeletes] = useState<Record<string|number,string>>({});
+  const [connect, setConnect] = useState(false);
+  const [ownerPass, setOwnerPass] = useState('');
 
+  // get location
   useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(
-      (p) => setCenter([p.coords.latitude, p.coords.longitude]),
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setCenter([pos.coords.latitude, pos.coords.longitude]),
       () => {}
     );
   }, []);
 
+  // load recent
+  useEffect(() => {
+    (async () => {
+      const data = await getRecentMoods(720);
+      setPoints(data);
+    })().catch(console.error);
+  }, []);
+
   async function onSend() {
     try {
-      const pos = center;
-      const { id, deleteToken } = await sendMood({
-        mood, energy, text: text.trim() || undefined, lat: pos[0], lng: pos[1]
-      });
-      const tokens = JSON.parse(localStorage.getItem("mm_tokens") || "{}");
-      tokens[id] = deleteToken; localStorage.setItem("mm_tokens", JSON.stringify(tokens));
-      setText("");
-      alert("Pulse sent ✨");
-    } catch (e:any) {
-      alert("Failed to send: " + (e?.message || "error"));
+      const { latitude, longitude } = await getLocation(center);
+      const r = await sendMood({ lat: latitude, lng: longitude, mood, energy, text: text.trim() || undefined });
+      setMyDeletes(prev => ({ ...prev, [r.id]: r.deleteToken }));
+      const fresh = await getRecentMoods(720);
+      setPoints(fresh);
+      setText('');
+    } catch (e: any) {
+      alert(`Failed to submit: ${e?.message ?? e}`);
+    }
+  }
+
+  async function onDelete(id: number|string) {
+    const token = myDeletes[id];
+    try {
+      await deleteMood(id, token, ownerPass || undefined);
+      setPoints(await getRecentMoods(720));
+    } catch (e: any) {
+      alert(`Delete failed: ${e?.message ?? e}`);
     }
   }
 
   return (
-    <>
-      <Sky />
-      <div className="wrapper">
-        <div className="panel" style={{padding:"18px 20px", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
-          <div className="logo">MICROMOOD</div>
-          <div className="small">Built by <a href="#" target="_blank" rel="noreferrer">Mouaz Almjarkesh</a></div>
-        </div>
+    <div className="app">
+      <LiveSky />
+      <TopNav />
 
+      <section className="hero">
         <h1>One sky. One moon. Many hearts.</h1>
-        <p className="sub">
+        <p>
           Somewhere you can’t see them, strangers are looking up at the same moon.
-          Each pulse you share becomes part of a constellation of feelings—proof that we’re never truly alone in the night.
+          Each pulse you share becomes part of a constellation of feelings—proof
+          that we’re never truly alone in the night.
         </p>
+      </section>
 
-        <div className="panel" style={{marginTop: 20}}>
-          <div className="row">
-            <div>
-              <h3 style={{margin:"6px 0 10px"}}>How do you feel?</h3>
-              <div style={{display:"grid", gap:12}}>
-                {MOODS.map(m => (
-                  <button key={m} className="btn" aria-pressed={mood===m} onClick={()=>setMood(m)}>
-                    <span>{m}</span>
-                    <span className="small">{mood===m ? "selected" : "tap"}</span>
-                  </button>
-                ))}
-              </div>
+      <main className="layout">
+        <div className="left">
+          <MoodDial mood={mood} setMood={setMood} energy={energy} setEnergy={setEnergy} />
+          <div className="panel">
+            <label>What’s on your mind? (optional)</label>
+            <textarea
+              maxLength={150}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="A short thought, feeling, or moment (max 150 chars)"
+            />
+            <button onClick={onSend}>Send pulse</button>
+          </div>
 
-              <div style={{marginTop:16}}>
-                <div className="small">Energy: {energy}</div>
-                <input type="range" min={1} max={5} value={energy}
-                  onChange={e=>setEnergy(Number(e.target.value))} style={{width:"100%"}} />
-              </div>
-
-              <div style={{marginTop:16}}>
-                <div className="small">What’s on your mind? (optional)</div>
-                <textarea rows={3} value={text} onChange={e=>setText(e.target.value)}
-                  placeholder="A short thought, feeling, or moment (max 150 chars)"
-                  style={{width:"100%", background:"#0b1220", color:"#e5e7eb", border:"1px solid #111827", borderRadius:12, padding:12}} />
-                <div style={{display:"flex", gap:10, alignItems:"center", marginTop:12}}>
-                  <button className="btn" onClick={onSend} style={{justifyContent:"center"}}>Send pulse</button>
-                  <span className="small">Owner code:</span>
-                  <input value={owner} onChange={(e)=>setOwner(e.target.value)} placeholder="(optional)"
-                    style={{background:"#0b1220", color:"#e5e7eb", border:"1px solid #111827", borderRadius:8, padding:"6px 8px"}} />
-                </div>
-              </div>
+          <div className="panel">
+            <div className="row">
+              <label className="switch">
+                <input type="checkbox" checked={connect} onChange={e => setConnect(e.target.checked)} />
+                <span>Connect dots with same energy</span>
+              </label>
             </div>
+            <div className="row">
+              <input
+                type="password"
+                placeholder="Owner mode password (optional for deletes)"
+                value={ownerPass}
+                onChange={(e) => setOwnerPass(e.target.value)}
+              />
+            </div>
+          </div>
 
-            <div>
-              <MapView center={center} ownerCode={ownerCode} />
-              <div className="footer">Pins vanish automatically after ~24 hours.</div>
+          <div className="panel">
+            <h3>Your recent pulses</h3>
+            <div className="mine">
+              {points.filter(p => myDeletes[p.id]).slice(0,10).map(p => (
+                <div key={p.id} className="chip">
+                  <span>{new Date(p.createdAt).toLocaleString()}</span>
+                  <button onClick={() => onDelete(p.id)}>Delete</button>
+                </div>
+              ))}
+              {Object.keys(myDeletes).length === 0 && <div className="hint">Send a pulse to see it here with a delete option.</div>}
             </div>
           </div>
         </div>
-      </div>
-    </>
+
+        <div className="right">
+          <MapView center={center} points={points} connect={connect} />
+        </div>
+      </main>
+    </div>
   );
+}
+
+function getLocation(fallback: [number,number]) {
+  return new Promise<{ latitude: number; longitude: number }>((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ latitude: p.coords.latitude, longitude: p.coords.longitude }),
+      () => resolve({ latitude: fallback[0], longitude: fallback[1] })
+    );
+  });
 }
