@@ -3,41 +3,39 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Micromood — under the same sky</title>
-  <meta name="description" content="Express your mood. Anonymous, 24-hour dots on a live world map.">
+  <title>Micromoon — under the same sky</title>
+  <meta name="description" content="Micromoon: anonymous moods on a live world map. Dots fade after 24 hours.">
+
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-  <!-- Tailwind (CDN) -->
+  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
+            night: { 900:'#0a1224', 800:'#0f1b35', 700:'#152449' },
             brand: { 500: '#8e6e5a' },
             mood: {
-              '-2': '#ef4444',
-              '-1': '#f59e0b',
-              '0':  '#a3a3a3',
-              '1':  '#34d399',
-              '2':  '#60a5fa'
+              '-2': '#ef4444', '-1': '#f59e0b', '0': '#a3a3a3', '1': '#34d399', '2': '#60a5fa'
             }
-          }
+          },
+          maxWidth: { '8xl': '80rem' }
         }
       }
     }
   </script>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
-  <!-- Leaflet plugins: heatmap + markercluster (for clustering) -->
+  <!-- Leaflet + plugins -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <!-- Socket.IO client -->
@@ -45,95 +43,96 @@
 
   <link rel="stylesheet" href="/styles.css" />
 </head>
-<body class="min-h-screen bg-black text-white font-[Inter]">
-  <!-- Starfield canvas background -->
+<body class="min-h-screen bg-night-900 text-white font-[Inter]">
+  <!-- Star & nebula canvas background -->
   <canvas id="stars" class="fixed inset-0 -z-10"></canvas>
 
-  <!-- Header phrase + language toggle -->
-  <header class="w-full border-b border-white/10 bg-black/30 backdrop-blur sticky top-0 z-20">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-      <h1 id="deepPhrase" class="text-xl sm:text-2xl font-extrabold tracking-tight"></h1>
-      <div class="flex items-center gap-3">
-        <div class="text-sm text-white/70" id="tagline"></div>
-        <div class="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
-          <button id="langEn" class="text-xs px-2 py-1 rounded hover:bg-white/10">EN</button>
-          <button id="langDe" class="text-xs px-2 py-1 rounded hover:bg-white/10">DE</button>
-        </div>
+  <!-- Minimal header: tagline + language -->
+  <header class="w-full border-b border-white/10 bg-night-800/60 backdrop-blur sticky top-0 z-20">
+    <div class="max-w-8xl mx-auto px-5 py-3 flex items-center justify-between">
+      <div class="text-sm text-white/75" id="tagline">Micromoon — anonymous, 24-hour moods</div>
+      <div class="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
+        <button id="langEn" class="text-xs px-2 py-1 rounded hover:bg-white/10">EN</button>
+        <button id="langDe" class="text-xs px-2 py-1 rounded hover:bg-white/10">DE</button>
       </div>
     </div>
   </header>
+
+  <!-- Centered hero phrase -->
+  <section id="hero" class="relative">
+    <div class="max-w-4xl mx-auto px-6 py-14 md:py-18 text-center">
+      <h1 id="deepPhrase"
+          data-phrase="The same moon looks down on all of us and knows our hidden feelings. On Micromoon those feelings become lights on a shared map, glowing for one day before they fade back into the night."
+          class="text-3xl md:text-5xl font-extrabold leading-tight tracking-tight text-white/95 drop-shadow-[0_1px_12px_rgba(100,140,255,0.15)]">
+      </h1>
+    </div>
+  </section>
 
   <!-- Toasts -->
   <div id="toastHost" class="fixed left-1/2 -translate-x-1/2 top-4 z-50 flex flex-col gap-2"></div>
 
   <!-- Main -->
-  <main class="max-w-6xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
+  <main class="max-w-8xl mx-auto px-5 pb-8 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">
+    <!-- Composer -->
+    <section class="bg-white/5 rounded-3xl p-5 shadow-lg ring-1 ring-white/10">
+      <h2 id="ui-pulseTitle" class="font-semibold mb-3 text-lg md:text-xl">Pulse your mood</h2>
 
-    <!-- Composer panel -->
-    <section class="bg-white/5 rounded-2xl p-4 shadow-lg ring-1 ring-white/10">
-      <h2 id="ui-pulseTitle" class="font-semibold mb-3"></h2>
-
-      <div class="space-y-3">
-        <!-- Mood picker -->
+      <div class="space-y-4">
         <div>
-          <label id="ui-howFeel" class="block text-sm text-white/70 mb-1"></label>
-          <div id="moodPicker" class="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Mood">
-            <button data-mood="-2" class="mood-btn" aria-label="Very low" role="radio">😢</button>
-            <button data-mood="-1" class="mood-btn" aria-label="Low" role="radio">🙁</button>
-            <button data-mood="0"  class="mood-btn" aria-label="Neutral" role="radio">😐</button>
-            <button data-mood="1"  class="mood-btn" aria-label="Good" role="radio">🙂</button>
-            <button data-mood="2"  class="mood-btn" aria-label="Great" role="radio">🤩</button>
+          <label id="ui-howFeel" class="block text-sm text-white/80 mb-2">How do you feel?</label>
+          <div id="moodPicker" class="grid grid-cols-5 gap-3" role="radiogroup" aria-label="Mood">
+            <button data-mood="-2" class="mood-btn text-2xl py-3" aria-label="Very low" role="radio">😢</button>
+            <button data-mood="-1" class="mood-btn text-2xl py-3" aria-label="Low" role="radio">🙁</button>
+            <button data-mood="0"  class="mood-btn text-2xl py-3" aria-label="Neutral" role="radio">😐</button>
+            <button data-mood="1"  class="mood-btn text-2xl py-3" aria-label="Good" role="radio">🙂</button>
+            <button data-mood="2"  class="mood-btn text-2xl py-3" aria-label="Great" role="radio">🤩</button>
           </div>
         </div>
 
-        <!-- Note -->
         <div>
-          <label for="note" class="block text-sm text-white/70 mb-1">
-            <span id="ui-whatsHappening"></span>
-            <span class="text-white/40" id="ui-optional"></span>
+          <label for="note" class="block text-sm text-white/80 mb-2">
+            <span id="ui-whatsHappening">What’s happening?</span>
+            <span class="text-white/50" id="ui-optional">(optional, 280 chars)</span>
           </label>
-          <textarea id="note" rows="3" maxlength="280" class="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none focus:ring-2 focus:ring-brand-500" placeholder="A few words you want to share…"></textarea>
+          <textarea id="note" rows="4" maxlength="280" class="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-white/40" placeholder="A few words you want to share…"></textarea>
         </div>
 
-        <!-- Location controls -->
-        <div class="flex items-center gap-2 flex-wrap">
-          <button id="useMyLocation" class="px-3 py-2 rounded-xl bg-brand-500/80 hover:bg-brand-500 transition"></button>
-          <span class="text-sm text-white/60" id="ui-orClickMap"></span>
-          <button id="toggleCrosshair" class="text-xs px-2 py-1 rounded bg-white/10 hover:bg-white/20 ml-auto">Crosshair ⌖</button>
+        <div class="flex items-center gap-3 flex-wrap">
+          <button id="useMyLocation" class="px-4 py-2.5 rounded-2xl bg-brand-500/90 hover:bg-brand-500 transition text-black font-semibold">Use my location</button>
+          <span class="text-sm text-white/70" id="ui-orClickMap">or click on the map</span>
+          <button id="toggleCrosshair" class="text-xs px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 ml-auto">Crosshair ⌖</button>
         </div>
-        <div id="chosenSpot" class="text-xs text-white/60">No spot selected yet.</div>
+        <div id="chosenSpot" class="text-xs text-white/70">No spot selected yet.</div>
 
-        <!-- Consent, submit, share -->
-        <label class="flex items-center gap-2 text-sm text-white/80 select-none">
+        <label class="flex items-center gap-2 text-sm text-white/85 select-none">
           <input type="checkbox" id="connectConsent" class="accent-brand-500" />
-          <span id="ui-allowConnect"></span>
+          <span id="ui-allowConnect">Allow others to connect my dot</span>
         </label>
 
-        <div class="flex gap-2">
-          <button id="submitMood" class="flex-1 mt-2 px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-white/90 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled></button>
-          <button id="shareLink" class="mt-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-50" disabled>Share</button>
+        <div class="flex gap-3">
+          <button id="submitMood" class="flex-1 mt-1 px-5 py-3 rounded-2xl bg-white text-black font-semibold hover:bg-white/90 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>Pulse</button>
+          <button id="shareLink" class="mt-1 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-50" disabled>Share</button>
         </div>
 
-        <!-- Tiny info -->
-        <p class="text-xs text-white/50" id="ui-postsInfo"></p>
+        <p class="text-xs text-white/60" id="ui-postsInfo">Posts are anonymous and visible for 24 hours, then disappear.</p>
       </div>
     </section>
 
-    <!-- Map + toggles -->
-    <section class="relative rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-lg">
-      <div class="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur rounded-xl p-2 flex flex-wrap gap-2 items-center">
+    <!-- Map -->
+    <section class="relative rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-lg">
+      <div class="absolute top-4 right-4 z-10 bg-night-800/70 backdrop-blur rounded-2xl px-3 py-2.5 flex flex-wrap gap-3 items-center">
         <label class="flex items-center gap-2 text-xs">
           <input type="checkbox" id="toggleConnections" class="accent-brand-500" />
-          <span id="ui-connectSimilar"></span>
+          <span id="ui-connectSimilar">Connect similar moods</span>
         </label>
         <label class="flex items-center gap-2 text-xs">
-          <span id="ui-radius"></span>
+          <span id="ui-radius">Radius</span>
           <input id="radiusKm" type="range" min="10" max="500" value="120" />
-          <span id="radiusValue" class="w-10 text-right">120km</span>
+          <span id="radiusValue" class="w-12 text-right">120km</span>
         </label>
         <label class="flex items-center gap-2 text-xs">
-          <span id="ui-window"></span>
-          <select id="windowHours" class="bg-black/30 border border-white/20 rounded-md px-2 py-1">
+          <span id="ui-window">Window</span>
+          <select id="windowHours" class="bg-night-700/70 border border-white/20 rounded-md px-2 py-1">
             <option value="24" selected id="ui-24h">24h</option>
             <option value="12" id="ui-12h">12h</option>
             <option value="6" id="ui-6h">6h</option>
@@ -148,7 +147,7 @@
           <span>Cluster</span>
         </label>
       </div>
-      <div id="map" class="h-[70vh] w-full"></div>
+      <div id="map" class="h-[80vh] w-full"></div>
 
       <!-- Crosshair overlay -->
       <div id="crosshair" class="pointer-events-none hidden">
@@ -158,8 +157,7 @@
     </section>
   </main>
 
-  <!-- Footer credit -->
-  <footer class="py-6 text-center text-sm text-white/60">
+  <footer class="py-8 text-center text-sm text-white/70">
     Built by <strong>Mouaz Almjarkesh</strong>
   </footer>
 
