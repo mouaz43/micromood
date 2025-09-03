@@ -1,155 +1,100 @@
-import express from 'express';
-import http from 'http';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
-import { Pool } from 'pg';
-import { Server as SocketIOServer } from 'socket.io';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// Minimal site + API in one service
+const express = require("express");
+const path = require("path");
+const cors = require("cors");
+const { Pool } = require("pg");
 
-dotenv.config();
+const ORIGIN = process.env.ORIGIN || "*";
+const PORT = process.env.PORT || 3000;
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL is missing. Set it in Render → Web Service → Environment.');
-  process.exit(1);
-}
-
-// Use SSL only when requested or when URL demands it
-const useSSL =
-  (process.env.DATABASE_SSL === 'true') ||
-  /sslmode=require/i.test(process.env.DATABASE_URL || '');
+const ssl =
+  process.env.NODE_ENV === "production"
+    ? { rejectUnauthorized: false }
+    : false;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: useSSL ? { rejectUnauthorized: false } : false,
+  ssl
 });
 
-const app = express();
-const server = http.createServer(app);
-const io = new SocketIOServer(server, { cors: { origin: '*' } });
-
-// Security: allow our CDNs
-app.use(helmet({
-  contentSecurityPolicy: {
-    useDefaults: true,
-    directives: {
-      "default-src": ["'self'"],
-      "script-src": [
-        "'self'",
-        "'unsafe-inline'",
-        "https://cdn.tailwindcss.com",
-        "https://unpkg.com"
-      ],
-      "style-src": [
-        "'self'",
-        "'unsafe-inline'",
-        "https://unpkg.com",
-        "https://cdn.jsdelivr.net",
-        "https://fonts.googleapis.com"
-      ],
-      "font-src": ["'self'", "https://fonts.gstatic.com"],
-      "img-src": ["'self'", "data:", "https://*.tile.openstreetmap.org"],
-      "connect-src": ["'self'", "ws:", "wss:"]
-    }
-  }
-}));
-
-app.use(express.json({ limit: '1mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
-
-// DB bootstrap
 async function ensureTable() {
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS moods (
-      id SERIAL PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS pulses (
+      id BIGSERIAL PRIMARY KEY,
+      mood INTEGER NOT NULL CHECK (mood BETWEEN -2 AND 2),
+      note TEXT,
       lat DOUBLE PRECISION NOT NULL,
       lng DOUBLE PRECISION NOT NULL,
-      mood SMALLINT NOT NULL CHECK (mood BETWEEN -2 AND 2),
-      text VARCHAR(280),
-      connect_consent BOOLEAN NOT NULL DEFAULT false,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      allow_connect BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
-    CREATE INDEX IF NOT EXISTS idx_moods_created_at ON moods(created_at);
+    CREATE INDEX IF NOT EXISTS pulses_created_at_idx ON pulses (created_at DESC);
   `);
 }
 
-// Rate limit: 20 posts/hour/IP
-const limiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-// Health
-app.get('/health', (_req, res) => res.status(200).send('ok'));
+const app = express();
+app.use(cors({ origin: ORIGIN, credentials: false }));
+app.use(express.json({ limit: "200kb" }));
 
 // API
-app.get('/api/moods', async (req, res) => {
-  const sinceHours = Math.min(parseInt(req.query.sinceHours) || 24, 168);
+app.get("/api/pulses", async (req, res) => {
   try {
+    const h = Math.max(1, Math.min(72, parseInt(req.query.windowHours || "24", 10)));
     const { rows } = await pool.query(
-      `SELECT id, lat, lng, mood, text, connect_consent, created_at
-       FROM moods
-       WHERE created_at >= NOW() - ($1::text)::interval
-       ORDER BY created_at DESC
-       LIMIT 2000`,
-      [`${sinceHours} hours`]
+      `SELECT id, mood, note, lat, lng, allow_connect, created_at
+         FROM pulses
+        WHERE created_at >= now() - INTERVAL '${h} hours'
+        ORDER BY created_at DESC
+        LIMIT 2000`
     );
-    res.json({ ok: true, data: rows });
+    res.json(rows);
   } catch (e) {
     console.error(e);
-    res.status(500).json({ ok: false, error: 'DB_ERROR' });
+    res.status(500).json({ error: "failed_to_fetch" });
   }
 });
 
-app.post('/api/moods', limiter, async (req, res) => {
+app.post("/api/pulses", async (req, res) => {
   try {
-    const { lat, lng, mood, text, connectConsent } = req.body || {};
-    if (typeof lat !== 'number' || typeof lng !== 'number') {
-      return res.status(400).json({ ok: false, error: 'BAD_COORDS' });
-    }
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return res.status(400).json({ ok: false, error: 'RANGE_COORDS' });
-    }
-    const allowed = [-2, -1, 0, 1, 2];
-    if (!allowed.includes(mood)) {
-      return res.status(400).json({ ok: false, error: 'BAD_MOOD' });
-    }
+    const { mood, note = "", lat, lng, allow_connect = false } = req.body || {};
+    const m = Number(mood);
+    const la = Number(lat);
+    const ln = Number(lng);
 
-    const safeText = (typeof text === 'string' ? text : '').trim().slice(0, 280);
-    const consent = !!connectConsent;
+    if (!Number.isFinite(la) || !Number.isFinite(ln)) {
+      return res.status(400).json({ error: "invalid_location" });
+    }
+    if (!Number.isInteger(m) || m < -2 || m > 2) {
+      return res.status(400).json({ error: "invalid_mood" });
+    }
+    const cleanNote = String(note).slice(0, 280);
 
     const { rows } = await pool.query(
-      `INSERT INTO moods (lat, lng, mood, text, connect_consent)
+      `INSERT INTO pulses (mood, note, lat, lng, allow_connect)
        VALUES ($1,$2,$3,$4,$5)
-       RETURNING id, lat, lng, mood, text, connect_consent, created_at`,
-      [lat, lng, mood, safeText, consent]
+       RETURNING id, mood, note, lat, lng, allow_connect, created_at`,
+      [m, cleanNote, la, ln, !!allow_connect]
     );
-
-    const saved = rows[0];
-    io.emit('new_mood', saved);
-    res.json({ ok: true, data: saved });
+    res.status(201).json(rows[0]);
   } catch (e) {
     console.error(e);
-    res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+    res.status(500).json({ error: "failed_to_insert" });
   }
 });
 
-// Prune old entries >72h (view shows ≤24h)
-setInterval(async () => {
-  try { await pool.query(`DELETE FROM moods WHERE created_at < NOW() - INTERVAL '72 hours'`); }
-  catch (e) { console.error('pruneOld failed', e); }
-}, 60 * 60 * 1000);
-
-// Sockets (realtime broadcast already in POST)
-io.on('connection', () => { /* no-op */ });
-
-const PORT = process.env.PORT || 3000;
-ensureTable().then(() => {
-  server.listen(PORT, () => console.log(`Micromoon listening on :${PORT}`));
+// Static site
+app.use(express.static(path.join(__dirname, "..", "public")));
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 });
+
+ensureTable()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Micromoon running on :${PORT}`);
+    });
+  })
+  .catch((e) => {
+    console.error("Failed to ensure table", e);
+    process.exit(1);
+  });
