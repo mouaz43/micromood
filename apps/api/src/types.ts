@@ -1,17 +1,15 @@
-export type NewPulse = {
-  lat: number;
-  lng: number;
-  mood: 'HAPPY' | 'SAD' | 'STRESSED' | 'CALM' | 'ENERGIZED' | 'TIRED';
-  energy: number; // 1-5
-  text?: string;
-};
+export type MoodKind = 'HAPPY'|'SAD'|'STRESSED'|'CALM'|'ENERGIZED'|'TIRED';
 
 export type PulseDTO = {
-  id: number | string;
+  id: string;
   lat: number;
   lng: number;
-  mood: NewPulse['mood'];
+  mood: MoodKind;
   energy: number;
-  text?: string | null;
+  text: string | null;
   createdAt: string;
 };
+
+export function isMood(x: string): x is MoodKind {
+  return ['HAPPY','SAD','STRESSED','CALM','ENERGIZED','TIRED'].includes(x.toUpperCase());
+}
