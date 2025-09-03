@@ -1,9 +1,10 @@
-/* Starfield canvas sits behind everything */
+/* Starfield canvas with moon glow */
 #stars {
   display: block;
-  background: radial-gradient(1000px 600px at 80% -10%, rgba(130,170,255,0.12), transparent 45%), /* moon glow */
-              radial-gradient(1200px 600px at 50% -10%, rgba(255,255,255,0.07), transparent 40%),
-              #000;
+  background:
+    radial-gradient(1000px 600px at 80% -10%, rgba(130,170,255,0.12), transparent 45%), /* moon glow */
+    radial-gradient(1200px 600px at 50% -10%, rgba(255,255,255,0.07), transparent 40%),
+    #000;
 }
 
 /* Mood button styling */
@@ -26,3 +27,48 @@
 .leaflet-container { background: transparent; }
 .leaflet-popup-content-wrapper { background: rgba(0,0,0,0.85); color: white; border-radius: 12px; }
 .leaflet-popup-tip { background: rgba(0,0,0,0.85); }
+
+/* Toasts */
+.toast {
+  background: rgba(255,255,255,0.95);
+  color: #111;
+  padding: .6rem .9rem;
+  border-radius: .75rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  font-weight: 600;
+}
+
+/* Crosshair overlay */
+#crosshair {
+  position: absolute;
+  inset: 0;
+}
+.crosshair-vert, .crosshair-horiz {
+  position: absolute;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.35), transparent);
+}
+.crosshair-vert {
+  width: 1px; left: 50%; top: 0; bottom: 0; transform: translateX(-0.5px);
+}
+.crosshair-horiz {
+  height: 1px; top: 50%; left: 0; right: 0; transform: translateY(-0.5px);
+}
+
+/* DivIcon pulse dot */
+.mm-dot {
+  width: 12px; height: 12px; border-radius: 9999px;
+  position: relative;
+}
+.mm-dot::after {
+  content: "";
+  position: absolute; inset: -6px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: .25;
+  animation: mm-pulse 2.4s ease-in-out infinite;
+}
+@keyframes mm-pulse {
+  0% { transform: scale(0.8); opacity: .35; }
+  50% { transform: scale(1.25); opacity: .12; }
+  100% { transform: scale(0.8); opacity: .35; }
+}
