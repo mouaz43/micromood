@@ -1,74 +1,75 @@
-/* Starfield canvas with moon glow */
+/* Night sky background: brighter stars + nebula glow */
 #stars {
   display: block;
   background:
-    radial-gradient(1000px 600px at 80% -10%, rgba(130,170,255,0.12), transparent 45%), /* moon glow */
-    radial-gradient(1200px 600px at 50% -10%, rgba(255,255,255,0.07), transparent 40%),
-    #000;
+    radial-gradient(1200px 700px at 75% -10%, rgba(100,140,255,0.18), transparent 45%),
+    radial-gradient(1400px 700px at 30% -15%, rgba(120,160,255,0.10), transparent 50%),
+    linear-gradient(180deg, #0a1224 0%, #0f1b35 40%, #152449 100%);
 }
 
-/* Mood button styling */
-.mood-btn {
-  border-radius: 0.75rem;
-  padding: 0.5rem 0;
-  font-size: 1.25rem;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.05);
-  transition: background .2s ease;
+/* Center hero subtle breathing */
+#hero #deepPhrase { animation: hero-fade 10s ease-in-out infinite; }
+@keyframes hero-fade {
+  0% { opacity:.92; text-shadow:0 0 0 rgba(120,160,255,0.0); }
+  50% { opacity:1; text-shadow:0 0 18px rgba(120,160,255,0.18); }
+  100% { opacity:.92; text-shadow:0 0 0 rgba(120,160,255,0.0); }
 }
-.mood-btn:hover { background: rgba(255,255,255,0.10); }
+
+/* Mood buttons – bigger, comfier */
+.mood-btn {
+  border-radius: 1rem;
+  padding: 0.6rem 0;
+  font-size: 1.35rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  transition: transform .08s ease, background .2s ease;
+}
+.mood-btn:hover { background: rgba(255,255,255,0.12); transform: translateY(-1px); }
 .mood-btn.active[data-mood="-2"] { box-shadow: 0 0 0 2px #ef4444 inset; }
 .mood-btn.active[data-mood="-1"] { box-shadow: 0 0 0 2px #f59e0b inset; }
 .mood-btn.active[data-mood="0"]  { box-shadow: 0 0 0 2px #a3a3a3 inset; }
 .mood-btn.active[data-mood="1"]  { box-shadow: 0 0 0 2px #34d399 inset; }
 .mood-btn.active[data-mood="2"]  { box-shadow: 0 0 0 2px #60a5fa inset; }
 
-/* Leaflet tweaks */
+/* Leaflet dark theme tweaks */
 .leaflet-container { background: transparent; }
-.leaflet-popup-content-wrapper { background: rgba(0,0,0,0.85); color: white; border-radius: 12px; }
-.leaflet-popup-tip { background: rgba(0,0,0,0.85); }
+.leaflet-popup-content-wrapper { background: rgba(9,14,30,0.92); color: #fff; border-radius: 14px; }
+.leaflet-popup-tip { background: rgba(9,14,30,0.92); }
 
 /* Toasts */
 .toast {
-  background: rgba(255,255,255,0.95);
-  color: #111;
-  padding: .6rem .9rem;
-  border-radius: .75rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,.15);
-  font-weight: 600;
+  background: rgba(255,255,255,0.98);
+  color: #0a1224;
+  padding: .7rem 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  font-weight: 700;
 }
 
 /* Crosshair overlay */
-#crosshair {
-  position: absolute;
-  inset: 0;
-}
+#crosshair { position: absolute; inset: 0; }
 .crosshair-vert, .crosshair-horiz {
   position: absolute;
-  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.35), transparent);
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.45), transparent);
 }
-.crosshair-vert {
-  width: 1px; left: 50%; top: 0; bottom: 0; transform: translateX(-0.5px);
-}
-.crosshair-horiz {
-  height: 1px; top: 50%; left: 0; right: 0; transform: translateY(-0.5px);
-}
+.crosshair-vert { width: 1px; left: 50%; top: 0; bottom: 0; transform: translateX(-0.5px); }
+.crosshair-horiz { height: 1px; top: 50%; left: 0; right: 0; transform: translateY(-0.5px); }
 
-/* DivIcon pulse dot */
+/* DivIcon pulse dot – slightly bigger for visibility */
 .mm-dot {
-  width: 12px; height: 12px; border-radius: 9999px;
+  width: 14px; height: 14px; border-radius: 9999px;
   position: relative;
 }
 .mm-dot::after {
   content: "";
-  position: absolute; inset: -6px;
+  position: absolute; inset: -7px;
   border-radius: 9999px;
   background: currentColor;
-  opacity: .25;
-  animation: mm-pulse 2.4s ease-in-out infinite;
+  opacity: .28;
+  animation: mm-pulse 2.2s ease-in-out infinite;
 }
 @keyframes mm-pulse {
-  0% { transform: scale(0.8); opacity: .35; }
-  50% { transform: scale(1.25); opacity: .12; }
-  100% { transform: scale(0.8); opacity: .35; }
+  0% { transform: scale(0.8); opacity: .38; }
+  50% { transform: scale(1.25); opacity: .16; }
+  100% { transform: scale(0.8); opacity: .38; }
 }
