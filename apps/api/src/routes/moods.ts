@@ -1,112 +1,87 @@
-// apps/api/src/routes/moods.ts
-import { Router, type Request, type Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Router } from 'express';
 import { z } from 'zod';
-import crypto from 'node:crypto';
+import { prisma } from '../lib/prisma.js';
+import type { MoodName, NewPulseInput, PulseDTO } from '../lib/types.js';
 
-const prisma = new PrismaClient();
+const MOODS: readonly MoodName[] = ['happy','sad','stressed','calm','energized','tired'] as const;
+
+const newPulseSchema = z.object({
+  mood: z.enum(MOODS as [MoodName, ...MoodName[]]),
+  energy: z.number().int().min(1).max(5),
+  text: z.string().max(150).optional(),
+  lat: z.number().finite(),
+  lng: z.number().finite()
+});
+
 const router = Router();
 
-/** Local enum as string-union: works on any Prisma version */
-type MoodStr = 'HAPPY' | 'SAD' | 'STRESSED' | 'CALM' | 'ENERGIZED' | 'TIRED';
-const ALL_MOODS = ['HAPPY','SAD','STRESSED','CALM','ENERGIZED','TIRED'] as const;
+// GET /moods?sinceMinutes=720  (default 720 => 12h)
+router.get('/', async (req, res, next) => {
+  try {
+    const sinceMinutes = Math.max(0, Number(req.query.sinceMinutes ?? 720));
+    const since = new Date(Date.now() - sinceMinutes * 60_000);
 
-/** API response DTO (kept local so we don't import cross-files) */
-type PulseDTO = {
-  id: string;
-  lat: number;
-  lng: number;
-  mood: MoodStr;
-  energy: number;
-  text: string | null;
-  createdAt: string;
-};
+    const rows = await prisma.moodPulse.findMany({
+      where: {
+        createdAt: { gte: since }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 1000
+    });
 
-/** Body validation for creating pulses */
-const CreatePulse = z.object({
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
-  mood: z.enum(['HAPPY','SAD','STRESSED','CALM','ENERGIZED','TIRED'])
-        .or(z.enum(['happy','sad','stressed','calm','energized','tired'])),
-  energy: z.number().int().min(1).max(5),
-  text: z.string().trim().max(150).optional(),
+    const out: PulseDTO[] = rows.map(r => ({
+      id: r.id,
+      mood: r.mood as MoodName,
+      energy: r.energy,
+      text: r.text ?? undefined,
+      lat: r.lat,
+      lng: r.lng,
+      createdAt: r.createdAt.toISOString()
+    }));
+
+    res.json(out);
+  } catch (err) {
+    next(err);
+  }
 });
 
-/** Normalize and guard mood string */
-function toMood(s: string): MoodStr {
-  const up = s.toUpperCase() as MoodStr;
-  // Type guard: ensure it’s one of our allowed values
-  return (ALL_MOODS as readonly string[]).includes(up) ? up : 'CALM';
-}
+// POST /moods
+router.post('/', async (req, res, next) => {
+  try {
+    const parsed = newPulseSchema.parse(req.body) as NewPulseInput;
 
-/** Round to ~100m for a little location privacy */
-function roundCoord(v: number) {
-  return Math.round(v / 0.001) * 0.001;
-}
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-/** GET /moods?sinceMinutes=720 — list recent, non-expired pulses */
-router.get('/', async (req: Request, res: Response) => {
-  const sinceMinutesRaw = Number(req.query.sinceMinutes ?? 720);
-  const sinceMinutes = Number.isFinite(sinceMinutesRaw) ? Math.max(5, Math.min(60*24*7, sinceMinutesRaw)) : 720;
-  const since = new Date(Date.now() - sinceMinutes * 60_000);
+    const created = await prisma.moodPulse.create({
+      data: {
+        mood: parsed.mood,
+        energy: parsed.energy,
+        text: parsed.text?.trim() || null,
+        lat: parsed.lat,
+        lng: parsed.lng,
+        expiresAt
+      }
+    });
 
-  const rows = await prisma.pulse.findMany({
-    where: { createdAt: { gte: since }, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: 'desc' },
-    take: 1000,
-  });
-
-  const data: PulseDTO[] = rows.map((m) => ({
-    id: m.id,
-    lat: m.lat,
-    lng: m.lng,
-    mood: (m.mood as unknown as MoodStr), // map DB enum to our union
-    energy: m.energy,
-    text: m.text ?? null,
-    createdAt: m.createdAt.toISOString(),
-  }));
-
-  res.json({ data });
+    res.status(201).json({ id: created.id });
+  } catch (err) {
+    next(err);
+  }
 });
 
-/** POST /moods — create a pulse and return id + deleteToken */
-router.post('/', async (req: Request, res: Response) => {
-  const parsed = CreatePulse.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-
-  const { lat, lng, mood, energy, text } = parsed.data;
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  const deleteToken = crypto.randomBytes(24).toString('hex');
-
-  const created = await prisma.pulse.create({
-    data: {
-      lat: roundCoord(lat),
-      lng: roundCoord(lng),
-      // Pass the normalized string; TS cast avoids depending on Prisma enum types
-      mood: toMood(mood as string) as any,
-      energy,
-      text: text ?? null,
-      deleteToken,
-      expiresAt,
-    },
-    select: { id: true, deleteToken: true, createdAt: true },
-  });
-
-  res.status(201).json(created);
-});
-
-/** DELETE /moods/:id?token=... — delete by token */
-router.delete('/:id', async (req: Request, res: Response) => {
-  const id = String(req.params.id);
-  const token = String(req.query.token ?? '');
-  if (!token) return res.status(400).json({ error: 'token required' });
-
-  const found = await prisma.pulse.findUnique({ where: { id } });
-  if (!found) return res.status(404).json({ error: 'not found' });
-  if (found.deleteToken !== token) return res.status(403).json({ error: 'invalid token' });
-
-  await prisma.pulse.delete({ where: { id } });
-  res.json({ ok: true });
+// DELETE /moods/:id  (requires ADMIN_SECRET in header x-admin-secret)
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const admin = req.header('x-admin-secret');
+    if (!admin || admin !== process.env.ADMIN_SECRET) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+    const id = String(req.params.id);
+    await prisma.moodPulse.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;
