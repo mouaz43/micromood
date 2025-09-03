@@ -1,0 +1,11 @@
+# Node
+node_modules
+npm-debug.log*
+pnpm-lock.yaml
+yarn.lock
+
+# Env
+.env
+
+# OS
+.DS_Store
