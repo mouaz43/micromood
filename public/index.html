@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Micromoon — under the same sky</title>
-  <meta name="description" content="Micromoon: anonymous moods on a live world map. Dots fade after 24 hours.">
+  <meta name="description" content="Micromoon: anonymous moods on a live world map. Dots glow for 24 hours, then fade back to night.">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <!-- Tailwind (CDN) -->
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -19,10 +19,9 @@
         extend: {
           colors: {
             night: { 900:'#0a1224', 800:'#0f1b35', 700:'#152449' },
-            brand: { 500: '#8e6e5a' },
-            mood: { '-2':'#ef4444','-1':'#f59e0b','0':'#a3a3a3','1':'#34d399','2':'#60a5fa' }
+            brand: { 500:'#8e6e5a' }
           },
-          maxWidth: { '8xl': '80rem' }
+          maxWidth: { '8xl': '80rem', '9xl': '96rem' }
         }
       }
     }
@@ -36,46 +35,76 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-  <!-- Socket.IO client -->
+  <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
 
+  <!-- Your base styles -->
   <link rel="stylesheet" href="/styles.css" />
+
+  <!-- Modern hero styles (self-contained) -->
+  <style>
+    .font-display{ font-family: "Space Grotesk", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    #deepPhrase{
+      font-size: clamp(28px, 5.8vw, 76px);
+      line-height: 1.05;
+      letter-spacing: -0.015em;
+      text-wrap: balance;
+    }
+    #deepPhrase .line{
+      display:block;
+      transform-origin:50% 60%;
+      animation:headline-rise .7s ease both;
+      animation-delay: calc(var(--i, 0) * 120ms);
+      will-change: transform, opacity, filter;
+    }
+    @keyframes headline-rise{
+      from{opacity:0; transform:translateY(10px) scale(.985); filter:blur(1px)}
+      to{opacity:1; transform:translateY(0) scale(1); filter:blur(0)}
+    }
+    .brand-gradient{
+      background: linear-gradient(180deg, #ffffff 0%, #d8e4ff 70%);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow:0 10px 40px rgba(120,160,255,.18);
+    }
+    /* language pills */
+    .lang-btn{ padding:.25rem .5rem; border-radius:.5rem; }
+    .lang-btn.active{ background:rgba(255,255,255,.18); }
+  </style>
 </head>
+
 <body class="min-h-screen bg-night-900 text-white font-[Inter]">
-  <!-- Star & nebula canvas -->
+  <!-- star canvas -->
   <canvas id="stars" class="fixed inset-0 -z-10"></canvas>
 
-  <!-- Header: tagline + language -->
+  <!-- top bar -->
   <header class="w-full border-b border-white/10 bg-night-800/60 backdrop-blur sticky top-0 z-20">
-    <div class="max-w-8xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
+    <div class="max-w-9xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
       <div class="text-sm text-white/75" id="tagline">Micromoon — anonymous, 24-hour moods</div>
-      <div class="flex flex-wrap items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
-        <button data-lang="en" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">EN</button>
-        <button data-lang="de" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">DE</button>
-        <button data-lang="es" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">ES</button>
-        <button data-lang="fr" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">FR</button>
-        <button data-lang="ar" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">AR</button>
-        <button data-lang="ru" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">RU</button>
-        <button data-lang="zh" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">中文</button>
+      <div class="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
+        <button data-lang="en" class="lang-btn text-xs hover:bg-white/10">EN</button>
+        <button data-lang="de" class="lang-btn text-xs hover:bg-white/10">DE</button>
+        <button data-lang="es" class="lang-btn text-xs hover:bg-white/10">ES</button>
+        <button data-lang="fr" class="lang-btn text-xs hover:bg-white/10">FR</button>
+        <button data-lang="ar" class="lang-btn text-xs hover:bg-white/10">AR</button>
+        <button data-lang="ru" class="lang-btn text-xs hover:bg-white/10">RU</button>
+        <button data-lang="zh" class="lang-btn text-xs hover:bg-white/10">中文</button>
       </div>
     </div>
   </header>
 
-  <!-- Centered hero phrase -->
+  <!-- hero -->
   <section id="hero" class="relative">
-    <div class="max-w-4xl mx-auto px-6 py-14 md:py-18 text-center">
-      <h1 id="deepPhrase"
-          class="text-3xl md:text-5xl font-extrabold leading-tight tracking-tight text-white/95 drop-shadow-[0_1px_12px_rgba(100,140,255,0.15)]">
-      </h1>
+    <div class="max-w-5xl mx-auto px-6 py-14 md:py-18 text-center">
+      <h1 id="deepPhrase" class="font-display text-white/95 drop-shadow-[0_1px_16px_rgba(120,160,255,0.15)]"></h1>
     </div>
   </section>
 
-  <!-- Toasts -->
+  <!-- toasts -->
   <div id="toastHost" class="fixed left-1/2 -translate-x-1/2 top-4 z-50 flex flex-col gap-2"></div>
 
-  <!-- Main layout -->
-  <main class="max-w-8xl mx-auto px-5 pb-8 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">
-    <!-- Composer -->
+  <!-- main two columns -->
+  <main class="max-w-9xl mx-auto px-5 pb-10 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">
+    <!-- left: composer -->
     <section class="bg-white/5 rounded-3xl p-5 shadow-lg ring-1 ring-white/10">
       <h2 id="ui-pulseTitle" class="font-semibold mb-3 text-lg md:text-xl">Pulse your mood</h2>
 
@@ -104,6 +133,7 @@
           <span class="text-sm text-white/70" id="ui-orClickMap">or click on the map</span>
           <button id="toggleCrosshair" class="text-xs px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 ml-auto">Crosshair ⌖</button>
         </div>
+
         <div id="chosenSpot" class="text-xs text-white/70">No spot selected yet.</div>
 
         <label class="flex items-center gap-2 text-sm text-white/85 select-none">
@@ -120,52 +150,53 @@
       </div>
     </section>
 
-    <!-- Map view controls (moved out of the map) -->
-    <section class="bg-white/5 rounded-3xl p-4 shadow-lg ring-1 ring-white/10">
-      <h3 class="font-semibold mb-3 text-base md:text-lg">Map view</h3>
-      <div class="mm-controls grid gap-3 sm:grid-cols-2">
-        <label class="flex items-center gap-2 text-sm">
-          <input type="checkbox" id="toggleConnections" class="accent-brand-500" />
-          <span id="ui-connectSimilar">Connect similar moods</span>
-        </label>
-
-        <div class="flex items-center gap-2 text-sm">
-          <span id="ui-radius">Radius</span>
-          <input id="radiusKm" type="range" min="10" max="500" value="120" class="flex-1" />
-          <span id="radiusValue" class="w-14 text-right">120km</span>
-        </div>
-
-        <div class="flex items-center gap-2 text-sm">
-          <span id="ui-window">Window</span>
-          <select id="windowHours" class="bg-night-700/70 border border-white/20 rounded-md px-2 py-1">
-            <option value="24" selected id="ui-24h">24h</option>
-            <option value="12" id="ui-12h">12h</option>
-            <option value="6"  id="ui-6h">6h</option>
-          </select>
-        </div>
-
-        <div class="flex items-center gap-3 text-sm">
-          <label class="flex items-center gap-2">
-            <input type="checkbox" id="toggleHeat" class="accent-brand-500" />
-            <span>Heatmap</span>
+    <!-- right: controls + map -->
+    <section class="space-y-4 lg:col-start-2">
+      <!-- controls -->
+      <div class="bg-white/5 rounded-3xl p-4 shadow-lg ring-1 ring-white/10">
+        <h3 class="font-semibold mb-3 text-base md:text-lg">Map view</h3>
+        <div class="mm-controls grid gap-3 sm:grid-cols-2">
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" id="toggleConnections" class="accent-brand-500" />
+            <span id="ui-connectSimilar">Connect similar moods</span>
           </label>
-          <label class="flex items-center gap-2">
-            <input type="checkbox" id="toggleCluster" class="accent-brand-500" />
-            <span>Cluster</span>
-          </label>
+
+          <div class="flex items-center gap-2 text-sm">
+            <span id="ui-radius">Radius</span>
+            <input id="radiusKm" type="range" min="10" max="500" value="120" class="flex-1" />
+            <span id="radiusValue" class="w-14 text-right">120km</span>
+          </div>
+
+          <div class="flex items-center gap-2 text-sm">
+            <span id="ui-window">Window</span>
+            <select id="windowHours" class="bg-night-700/70 border border-white/20 rounded-md px-2 py-1">
+              <option value="24" selected id="ui-24h">24h</option>
+              <option value="12" id="ui-12h">12h</option>
+              <option value="6"  id="ui-6h">6h</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-3 text-sm">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" id="toggleHeat" class="accent-brand-500" />
+              <span>Heatmap</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <input type="checkbox" id="toggleCluster" class="accent-brand-500" />
+              <span>Cluster</span>
+            </label>
+          </div>
         </div>
+        <p class="mt-2 text-xs text-white/50">Tip: lower the window to 6–12h to see fresher activity.</p>
       </div>
-      <p class="mt-2 text-xs text-white/50">Tip: lower the window to 6–12h to see fresher activity.</p>
-    </section>
 
-    <!-- Map -->
-    <section class="relative rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-lg">
-      <div id="map" class="h-[80vh] w-full"></div>
-
-      <!-- Crosshair overlay -->
-      <div id="crosshair" class="pointer-events-none hidden">
-        <div class="crosshair-vert"></div>
-        <div class="crosshair-horiz"></div>
+      <!-- map -->
+      <div class="relative rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-lg">
+        <div id="map" class="h-[80vh] w-full"></div>
+        <div id="crosshair" class="pointer-events-none hidden">
+          <div class="crosshair-vert"></div>
+          <div class="crosshair-horiz"></div>
+        </div>
       </div>
     </section>
   </main>
@@ -174,6 +205,59 @@
     Built by <strong>Mouaz Almjarkesh</strong>
   </footer>
 
+  <!-- App logic -->
   <script src="/app.js" type="module"></script>
+
+  <!-- Minimal inline script to render the modern hero phrase and handle language buttons -->
+  <script>
+    const phraseByLang = {
+      en: `The same moon looks down on all of us and knows our hidden feelings.
+On Micromoon those feelings become lights on a shared map,
+glowing for one day before they fade back into the night.`,
+      de: `Der gleiche Mond schaut auf uns alle hinab und kennt unsere verborgenen Gefühle.
+Auf Micromoon werden diese Gefühle zu Lichtern auf einer gemeinsamen Karte,
+sie leuchten einen Tag, bevor sie wieder in die Nacht zurückkehren.`,
+      es: `La misma luna nos mira a todos y conoce nuestros sentimientos ocultos.
+En Micromoon esos sentimientos se vuelven luces en un mapa compartido,
+brillan por un día antes de volver a la noche.`,
+      fr: `La même lune nous regarde et connaît nos sentiments cachés.
+Sur Micromoon ces sentiments deviennent des lumières sur une carte partagée,
+elles brillent une journée avant de retourner à la nuit.`,
+      ar: `القمر نفسه ينظر إلينا جميعًا ويعرف مشاعرنا الخفية.
+على Micromoon تصبح هذه المشاعر أضواءً على خريطة مشتركة،
+تتوهج ليوم واحد ثم تعود إلى الليل.`,
+      ru: `Одна и та же луна смотрит на всех нас и знает наши скрытые чувства.
+На Micromoon эти чувства становятся огнями на общей карте,
+они сияют один день, а затем возвращаются в ночь.`,
+      zh: `同一轮月亮注视着我们并了解我们隐藏的心情。
+在 Micromoon 上，这些感受会化作共享地图上的光点，
+只亮一天，随后回到夜色之中。`
+    };
+
+    function renderHeroPhrase(lang='en'){
+      const el = document.getElementById('deepPhrase');
+      if(!el) return;
+      const raw = phraseByLang[lang] || phraseByLang.en;
+      const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const highlighted = esc(raw).replaceAll(/Micromoon/g, '<span class="brand-gradient">Micromoon</span>');
+      const lines = highlighted.split('\n').map((ln,i)=>`<span class="line" style="--i:${i}">${ln.trim()}</span>`);
+      el.innerHTML = lines.join('');
+    }
+
+    // init language UI (non-intrusive: only for hero text)
+    const btns = Array.from(document.querySelectorAll('.lang-btn'));
+    let currentLang = 'en';
+    btns.forEach(b=>{
+      b.addEventListener('click', ()=>{
+        btns.forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        currentLang = b.dataset.lang || 'en';
+        renderHeroPhrase(currentLang);
+      });
+    });
+    // default state
+    document.querySelector('.lang-btn[data-lang="en"]')?.classList.add('active');
+    renderHeroPhrase('en');
+  </script>
 </body>
 </html>
