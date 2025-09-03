@@ -43,11 +43,17 @@
   <!-- Starfield canvas background -->
   <canvas id="stars" class="fixed inset-0 -z-10"></canvas>
 
-  <!-- Header phrase -->
+  <!-- Header phrase + language toggle -->
   <header class="w-full border-b border-white/10 bg-black/30 backdrop-blur sticky top-0 z-20">
     <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-      <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight">We all live under one sky. Sometimes, we feel the same.</h1>
-      <div class="text-sm text-white/70">Micromood — anonymous, 24-hour moods</div>
+      <h1 id="deepPhrase" class="text-xl sm:text-2xl font-extrabold tracking-tight"></h1>
+      <div class="flex items-center gap-3">
+        <div class="text-sm text-white/70" id="tagline"></div>
+        <div class="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
+          <button id="langEn" class="text-xs px-2 py-1 rounded hover:bg-white/10">EN</button>
+          <button id="langDe" class="text-xs px-2 py-1 rounded hover:bg-white/10">DE</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -56,45 +62,48 @@
 
     <!-- Composer panel -->
     <section class="bg-white/5 rounded-2xl p-4 shadow-lg ring-1 ring-white/10">
-      <h2 class="font-semibold mb-3">Pulse your mood</h2>
+      <h2 id="ui-pulseTitle" class="font-semibold mb-3"></h2>
 
       <div class="space-y-3">
         <!-- Mood picker -->
         <div>
-          <label class="block text-sm text-white/70 mb-1">How do you feel?</label>
+          <label id="ui-howFeel" class="block text-sm text-white/70 mb-1"></label>
           <div id="moodPicker" class="grid grid-cols-5 gap-2">
-            <button data-mood="-2" class="mood-btn">😢</button>
-            <button data-mood="-1" class="mood-btn">🙁</button>
-            <button data-mood="0"  class="mood-btn">😐</button>
-            <button data-mood="1"  class="mood-btn">🙂</button>
-            <button data-mood="2"  class="mood-btn">🤩</button>
+            <button data-mood="-2" class="mood-btn" aria-label="Very low">😢</button>
+            <button data-mood="-1" class="mood-btn" aria-label="Low">🙁</button>
+            <button data-mood="0"  class="mood-btn" aria-label="Neutral">😐</button>
+            <button data-mood="1"  class="mood-btn" aria-label="Good">🙂</button>
+            <button data-mood="2"  class="mood-btn" aria-label="Great">🤩</button>
           </div>
         </div>
 
         <!-- Note -->
         <div>
-          <label for="note" class="block text-sm text-white/70 mb-1">What’s happening? <span class="text-white/40">(optional, 280 chars)</span></label>
+          <label for="note" class="block text-sm text-white/70 mb-1">
+            <span id="ui-whatsHappening"></span>
+            <span class="text-white/40" id="ui-optional"></span>
+          </label>
           <textarea id="note" rows="3" maxlength="280" class="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none focus:ring-2 focus:ring-brand-500" placeholder="A few words you want to share…"></textarea>
         </div>
 
         <!-- Location controls -->
         <div class="flex items-center gap-2">
-          <button id="useMyLocation" class="px-3 py-2 rounded-xl bg-brand-500/80 hover:bg-brand-500 transition">Use my location</button>
-          <span class="text-sm text-white/60">or click on the map</span>
+          <button id="useMyLocation" class="px-3 py-2 rounded-xl bg-brand-500/80 hover:bg-brand-500 transition"></button>
+          <span class="text-sm text-white/60" id="ui-orClickMap"></span>
         </div>
         <div id="chosenSpot" class="text-xs text-white/60">No spot selected yet.</div>
 
         <!-- Consent & connect toggle for my dot -->
         <label class="flex items-center gap-2 text-sm text-white/80 select-none">
           <input type="checkbox" id="connectConsent" class="accent-brand-500" />
-          Allow others to connect my dot
+          <span id="ui-allowConnect"></span>
         </label>
 
         <!-- Submit -->
-        <button id="submitMood" class="w-full mt-2 px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-white/90 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>Pulse</button>
+        <button id="submitMood" class="w-full mt-2 px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-white/90 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled></button>
 
         <!-- Tiny info -->
-        <p class="text-xs text-white/50">Posts are anonymous and visible for 24 hours, then disappear.</p>
+        <p class="text-xs text-white/50" id="ui-postsInfo"></p>
       </div>
     </section>
 
@@ -103,19 +112,19 @@
       <div class="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur rounded-xl p-2 flex flex-wrap gap-2 items-center">
         <label class="flex items-center gap-2 text-xs">
           <input type="checkbox" id="toggleConnections" class="accent-brand-500" />
-          Connect similar moods
+          <span id="ui-connectSimilar"></span>
         </label>
         <label class="flex items-center gap-2 text-xs">
-          <span>Radius</span>
+          <span id="ui-radius"></span>
           <input id="radiusKm" type="range" min="10" max="500" value="120" />
           <span id="radiusValue" class="w-10 text-right">120km</span>
         </label>
         <label class="flex items-center gap-2 text-xs">
-          <span>Window</span>
+          <span id="ui-window"></span>
           <select id="windowHours" class="bg-black/30 border border-white/20 rounded-md px-2 py-1">
-            <option value="24" selected>24h</option>
-            <option value="12">12h</option>
-            <option value="6">6h</option>
+            <option value="24" selected id="ui-24h">24h</option>
+            <option value="12" id="ui-12h">12h</option>
+            <option value="6" id="ui-6h">6h</option>
           </select>
         </label>
       </div>
