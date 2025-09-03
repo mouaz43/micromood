@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CDN -->
+  <!-- Tailwind (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -20,9 +20,7 @@
           colors: {
             night: { 900:'#0a1224', 800:'#0f1b35', 700:'#152449' },
             brand: { 500: '#8e6e5a' },
-            mood: {
-              '-2': '#ef4444', '-1': '#f59e0b', '0': '#a3a3a3', '1': '#34d399', '2': '#60a5fa'
-            }
+            mood: { '-2':'#ef4444','-1':'#f59e0b','0':'#a3a3a3','1':'#34d399','2':'#60a5fa' }
           },
           maxWidth: { '8xl': '80rem' }
         }
@@ -49,11 +47,18 @@
 
   <!-- Minimal header: tagline + language -->
   <header class="w-full border-b border-white/10 bg-night-800/60 backdrop-blur sticky top-0 z-20">
-    <div class="max-w-8xl mx-auto px-5 py-3 flex items-center justify-between">
+    <div class="max-w-8xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
       <div class="text-sm text-white/75" id="tagline">Micromoon — anonymous, 24-hour moods</div>
-      <div class="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
-        <button id="langEn" class="text-xs px-2 py-1 rounded hover:bg-white/10">EN</button>
-        <button id="langDe" class="text-xs px-2 py-1 rounded hover:bg-white/10">DE</button>
+
+      <!-- Language bar -->
+      <div class="flex flex-wrap items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
+        <button data-lang="en" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">EN</button>
+        <button data-lang="de" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">DE</button>
+        <button data-lang="es" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">ES</button>
+        <button data-lang="fr" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">FR</button>
+        <button data-lang="ar" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">AR</button>
+        <button data-lang="ru" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">RU</button>
+        <button data-lang="zh" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">中文</button>
       </div>
     </div>
   </header>
@@ -62,7 +67,6 @@
   <section id="hero" class="relative">
     <div class="max-w-4xl mx-auto px-6 py-14 md:py-18 text-center">
       <h1 id="deepPhrase"
-          data-phrase="The same moon looks down on all of us and knows our hidden feelings. On Micromoon those feelings become lights on a shared map, glowing for one day before they fade back into the night."
           class="text-3xl md:text-5xl font-extrabold leading-tight tracking-tight text-white/95 drop-shadow-[0_1px_12px_rgba(100,140,255,0.15)]">
       </h1>
     </div>
