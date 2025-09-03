@@ -1,39 +1,39 @@
-// fraction: 0=new, 0.5=full, 1=back to new
-export function moonSVG(phaseFrac: number, tint: string) {
-  const f = Math.max(0, Math.min(1, phaseFrac));
-  // Crescent math: scale the “terminator” ellipse by phase
-  const k = Math.abs(0.5 - f) * 2; // 1-> new, 0-> full
-  const dir = f <= 0.5 ? 1 : -1;   // waxing vs waning
+export function moonSVG(phase: number, tint: string, size = 38) {
+  const s = Math.max(0, Math.min(1, phase));
+  const k = Math.abs(0.5 - s) * 2;
+  const dir = s <= 0.5 ? 1 : -1;
+  const r = size / 2;
+  const cx = r, cy = r;
+  const rx = r, ry = r * 0.98;
+  const ex = cx + dir * (r * 0.62 * (1 - k));
 
   return `
-<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <defs>
-    <radialGradient id="g" cx="30%" cy="30%">
+    <radialGradient id="lit" cx="32%" cy="26%">
       <stop offset="0%" stop-color="${tint}" stop-opacity="1"/>
-      <stop offset="100%" stop-color="${tint}" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="${tint}" stop-opacity=".28"/>
     </radialGradient>
-    <mask id="m">
-      <rect x="0" y="0" width="36" height="36" fill="white"/>
-      <ellipse cx="${18 + dir * (10 * (1-k))}" cy="18" rx="${18 * k}" ry="18" fill="black"/>
+    <filter id="soft">
+      <feGaussianBlur stdDeviation="${size*0.02}" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <mask id="term">
+      <rect x="0" y="0" width="${size}" height="${size}" fill="white"/>
+      <ellipse cx="${ex}" cy="${cy}" rx="${rx*k}" ry="${ry}" fill="black"/>
     </mask>
   </defs>
-  <circle cx="18" cy="18" r="16" fill="url(#g)" stroke="rgba(255,255,255,0.35)" />
-  <circle cx="18" cy="18" r="16" fill="black" mask="url(#m)"/>
+  <circle cx="${cx}" cy="${cy}" r="${r-1}" fill="url(#lit)" stroke="rgba(255,255,255,.35)" filter="url(#soft)"/>
+  <circle cx="${cx}" cy="${cy}" r="${r-1}" fill="#000" mask="url(#term)"/>
 </svg>`;
 }
 
-// map moods to tint + phase
-export function phaseForMood(mood: string, energy: number) {
-  // 0 new (low), 0.5 full (high)
-  const base = { HAPPY: .6, SAD: .1, STRESSED: .2, CALM: .4, ENERGIZED: .8, TIRED: .15 }[mood as any] ?? .3;
-  // nudge by energy
-  return Math.max(0, Math.min(1, base + (energy-3) * 0.06));
+export function phaseFor(mood: string, energy: number) {
+  const base = { HAPPY:.6, SAD:.08, STRESSED:.2, CALM:.4, ENERGIZED:.82, TIRED:.14 }[mood as any] ?? .3;
+  return Math.max(0, Math.min(1, base + (energy-3)*0.06));
 }
 
-export function energyTint(energy: number) {
-  // soft teal to bright cyan
-  const c = [
-    '#4a6b6b', '#3fa2a2', '#34c3c3', '#2fd9e5', '#29f0ff'
-  ];
-  return c[Math.max(1, Math.min(5, energy)) - 1];
+export function tintFor(energy: number) {
+  const c = ['#446f86','#1aa3be','#22c6e2','#22d9f0','#29f0ff'];
+  return c[Math.max(1, Math.min(5, energy))-1];
 }
