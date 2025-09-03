@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: micromood
+    env: node
+    plan: free
+    region: frankfurt
+    buildCommand: ""
+    startCommand: "node server.js"
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+    autoDeploy: true
+    healthCheckPath: "/health"
+databases:
+  - name: micromood-db
