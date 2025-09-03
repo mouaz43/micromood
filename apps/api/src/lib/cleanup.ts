@@ -1,13 +1,13 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma.js';
 
-export async function purgeExpired(prisma: PrismaClient) {
-  const n = await prisma.pulse.deleteMany({ where: { expiresAt: { lt: new Date() } } });
-  return n.count;
-}
-
-export function scheduleJanitor(prisma: PrismaClient) {
-  const everyMs = Number(process.env.CLEANUP_EVERY_MS ?? 5 * 60 * 1000);
-  setInterval(() => {
-    purgeExpired(prisma).catch(() => void 0);
-  }, everyMs);
+/**
+ * Deletes expired pulses (expiresAt < now).
+ * Safe to run on an interval.
+ */
+export async function runCleanup(): Promise<{ deleted: number }> {
+  const now = new Date();
+  const result = await prisma.moodPulse.deleteMany({
+    where: { expiresAt: { lt: now } },
+  });
+  return { deleted: result.count };
 }
