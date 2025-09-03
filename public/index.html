@@ -42,15 +42,13 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body class="min-h-screen bg-night-900 text-white font-[Inter]">
-  <!-- Star & nebula canvas background -->
+  <!-- Star & nebula canvas -->
   <canvas id="stars" class="fixed inset-0 -z-10"></canvas>
 
-  <!-- Minimal header: tagline + language -->
+  <!-- Header: tagline + language -->
   <header class="w-full border-b border-white/10 bg-night-800/60 backdrop-blur sticky top-0 z-20">
     <div class="max-w-8xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
       <div class="text-sm text-white/75" id="tagline">Micromoon — anonymous, 24-hour moods</div>
-
-      <!-- Language bar -->
       <div class="flex flex-wrap items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
         <button data-lang="en" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">EN</button>
         <button data-lang="de" class="lang-btn text-xs px-2 py-1 rounded hover:bg-white/10">DE</button>
@@ -75,7 +73,7 @@
   <!-- Toasts -->
   <div id="toastHost" class="fixed left-1/2 -translate-x-1/2 top-4 z-50 flex flex-col gap-2"></div>
 
-  <!-- Main -->
+  <!-- Main layout -->
   <main class="max-w-8xl mx-auto px-5 pb-8 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">
     <!-- Composer -->
     <section class="bg-white/5 rounded-3xl p-5 shadow-lg ring-1 ring-white/10">
@@ -122,35 +120,46 @@
       </div>
     </section>
 
-    <!-- Map -->
-    <section class="relative rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-lg">
-      <div class="absolute top-4 right-4 z-10 bg-night-800/70 backdrop-blur rounded-2xl px-3 py-2.5 flex flex-wrap gap-3 items-center">
-        <label class="flex items-center gap-2 text-xs">
+    <!-- Map view controls (moved out of the map) -->
+    <section class="bg-white/5 rounded-3xl p-4 shadow-lg ring-1 ring-white/10">
+      <h3 class="font-semibold mb-3 text-base md:text-lg">Map view</h3>
+      <div class="mm-controls grid gap-3 sm:grid-cols-2">
+        <label class="flex items-center gap-2 text-sm">
           <input type="checkbox" id="toggleConnections" class="accent-brand-500" />
           <span id="ui-connectSimilar">Connect similar moods</span>
         </label>
-        <label class="flex items-center gap-2 text-xs">
+
+        <div class="flex items-center gap-2 text-sm">
           <span id="ui-radius">Radius</span>
-          <input id="radiusKm" type="range" min="10" max="500" value="120" />
-          <span id="radiusValue" class="w-12 text-right">120km</span>
-        </label>
-        <label class="flex items-center gap-2 text-xs">
+          <input id="radiusKm" type="range" min="10" max="500" value="120" class="flex-1" />
+          <span id="radiusValue" class="w-14 text-right">120km</span>
+        </div>
+
+        <div class="flex items-center gap-2 text-sm">
           <span id="ui-window">Window</span>
           <select id="windowHours" class="bg-night-700/70 border border-white/20 rounded-md px-2 py-1">
             <option value="24" selected id="ui-24h">24h</option>
             <option value="12" id="ui-12h">12h</option>
-            <option value="6" id="ui-6h">6h</option>
+            <option value="6"  id="ui-6h">6h</option>
           </select>
-        </label>
-        <label class="flex items-center gap-2 text-xs">
-          <input type="checkbox" id="toggleHeat" class="accent-brand-500" />
-          <span>Heatmap</span>
-        </label>
-        <label class="flex items-center gap-2 text-xs">
-          <input type="checkbox" id="toggleCluster" class="accent-brand-500" />
-          <span>Cluster</span>
-        </label>
+        </div>
+
+        <div class="flex items-center gap-3 text-sm">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="toggleHeat" class="accent-brand-500" />
+            <span>Heatmap</span>
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="toggleCluster" class="accent-brand-500" />
+            <span>Cluster</span>
+          </label>
+        </div>
       </div>
+      <p class="mt-2 text-xs text-white/50">Tip: lower the window to 6–12h to see fresher activity.</p>
+    </section>
+
+    <!-- Map -->
+    <section class="relative rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-lg">
       <div id="map" class="h-[80vh] w-full"></div>
 
       <!-- Crosshair overlay -->
