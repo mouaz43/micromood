@@ -1,17 +1,16 @@
 services:
   - type: web
-    name: micromood
+    name: micromoon
     env: node
     plan: free
     region: frankfurt
-    buildCommand: ""
     startCommand: "node server.js"
     envVars:
       - key: DATABASE_URL
         sync: false
       - key: DATABASE_SSL
-        value: "true"
-    autoDeploy: true
+        value: "false"
     healthCheckPath: "/health"
+    autoDeploy: true
 databases:
-  - name: micromood-db
+  - name: micromoon-db
