@@ -38,7 +38,9 @@ const CONFIG = {
     '0':  { en: "Neutral",  de: "Neutral" },
     '1':  { en: "Good",     de: "Gut" },
     '2':  { en: "Great",    de: "Sehr gut" }
-  }
+  },
+  // Simple moderation list (extend as you wish)
+  badWords: ["fuck","shit","bitch","asshole"]
 };
 
 function getLang() {
@@ -51,7 +53,7 @@ function setLang(lang) {
 function t(obj) { return obj[getLang()] || obj['en']; }
 
 /* =========================
-   Starfield background w/ subtle color shift
+   Starfield background
 ========================= */
 const starCanvas = document.getElementById('stars');
 const ctx = starCanvas.getContext('2d');
@@ -104,13 +106,15 @@ const toggleConnections = document.getElementById('toggleConnections');
 const radiusKm = document.getElementById('radiusKm');
 const radiusValue = document.getElementById('radiusValue');
 const windowHours = document.getElementById('windowHours');
+const toggleHeat = document.getElementById('toggleHeat');
+const toggleCluster = document.getElementById('toggleCluster');
+const shareLinkBtn = document.getElementById('shareLink');
 
+// i18n header/labels
 const deepPhrase = document.getElementById('deepPhrase');
 const tagline = document.getElementById('tagline');
 const langEn = document.getElementById('langEn');
 const langDe = document.getElementById('langDe');
-
-// i18n-controlled labels
 const LBL = {
   pulseTitle: document.getElementById('ui-pulseTitle'),
   howFeel: document.getElementById('ui-howFeel'),
@@ -127,7 +131,6 @@ const LBL = {
   h6:  document.getElementById('ui-6h'),
 };
 
-// apply language to UI
 function applyLang() {
   deepPhrase.textContent = t(CONFIG.phrase);
   tagline.textContent = t(CONFIG.tagline);
@@ -152,10 +155,60 @@ langDe.addEventListener('click', () => setLang('de'));
 applyLang();
 
 /* =========================
+   Toast helper
+========================= */
+const toastHost = document.getElementById('toastHost');
+function toast(msg, ms=2500) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = msg;
+  toastHost.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity .3s ease, transform .3s ease';
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(-6px)';
+    setTimeout(() => el.remove(), 320);
+  }, ms);
+}
+
+/* =========================
+   Keyboard crosshair
+========================= */
+const crosshair = document.getElementById('crosshair');
+const toggleCrosshairBtn = document.getElementById('toggleCrosshair');
+let crosshairOn = false;
+toggleCrosshairBtn.addEventListener('click', () => {
+  crosshairOn = !crosshairOn;
+  crosshair.classList.toggle('hidden', !crosshairOn);
+  toast(crosshairOn ? 'Crosshair on: ↑ ↓ ← → to move, Enter to select' : 'Crosshair off');
+});
+
+window.addEventListener('keydown', (e) => {
+  if (!crosshairOn) return;
+  const step = (deg) => deg * (1 / Math.pow(2, map.getZoom())) * 10; // adaptive step
+  let center = map.getCenter();
+  if (e.key === 'ArrowUp')   { center.lat += step(0.2); }
+  if (e.key === 'ArrowDown') { center.lat -= step(0.2); }
+  if (e.key === 'ArrowLeft') { center.lng -= step(0.2); }
+  if (e.key === 'ArrowRight'){ center.lng += step(0.2); }
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+    e.preventDefault();
+    map.setView(center, map.getZoom(), { animate: false });
+  }
+  if (e.key === 'Enter') {
+    selectedPos = { lat: center.lat, lng: center.lng };
+    chosenSpot.textContent = `Selected: ${selectedPos.lat.toFixed(5)}, ${selectedPos.lng.toFixed(5)}`;
+    updateSubmitState();
+    toast('Spot selected at crosshair');
+  }
+});
+
+/* =========================
    Composer interactions
 ========================= */
 let selectedMood = null;
 let selectedPos = null; // { lat, lng }
+let submitCooldown = 0; // seconds
 
 moodPicker.addEventListener('click', (e) => {
   if (e.target.closest('button')) {
@@ -168,16 +221,15 @@ moodPicker.addEventListener('click', (e) => {
 });
 
 useMyLocation.addEventListener('click', () => {
-  if (!navigator.geolocation) return alert('Geolocation is not supported in your browser.');
+  if (!navigator.geolocation) return toast('Geolocation not supported');
   navigator.geolocation.getCurrentPosition((pos) => {
     const { latitude, longitude } = pos.coords;
     selectedPos = { lat: latitude, lng: longitude };
     map.setView([latitude, longitude], 13);
     chosenSpot.textContent = `Selected: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
     updateSubmitState();
-  }, (err) => {
-    alert('Could not get your location. You can also click anywhere on the map.');
-    console.warn(err);
+  }, () => {
+    toast('Could not get your location, click the map instead');
   });
 });
 
@@ -188,7 +240,7 @@ map.on('click', (e) => {
 });
 
 function updateSubmitState() {
-  submitMood.disabled = !(selectedMood !== null && selectedPos);
+  submitMood.disabled = !(selectedMood !== null && selectedPos) || submitCooldown > 0;
 }
 
 radiusKm.addEventListener('input', () => {
@@ -200,13 +252,54 @@ windowHours.addEventListener('change', () => {
 });
 toggleConnections.addEventListener('change', drawConnections);
 
+/* =========================
+   Moderation helpers
+========================= */
+const urlRe = /(https?:\/\/|www\.)\S+/i;
+const emailRe = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+function containsBadWords(text) {
+  const lower = text.toLowerCase();
+  return CONFIG.badWords.some(w => lower.includes(w));
+}
+
+/* =========================
+   Share link
+========================= */
+let lastPosted = null;
+shareLinkBtn.addEventListener('click', async () => {
+  if (!lastPosted) return;
+  const z = 13;
+  const url = new URL(window.location.href);
+  url.searchParams.set('center', `${lastPosted.lat.toFixed(5)},${lastPosted.lng.toFixed(5)}`);
+  url.searchParams.set('z', z.toString());
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    toast('Share link copied!');
+  } catch {
+    toast('Share link: ' + url.toString(), 4000);
+  }
+});
+
+/* =========================
+   Submit
+========================= */
 submitMood.addEventListener('click', async () => {
+  if (submitCooldown > 0) return;
+  const note = noteEl.value.trim().slice(0, 280);
+
+  if (urlRe.test(note) || emailRe.test(note)) {
+    return toast('Notes cannot include links or emails');
+  }
+  if (containsBadWords(note)) {
+    return toast('Please keep it kind ♥');
+  }
+
   submitMood.disabled = true;
   const payload = {
     lat: selectedPos.lat,
     lng: selectedPos.lng,
     mood: selectedMood,
-    text: noteEl.value.trim().slice(0, 280),
+    text: note,
     connectConsent: connectConsent.checked
   };
   try {
@@ -215,11 +308,27 @@ submitMood.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    if (res.status === 429) {
+      toast('You’re posting too fast. Try again later.');
+      return;
+    }
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || 'Failed');
+    lastPosted = json.data;
+    shareLinkBtn.disabled = false;
+
+    // Cooldown (10s) to prevent double spam
+    submitCooldown = 10;
+    const int = setInterval(() => {
+      submitCooldown--;
+      updateSubmitState();
+      if (submitCooldown <= 0) clearInterval(int);
+    }, 1000);
+
     noteEl.value = '';
+    toast('Mood sent ✨');
   } catch (e) {
-    alert('Could not post your mood. Please try again later.');
+    toast('Could not post your mood. Please try later.');
     console.error(e);
   } finally {
     updateSubmitState();
@@ -227,11 +336,20 @@ submitMood.addEventListener('click', async () => {
 });
 
 /* =========================
-   Markers & connections
+   Layers: markers, clusters, heat
 ========================= */
+let entries = []; // latest fetched within window
 const markersLayer = L.layerGroup().addTo(map);
 const connectionsLayer = L.layerGroup().addTo(map);
-let entries = []; // latest fetched within window
+const clusterLayer = L.markerClusterGroup({ disableClusteringAtZoom: 9 });
+let heatLayer = null;
+
+toggleHeat.addEventListener('change', () => {
+  refreshLayers();
+});
+toggleCluster.addEventListener('change', () => {
+  refreshLayers();
+});
 
 function colorForMood(m) {
   return {
@@ -245,43 +363,58 @@ function colorForMood(m) {
 function moodLabel(m) {
   return t(CONFIG.moodLabels[m.toString()]);
 }
-
-// opacity based on age within current window (fresh dots = bright, older = transparent)
 function opacityByAge(createdAt) {
   const hoursWindow = parseInt(windowHours.value, 10);
   const ageMs = Date.now() - new Date(createdAt).getTime();
   const windowMs = hoursWindow * 3600 * 1000;
   const ratio = Math.max(0, Math.min(1, ageMs / windowMs));
-  // newer => 0 => 0.85 opacity; older => 1 => 0.15 opacity
-  return 0.85 - 0.7 * ratio;
+  return 0.85 - 0.7 * ratio; // fresh -> 0.85, old -> 0.15
 }
 
-function addMarker(e) {
+function dotIcon(color, opacity) {
+  // Use currentColor for pulse halo
+  const el = document.createElement('div');
+  el.className = 'mm-dot';
+  el.style.background = color;
+  el.style.color = color;
+  el.style.opacity = opacity.toString();
+  return L.divIcon({ html: el, className: '', iconSize: [12,12] });
+}
+
+function addPointToLayers(e) {
   const c = colorForMood(e.mood);
-  const marker = L.circleMarker([e.lat, e.lng], {
-    radius: 6,
-    color: c,
-    weight: 1.5,
-    fillColor: c,
-    fillOpacity: opacityByAge(e.created_at),
-  }).addTo(markersLayer);
+  const op = opacityByAge(e.created_at);
 
-  const time = new Date(e.created_at);
-  const agoMin = Math.max(1, Math.round((Date.now() - time.getTime())/60000));
-  const noteSafe = (e.text || '').replace(/[<>]/g, '');
-  marker.bindPopup(
-    `<div style="min-width:180px">
-      <div style="font-weight:600; margin-bottom:4px">${moodLabel(e.mood)} mood</div>
-      <div style="opacity:.8;">${noteSafe || t(CONFIG.ui.noNote)}</div>
-      <div style="opacity:.6; margin-top:6px; font-size:12px">${agoMin} min ago</div>
-    </div>`
-  );
-  return marker;
+  const marker = L.marker([e.lat, e.lng], { icon: dotIcon(c, op) })
+    .bindPopup(() => {
+      const time = new Date(e.created_at);
+      const agoMin = Math.max(1, Math.round((Date.now() - time.getTime())/60000));
+      const safe = (e.text || '').replace(/[<>]/g, '');
+      return `<div style="min-width:180px">
+        <div style="font-weight:600; margin-bottom:4px">${moodLabel(e.mood)} mood</div>
+        <div style="opacity:.8;">${safe || t(CONFIG.ui.noNote)}</div>
+        <div style="opacity:.6; margin-top:6px; font-size:12px">${agoMin} min ago</div>
+      </div>`;
+    });
+
+  if (toggleCluster.checked) {
+    clusterLayer.addLayer(marker);
+  } else {
+    markersLayer.addLayer(marker);
+  }
 }
 
-function clearLayers() {
+function clearVisualLayers() {
   markersLayer.clearLayers();
   connectionsLayer.clearLayers();
+  clusterLayer.clearLayers();
+  if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+}
+
+function drawHeat() {
+  if (!toggleHeat.checked) return;
+  const points = entries.map(e => [e.lat, e.lng, 0.5 + (e.mood+2)*0.125]); // weight by mood
+  heatLayer = L.heatLayer(points, { radius: 18, blur: 30, maxZoom: 9, minOpacity: 0.2 }).addTo(map);
 }
 
 function haversineKm(a, b) {
@@ -300,7 +433,6 @@ function drawConnections() {
   if (!toggleConnections.checked) return;
   const R = parseInt(radiusKm.value, 10);
   const allowed = entries.filter(e => e.connect_consent);
-  // group by mood
   const byMood = allowed.reduce((acc, e) => { (acc[e.mood] ||= []).push(e); return acc; }, {});
   for (const m in byMood) {
     const group = byMood[m];
@@ -320,8 +452,17 @@ function drawConnections() {
   }
 }
 
+function refreshLayers() {
+  clearVisualLayers();
+  for (const e of entries) addPointToLayers(e);
+  if (toggleCluster.checked && !map.hasLayer(clusterLayer)) map.addLayer(clusterLayer);
+  if (!toggleCluster.checked && map.hasLayer(clusterLayer)) map.removeLayer(clusterLayer);
+  drawConnections();
+  drawHeat();
+}
+
 /* =========================
-   Data loading
+   Data loading + URL centering
 ========================= */
 async function fetchMoods() {
   try {
@@ -330,21 +471,36 @@ async function fetchMoods() {
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || 'Failed');
     entries = json.data;
-    clearLayers();
-    for (const e of entries) addMarker(e);
-    drawConnections();
+    refreshLayers();
   } catch (e) {
     console.error(e);
   }
 }
 
+function centerFromUrl() {
+  const url = new URL(window.location.href);
+  const c = url.searchParams.get('center');
+  const z = parseInt(url.searchParams.get('z') || '0', 10);
+  if (c) {
+    const [lat, lng] = c.split(',').map(Number);
+    if (isFinite(lat) && isFinite(lng)) {
+      map.setView([lat, lng], isFinite(z) && z>0 ? z : 13);
+    }
+  }
+}
+
 // initial load + refresh + live updates
+centerFromUrl();
 fetchMoods();
 setInterval(fetchMoods, 60 * 1000);
+
 socket.on('new_mood', (e) => {
   const sinceMs = parseInt(windowHours.value, 10) * 3600 * 1000;
   if (Date.now() - new Date(e.created_at).getTime() > sinceMs) return;
   entries.unshift(e);
-  addMarker(e);
+  addPointToLayers(e);
   drawConnections();
+  if (toggleHeat.checked && heatLayer) {
+    map.removeLayer(heatLayer); heatLayer = null; drawHeat();
+  }
 });
