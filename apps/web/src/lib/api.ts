@@ -1,34 +1,41 @@
-export type MoodIn = { mood: string; energy: number; text?: string; lat: number; lng: number; };
-export type MoodOut = {
-  id: number; mood: string; energy: number; text: string | null;
-  lat: number; lng: number; createdAt: string;
+const API = import.meta.env.VITE_API_BASE;
+
+export type Mood = 'HAPPY' | 'SAD' | 'STRESSED' | 'CALM' | 'ENERGIZED' | 'TIRED';
+
+export type Pulse = {
+  id: number | string;
+  lat: number;
+  lng: number;
+  mood: Mood;
+  energy: number;
+  text?: string | null;
+  createdAt: string;
 };
 
-const BASE = import.meta.env.VITE_API_BASE;
+export async function getRecentMoods(sinceMinutes = 720): Promise<Pulse[]> {
+  const r = await fetch(`${API}/moods?sinceMinutes=${sinceMinutes}`, { credentials: 'omit' });
+  if (!r.ok) throw new Error(`Fetch moods failed: ${r.status}`);
+  const j = await r.json();
+  return j.data as Pulse[];
+}
 
-async function j(r: Response) {
+export async function sendMood(p: {
+  lat: number; lng: number; mood: Mood; energy: number; text?: string;
+}): Promise<{ id: number | string; deleteToken: string }> {
+  const r = await fetch(`${API}/moods`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(p)
+  });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
 
-export async function getRecentMoods(sinceMinutes = 1440): Promise<MoodOut[]> {
-  const r = await fetch(`${BASE}/moods?sinceMinutes=${sinceMinutes}`);
-  const { data } = await j(r);
-  return data as MoodOut[];
-}
-
-export async function sendMood(m: MoodIn): Promise<{ id: number; deleteToken: string }> {
-  const r = await fetch(`${BASE}/moods`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(m),
+export async function deleteMood(id: number | string, token?: string, ownerPass?: string) {
+  const r = await fetch(`${API}/moods/${id}?${token ? `token=${encodeURIComponent(token)}` : ''}`, {
+    method: 'DELETE',
+    headers: ownerPass ? { 'x-owner-pass': ownerPass } : {}
   });
-  return j(r);
-}
-
-export async function deleteMood(id: number, token?: string, ownerCode?: string): Promise<void> {
-  const init: RequestInit = { method: "DELETE", headers: {} };
-  if (ownerCode) (init.headers as any)["x-owner-code"] = ownerCode;
-  const url = token ? `${BASE}/moods/${id}?token=${encodeURIComponent(token)}` : `${BASE}/moods/${id}`;
-  const r = await fetch(url, init);
-  await j(r);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
 }
