@@ -1,13 +1,16 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
+// datasource
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-enum Mood {
+// generator
+generator client {
+  provider = "prisma-client-js"
+}
+
+// IMPORTANT: rename the Prisma enum in code, but map it to the existing DB enum "Mood"
+enum AppMood {
   HAPPY
   SAD
   STRESSED
@@ -15,20 +18,20 @@ enum Mood {
   ENERGIZED
   TIRED
 
-  @@map("Mood") // tells Prisma to use the existing Postgres enum named "Mood"
+  @@map("Mood") // <-- DB enum already exists as "Mood"
 }
-model MoodPulse {
-  id          String   @id @default(cuid())
-  mood        Mood
-  energy      Int
-  text        String?  @db.VarChar(150)
+
+// IMPORTANT: map the model to the already existing table (likely named "Mood")
+model MoodEntry {
+  id          Int       @id @default(autoincrement()) // if yours is UUID, change to String @id @default(uuid())
   lat         Float
   lng         Float
-  city        String?
-  deleteToken String   @unique
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime
+  mood        AppMood
+  energy      Int
+  text        String?   @db.Text
+  deleteToken String?   @unique
+  createdAt   DateTime  @default(now())
 
   @@index([createdAt])
-  @@index([lat, lng])
+  @@map("Mood") // <-- existing table name
 }
