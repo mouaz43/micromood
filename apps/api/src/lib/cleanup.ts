@@ -1,9 +1,9 @@
-import { prisma } from './prisma.js';
+import { PrismaClient } from '@prisma/client';
 
-export async function cleanExpired() {
+export async function cleanupExpired(prisma: PrismaClient) {
   const now = new Date();
-  const { count } = await prisma.moodPulse.deleteMany({
-    where: { expiresAt: { lte: now } },
+  const result = await prisma.mood.deleteMany({
+    where: { expiresAt: { lt: now } }
   });
-  return count;
+  return result.count;
 }
