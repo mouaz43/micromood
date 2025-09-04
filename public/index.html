@@ -1,16 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!--
-    Micromoon — Deluxe Cosmic UI (mobile-polished)
-    Keeps every #id your app.js expects:
-      #stars #deepPhrase #tagline #moodPicker #note #useMyLocation #toggleCrosshair
-      #chosenSpot #connectConsent #submitMood #shareLink #ui-* #toggleConnections
-      #windowHours #radiusKm #radiusValue #toggleHeat #toggleCluster #crosshair #map
-      #toastHost .lang-btn[data-lang] #moonBadge #moonLabel #toggleMotion #spark #liveCount
-  -->
+  <!-- Micromoon — Deluxe Cosmic UI (mobile-polished, logo-safe) -->
   <meta charset="utf-8" />
-  <!-- Mobile-safe viewport (iOS notch support) -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Micromoon — anonymous, 24-hour moods</title>
 
@@ -82,7 +74,6 @@
       100%{ transform: translate3d(1%, 2%, 0) scale(1.03); opacity:.95 }
     }
 
-    /* Constellation overlay (thin lines) */
     .constellations{
       position:fixed; inset:0; pointer-events:none; z-index:0;
       opacity:.22; mix-blend-mode:screen;
@@ -96,26 +87,23 @@
     }
 
     /* ----------------------------- Logo (animated SVG) */
-    .logo{
-      display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--ink);
-    }
-    .logo svg{ width:44px; height:44px; filter:drop-shadow(0 6px 24px rgba(150,200,255,.3)); }
+    .logo{ display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--ink); }
+    .logo svg{ width:44px; height:44px; filter:drop-shadow(0 6px 24px rgba(150,200,255,.3)); flex:0 0 auto; }
     .logo .word{
       font-weight:900; letter-spacing:.4px; font-size:22px;
       background: linear-gradient(90deg, #d0e1ff, #8ec5ff 35%, #d0e1ff 70%);
       -webkit-background-clip:text; background-clip:text; color:transparent;
       animation: shimmer 6s linear infinite; background-size:200% 100%;
+      white-space:nowrap;
     }
     @keyframes shimmer { 0%{ background-position:200% 0 } 100%{ background-position:-200% 0 } }
 
     /* ----------------------------- Top controls (lang, phase, motion) */
-    .top-controls{
-      display:flex; align-items:center; gap:12px; margin-left:auto;
-    }
+    .top-controls{ display:flex; align-items:center; gap:12px; margin-left:auto; }
     .badge{
       display:flex; align-items:center; gap:8px; font-size:12px; padding:8px 12px;
       background:var(--glass); backdrop-filter: blur(8px); border:1px solid var(--line);
-      border-radius:12px;
+      border-radius:12px; flex:0 0 auto;
     }
     .langbar{
       background:var(--glass); border:1px solid var(--line); border-radius:14px;
@@ -124,7 +112,7 @@
     .lang-btn{
       border:0; padding:6px 10px; border-radius:10px; color:var(--ink);
       background:transparent; cursor:pointer; font-weight:700; font-size:12px; opacity:.85;
-      transition: all .2s ease;
+      transition: all .2s ease; white-space:nowrap;
     }
     .lang-btn:hover{ opacity:1; background:rgba(255,255,255,.12) }
     .lang-btn.active{ background:rgba(255,255,255,.18); opacity:1; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
@@ -165,11 +153,7 @@
       animation: shimmer 5.5s linear infinite; background-size:200% 100%;
     }
 
-    .hero-right{
-      display:grid; gap:14px;
-      grid-template-rows: auto 1fr;
-    }
-
+    .hero-right{ display:grid; gap:14px; grid-template-rows: auto 1fr; }
     .hero-stats{
       background:linear-gradient(180deg, var(--glass-2), rgba(255,255,255,.05));
       border:1px solid var(--line); border-radius:22px; box-shadow: var(--shadow);
@@ -178,9 +162,7 @@
     .stat{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px }
     #spark{ width:140px; height:28px; display:block }
 
-    .legend{
-      display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:13px; color:var(--muted);
-    }
+    .legend{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:13px; color:var(--muted); }
     .legend .pill{ display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:var(--glass); border:1px solid var(--line) }
     .pill .dot{ width:10px; height:10px; border-radius:999px; display:inline-block }
     .d-neg2{ background:#8ebeff } .d-neg1{ background:#b5ccff } .d-0{ background:#dee7ff } .d-pos1{ background:#9bffdb } .d-pos2{ background:#67ffb0 }
@@ -243,50 +225,50 @@
     .reduce-motion .parallax-sky,
     .reduce-motion .constellations{ animation:none }
 
-    /* ----------------------------- Mobile polish (safe) */
-    /* Prevent any background from causing horizontal overflow on iOS */
-    .parallax-sky, .constellations, #stars {
-      left: 0; right: 0; top: 0; bottom: 0; width: 100vw; height: 100vh;
-    }
-    html, body { width: 100%; overflow-x: hidden; }
-    * { min-width: 0; } /* allow flex children to shrink */
+    /* ----------------------------- Mobile polish */
+    .parallax-sky, .constellations, #stars { left:0; right:0; top:0; bottom:0; width:100vw; height:100vh; }
+    html, body { width:100%; overflow-x:hidden; }
+    * { min-width:0; }
 
-    /* Safe-area insets for iPhones with notch */
-    :root {
-      --safe-l: env(safe-area-inset-left, 0px);
-      --safe-r: env(safe-area-inset-right, 0px);
-    }
+    :root { --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px); }
 
-    /* Tablet & narrow screens */
+    /* Tablet & narrow */
     @media (max-width: 980px) {
-      .container { max-width: 100%; padding-left: max(18px, var(--safe-l)); padding-right: max(18px, var(--safe-r)); }
-      header { gap: 10px; }
-      .top-controls { flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
-      .langbar { flex: 1 1 100%; justify-content: space-between; }
-      .hero { grid-template-columns: 1fr; gap: 16px; }
-      .grid { grid-template-columns: 1fr; gap: 16px; }
-      #map { height: 480px; }
+      .container { max-width:100%; padding-left:max(18px, var(--safe-l)); padding-right:max(18px, var(--safe-r)); }
+      header { gap:10px; flex-wrap:wrap; }           /* wrap header rows */
+      .logo { flex:1 1 100%; }                       /* logo gets its own full row */
+      .top-controls { flex-wrap:wrap; gap:10px; justify-content:flex-start; }
+      .langbar { flex:1 1 100%; justify-content:space-between; }
+      .hero { grid-template-columns:1fr; gap:16px; }
+      .grid { grid-template-columns:1fr; gap:16px; }
+      #map { height:480px; }
     }
 
     /* Phones */
     @media (max-width: 640px) {
-      .container { padding-left: max(14px, var(--safe-l)); padding-right: max(14px, var(--safe-r)); }
-      .langbar { width: 100%; padding: 6px; }
-      .lang-btn { padding: 6px 8px; font-size: 12px; }
-      .badge { flex: 0 1 auto; }
-      #tagline { font-size: 12px; }
-      #deepPhrase { font-size: clamp(22px, 7.5vw, 38px); line-height: 1.12; }
-      .card { padding: 16px; border-radius: 16px; }
-      .hero-right, .hero-stats { gap: 10px; }
-      .legend { gap: 8px; }
-      #map { height: 420px; }
+      .container { padding-left:max(14px, var(--safe-l)); padding-right:max(14px, var(--safe-r)); }
+      .logo { margin-bottom:6px; align-items:center; }
+      .logo svg { width:36px; height:36px; }        /* smaller moon icon */
+      .logo .word { font-size:20px; letter-spacing:.3px; } /* smaller wordmark */
+      .top-controls { width:100%; gap:8px; }        /* controls on second row, full width */
+      .langbar { width:100%; padding:6px; }
+      .lang-btn { padding:6px 8px; font-size:12px; }
+      .badge { flex:0 1 auto; }
+      #tagline { font-size:12px; }
+      #deepPhrase { font-size:clamp(22px, 7.5vw, 38px); line-height:1.12; }
+      .card { padding:16px; border-radius:16px; }
+      .hero-right, .hero-stats { gap:10px; }
+      .legend { gap:8px; }
+      #map { height:420px; }
     }
 
-    /* Ultra small phones */
+    /* Very small phones */
     @media (max-width: 380px) {
-      .langbar { gap: 2px; }
-      .lang-btn { padding: 5px 6px; font-size: 11px; }
-      #deepPhrase { font-size: clamp(20px, 8.2vw, 34px); }
+      .langbar { gap:2px; }
+      .lang-btn { padding:5px 6px; font-size:11px; }
+      .logo svg { width:32px; height:32px; }
+      .logo .word { font-size:18px; }
+      #deepPhrase { font-size:clamp(20px, 8.2vw, 34px); }
     }
   </style>
 </head>
@@ -295,7 +277,6 @@
   <canvas id="stars"></canvas>
   <div class="parallax-sky" aria-hidden="true"></div>
   <div class="constellations" aria-hidden="true">
-    <!-- minimalist constellation strokes -->
     <svg viewBox="0 0 100 100" preserveAspectRatio="none">
       <g stroke="rgba(182,211,255,.24)" stroke-width=".15" fill="none">
         <path d="M5 20 L15 35 L32 28 L48 45 L60 40 L72 55 L85 42" />
@@ -312,7 +293,6 @@
     <!-- Header -->
     <header>
       <a class="logo" href="/" aria-label="Micromoon home">
-        <!-- Animated crescent logo -->
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="crescent moon">
           <defs>
             <radialGradient id="g1" cx="40%" cy="40%">
@@ -371,7 +351,6 @@
 
     <!-- Panels -->
     <section class="grid">
-      <!-- Composer -->
       <div class="card composer" aria-labelledby="ui-pulseTitle">
         <h3 id="ui-pulseTitle">Pulse your mood</h3>
         <p id="ui-howFeel" class="muted">How do you feel?</p>
@@ -407,7 +386,6 @@
         <p class="muted" id="ui-postsInfo" style="margin-top:10px;">Posts are anonymous and visible for 24 hours, then disappear.</p>
       </div>
 
-      <!-- Map Controls -->
       <div class="card">
         <h3>Map view</h3>
 
@@ -432,41 +410,29 @@
             <span id="radiusValue">120km</span>
           </div>
 
-        <label style="display:flex; gap:8px; align-items:center;">
-          <input type="checkbox" id="toggleHeat" /> Heatmap
-        </label>
-        <label style="display:flex; gap:8px; align-items:center;">
-          <input type="checkbox" id="toggleCluster" checked /> Cluster
-        </label>
+          <label style="display:flex; gap:8px; align-items:center;">
+            <input type="checkbox" id="toggleHeat" /> Heatmap
+          </label>
+          <label style="display:flex; gap:8px; align-items:center;">
+            <input type="checkbox" id="toggleCluster" checked /> Cluster
+          </label>
         </div>
 
         <p class="muted" style="margin-top:10px;">Tip: lower the window to 6–12h to see fresher activity.</p>
 
-        <!-- Decorative mini-about in controls card -->
         <div class="info-grid">
-          <div class="info-card">
-            <h4>Anonymous</h4>
-            <p>No login. Just the sky, a dot, and a feeling.</p>
-          </div>
-          <div class="info-card">
-            <h4>Ephemeral</h4>
-            <p>Dots glow for 24 hours then fade into the night.</p>
-          </div>
-          <div class="info-card">
-            <h4>Connection</h4>
-            <p>Turn on “connect similar” to see lines between nearby moods.</p>
-          </div>
+          <div class="info-card"><h4>Anonymous</h4><p>No login. Just the sky, a dot, and a feeling.</p></div>
+          <div class="info-card"><h4>Ephemeral</h4><p>Dots glow for 24 hours then fade into the night.</p></div>
+          <div class="info-card"><h4>Connection</h4><p>Turn on “connect similar” to see lines between nearby moods.</p></div>
         </div>
       </div>
     </section>
 
-    <!-- Map Card -->
     <section class="card" style="margin-top:20px; position:relative;">
       <div id="crosshair" class="hidden" aria-hidden="true"></div>
       <div id="map"></div>
     </section>
 
-    <!-- Expanded Info / Story / FAQ -->
     <section class="info-grid" style="margin-top:20px;">
       <div class="info-card">
         <h4>Why Micromoon?</h4>
@@ -494,40 +460,23 @@
       </div>
     </section>
 
-    <!-- FAQ block -->
     <section class="card" style="margin-top:20px;">
       <h3>FAQ</h3>
-      <details open>
-        <summary>Do I need an account?</summary>
-        <p>No. You post as a guest. We only store your mood, optional note, coordinates, and time.</p>
-      </details>
-      <details>
-        <summary>How long do posts stay?</summary>
-        <p>For 24 hours on the map. Then they disappear, like a passing cloud.</p>
-      </details>
-      <details>
-        <summary>Can people see exactly where I am?</summary>
-        <p>Your dot shows the location you choose. If you prefer, click somewhere nearby instead of your exact spot.</p>
-      </details>
-      <details>
-        <summary>Who made this?</summary>
-        <p>Built by <strong>Mouaz Almjarkesh</strong>. Designed for quiet connection under a shared sky.</p>
-      </details>
+      <details open><summary>Do I need an account?</summary><p>No. You post as a guest. We only store your mood, optional note, coordinates, and time.</p></details>
+      <details><summary>How long do posts stay?</summary><p>For 24 hours on the map. Then they disappear, like a passing cloud.</p></details>
+      <details><summary>Can people see exactly where I am?</summary><p>Your dot shows the location you choose. If you prefer, click somewhere nearby instead of your exact spot.</p></details>
+      <details><summary>Who made this?</summary><p>Built by <strong>Mouaz Almjarkesh</strong>. Designed for quiet connection under a shared sky.</p></details>
     </section>
 
-    <!-- Footer -->
     <footer>
       <div class="credits">© <span id="year"></span> <strong>Micromoon</strong>. Built by <strong>Mouaz Almjarkesh</strong>.</div>
       <div class="credits">Under the same sky.</div>
     </footer>
   </div>
 
-  <!-- Toast host -->
   <div id="toastHost"></div>
 
-  <!-- App logic (front-end only; backend unchanged) -->
   <script>
-    // keep copyright current
     document.getElementById('year').textContent = new Date().getFullYear();
   </script>
   <script src="/app.js"></script>
