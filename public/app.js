@@ -1,10 +1,10 @@
 /* =========================================================================
-   Micromoon — Front-end Map Logic (drop-in)
-   - Mobile taps on markers (canvas renderer + big invisible hit stroke + touchend)
-   - Owner-only delete (local ownerKey + owned IDs; X-Owner header fallback)
-   - Same-mood connections with consent (Haversine + radius)
-   - Heatmap + clusters; i18n; sparkline; crosshair; periodic refresh
-   - Layout equalization for control cards
+   Micromoon — Front-end Map Logic (mobile popup + owner delete fixed)
+   - Reliable popups on touch (touchend + pointerup + small delay)
+   - Popups always panned fully into view (autoPan + padding)
+   - Marker z-order above overlays; cluster spiderfy behavior tuned
+   - Owner-only delete uses string IDs consistently; X-Owner header
+   - Same-mood connections, heatmap, i18n, sparkline, refresh, layout equalize
    - NO HTML changes
    ======================================================================== */
 
@@ -20,6 +20,7 @@ const kmBetween = (A, B) => {
 const esc = (s='') => s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const debounce = (fn, d=120)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),d); }; };
+const asId = v => String(v ?? '');   // normalize ids (string-safe)
 
 /* ---------------- DOM refs ---------------- */
 const deepPhrase = $('#deepPhrase');
@@ -202,7 +203,7 @@ toggleMotion?.addEventListener('change', ()=>document.body.classList.toggle('red
 
 /* ---------------- mobile detection & renderer ---------------- */
 const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-const HIT_STROKE = IS_TOUCH ? 36 : 18; // big invisible stroke for easy taps
+const HIT_STROKE = IS_TOUCH ? 36 : 18; // invisible stroke width for easy taps
 const DOT_RADIUS = IS_TOUCH ? 11 : 8;
 const touchRenderer = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ tolerance: IS_TOUCH ? 12 : 6, padding: 0.25 }) : undefined;
 const lineRenderer  = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ padding: 0.25 }) : undefined;
@@ -211,8 +212,8 @@ const lineRenderer  = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ paddin
 let map, clusterLayer, heatLayer, lineLayer;
 let pulses = [];
 const markers = new Map();
-const hidden  = new Set(JSON.parse(localStorage.getItem('mmHidden')   || '[]'));
-const owned   = new Set(JSON.parse(localStorage.getItem('mmOwnedIds') || '[]'));
+const hidden  = new Set(JSON.parse(localStorage.getItem('mmHidden')   || '[]').map(asId));
+const owned   = new Set(JSON.parse(localStorage.getItem('mmOwnedIds') || '[]').map(asId));
 let ownerKey  = localStorage.getItem('mmOwnerKey') || (crypto?.randomUUID?.() || String(Math.random()));
 localStorage.setItem('mmOwnerKey', ownerKey);
 
@@ -226,10 +227,13 @@ localStorage.setItem('mmOwnerKey', ownerKey);
   map.setView([20, 0], 2);
 
   clusterLayer = L.markerClusterGroup({
-    showCoverageOnHover:false, chunkedLoading:true,
-    maxClusterRadius: IS_TOUCH ? 70 : 50, spiderfyOnMaxZoom:true, spiderfyOnEveryZoom:true, disableClusteringAtZoom:17
+    showCoverageOnHover:false, chunkedLoading:true, zoomToBoundsOnClick:false,
+    maxClusterRadius: IS_TOUCH ? 70 : 50,
+    spiderfyOnMaxZoom:true, spiderfyOnEveryZoom:true, disableClusteringAtZoom:17
   });
   clusterLayer.on('clusterclick', a=>a.layer.spiderfy());
+  // When spiderfied, ensure taps open popups
+  clusterLayer.on('spiderfied', () => setTimeout(()=>map.closePopup(), 0));
   map.addLayer(clusterLayer);
 
   lineLayer = L.layerGroup().addTo(map);
@@ -238,6 +242,12 @@ localStorage.setItem('mmOwnerKey', ownerKey);
     selectedSpot = { lat: e.latlng.lat, lng: e.latlng.lng };
     chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`;
     submitMood.disabled = (selectedMood === null);
+  });
+
+  // Keep popups inside the visible map (important on mobile + overflow clips)
+  map.on('popupopen', e=>{
+    try { map.panInside(e.popup.getLatLng(), { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); }
+    catch{}
   });
 })();
 
@@ -291,10 +301,7 @@ function equalizeCards(){
   left.style.height = 'auto'; right.style.height = 'auto';
   const h = Math.max(left.offsetHeight, right.offsetHeight);
   left.style.height = right.style.height = h + 'px';
-  if(mapEl){
-    mapEl.style.marginTop = '16px';
-    mapEl.style.display = 'block';
-  }
+  if(mapEl){ mapEl.style.marginTop = '16px'; mapEl.style.display = 'block'; }
 }
 note && (note.style.width = '100%');
 const eqNow = ()=>requestAnimationFrame(equalizeCards);
@@ -308,7 +315,7 @@ async function refreshPulses(){
     const res = await fetch(`/api/pulses?windowHours=${hours}`);
     if(!res.ok) throw new Error(`GET /api/pulses ${res.status}`);
     const arr = await res.json();
-    pulses = (Array.isArray(arr) ? arr : []).filter(p => !hidden.has(p.id));
+    pulses = (Array.isArray(arr) ? arr : []).filter(p => !hidden.has(asId(p.id)));
     renderPulses();
   }catch(e){ console.error(e); toast(I18N[LANG].loadFail); }
 }
@@ -319,32 +326,52 @@ function renderPulses(){
   markers.clear();
 
   for(const p of pulses){
-    // BIGGER TOUCH HITBOX: large invisible stroke; visual is controlled by fill
+    const pid = asId(p.id);
     const marker = L.circleMarker([p.lat, p.lng], {
       radius: DOT_RADIUS,
       color: 'rgba(255,255,255,.22)',
-      weight: HIT_STROKE,      // large stroke for hit testing
-      opacity: 0,              // invisible stroke (keeps look clean)
+      weight: HIT_STROKE,         // big invisible stroke used for hit testing
+      opacity: 0,                 // keep stroke invisible
       fillColor: moodColor(p.mood),
-      fillOpacity: .95,
+      fillOpacity: .96,
       renderer: touchRenderer,
       bubblingMouseEvents:false,
       keyboard:true
     });
 
-    marker.bindPopup(popupHTML(p), { autoPan:true, closeButton:true, autoClose:false, keepInView:true });
-    marker.on('click', () => marker.openPopup());
-    marker.on('keypress', (e)=>{ if (e.originalEvent?.key === 'Enter') marker.openPopup(); });
+    // Ensure marker sits above heat/lines
+    marker.setZIndexOffset(1000);
 
-    // Reliable mobile open: use touchend to avoid map click swallowing
-    marker.on('touchend', ev=>{
-      ev.originalEvent?.preventDefault?.();
-      ev.originalEvent?.stopPropagation?.();
-      marker.openPopup();
-    });
+    const popupOpts = {
+      autoPan: true,
+      autoClose: false,
+      closeButton: true,
+      keepInView: true,
+      maxWidth: 260,
+      autoPanPaddingTopLeft: [30,50],
+      autoPanPaddingBottomRight: [30,50],
+      className: 'mm-popup'
+    };
+    marker.bindPopup(popupHTML(p), popupOpts);
 
-    marker.on('popupopen', ()=>attachPopupHandlers(p.id));
-    markers.set(p.id, marker);
+    // Reliable open on all inputs
+    const open = ()=>{ try{
+      // Delay a frame so cluster/touch handlers settle
+      requestAnimationFrame(()=>{
+        marker.openPopup();
+        // Extra safety: bring into view
+        try{ map.panInside(marker.getLatLng(), { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); }catch{}
+      });
+    }catch{} };
+
+    marker.on('click', open);
+    marker.on('keypress', (e)=>{ if (e.originalEvent?.key === 'Enter') open(); });
+    marker.on('touchend', ev=>{ ev.originalEvent?.preventDefault?.(); ev.originalEvent?.stopPropagation?.(); open(); });
+    marker.on('pointerup', open);
+
+    marker.on('popupopen', (ev)=>attachPopupHandlers(ev.popup, pid));
+
+    markers.set(pid, marker);
     clusterLayer.addLayer(marker);
   }
 
@@ -424,16 +451,14 @@ async function postPulse(){
     const res = await fetch('/api/pulses', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     if(!res.ok) throw new Error(`POST /api/pulses ${res.status}`);
     const created = await res.json();
-    if (created?.id != null) {
-      owned.add(created.id);
-      localStorage.setItem('mmOwnedIds', JSON.stringify([...owned]));
-      pulses.unshift(created);
-      renderPulses();
-      shareLinkBtn && (shareLinkBtn.disabled=false);
-      toast(I18N[LANG].pulsed);
-    } else {
-      throw new Error('No id in response');
-    }
+    const cid = asId(created?.id);
+    if (!cid) throw new Error('No id in response');
+    owned.add(cid);
+    localStorage.setItem('mmOwnedIds', JSON.stringify([...owned]));
+    toast(I18N[LANG].pulsed);
+    pulses.unshift(created);
+    renderPulses();
+    shareLinkBtn && (shareLinkBtn.disabled=false);
   }catch(e){ console.error(e); toast(I18N[LANG].postFail); }
   finally{ submitMood.disabled=false; }
 }
@@ -442,37 +467,43 @@ function popupHTML(p){
   const T = I18N[LANG];
   const name = ({'-2':T.veryLow,'-1':T.low,'0':T.neutral,'1':T.good,'2':T.great})[String(p.mood)] || 'mood';
   const noteHtml = p.note ? `<div style="margin-top:6px;color:#cfe3ff">${esc(p.note)}</div>` : '';
-  const delBtn = owned.has(p.id)
-    ? `<button class="mm-del" data-id="${esc(String(p.id))}"
+  const delBtn = owned.has(asId(p.id))
+    ? `<button class="mm-del" data-id="${esc(asId(p.id))}"
          style="padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
                 background:#2a3f66;color:#fff;cursor:pointer;">${esc(T.del)}</button>`
     : '';
-  return `<div style="min-width:180px"><div style="font-weight:800">${esc(name)}</div>${noteHtml}<div style="display:flex;gap:8px;margin-top:10px;">${delBtn}</div></div>`;
+  return `<div style="min-width:200px">
+            <div style="font-weight:800">${esc(name)}</div>
+            ${noteHtml}
+            <div style="display:flex;gap:8px;margin-top:10px;">${delBtn}</div>
+          </div>`;
 }
 
-function attachPopupHandlers(id){
-  const btn = document.body.querySelector(`.mm-del[data-id="${CSS.escape(String(id))}"]`);
-  if (btn) btn.onclick = ()=>deletePulse(id);
+function attachPopupHandlers(popup, idStr){
+  const root = popup?.getElement ? popup.getElement() : popup?._container;
+  if (!root) return;
+  const btn = root.querySelector(`.mm-del[data-id="${CSS.escape(idStr)}"]`);
+  if (btn) btn.onclick = ()=>deletePulse(idStr);
 }
 
-async function deletePulse(id){
-  if (!owned.has(id)) return;
+async function deletePulse(idStr){
+  if (!owned.has(idStr)) return;
   try{
-    const res = await fetch(`/api/pulses/${encodeURIComponent(id)}`, { method:'DELETE', headers:{ 'X-Owner': ownerKey } });
-    if (res.ok){ removePulse(id); return toast(I18N[LANG].delOK); }
+    const res = await fetch(`/api/pulses/${encodeURIComponent(idStr)}`, { method:'DELETE', headers:{ 'X-Owner': ownerKey } });
+    if (res.ok){ removePulse(idStr); return toast(I18N[LANG].delOK); }
     throw new Error(`DELETE ${res.status}`);
   }catch(e){
-    // If backend doesn't support delete, hide locally so the user experience is consistent
-    hidden.add(id); localStorage.setItem('mmHidden', JSON.stringify([...hidden]));
-    removePulse(id); toast(I18N[LANG].hidden);
+    hidden.add(idStr); localStorage.setItem('mmHidden', JSON.stringify([...hidden]));
+    removePulse(idStr); toast(I18N[LANG].hidden);
   }
 }
 
-function removePulse(id){
-  const m = markers.get(id); if (m){ clusterLayer.removeLayer(m); markers.delete(id); }
-  pulses = pulses.filter(p=>p.id!==id);
+function removePulse(idStr){
+  const m = markers.get(idStr); if (m){ clusterLayer.removeLayer(m); markers.delete(idStr); }
+  pulses = pulses.filter(p=>asId(p.id)!==idStr);
   buildConnections(); updateHeat();
   liveCount.textContent = `Now: ${pulses.length} pulses`;
+  map.closePopup();
 }
 
 /* ---------------- share ---------------- */
