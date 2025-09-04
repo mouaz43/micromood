@@ -1,8 +1,8 @@
 /* =========================================================================
-   Micromoon — Front-end Map Logic (READ DOTS RELIABLY)
-   - Popups now open even when the dot is inside a cluster (zoomToShowLayer)
-   - Auto-pan popups into view; nearest-dot tap on map for mobile
-   - Connections keep numeric compare; owner-only delete preserved
+   Micromoon — Front-end Map Logic (POPUPS FIXED)
+   - Popups open even when dots are clustered (zoomToShowLayer ➜ root popup)
+   - Wider mobile tap tolerance + nearest-dot open on map tap
+   - Owner-only delete, connections, heatmap, i18n kept intact
    ======================================================================== */
 
 /* ---------------- helpers ---------------- */
@@ -77,7 +77,7 @@ function toast(txt, ms=2400){
   setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(-6px)'; setTimeout(()=>el.remove(),250); }, ms);
 }
 
-/* ---------------- i18n (same content as before) ---------------- */
+/* ---------------- i18n ---------------- */
 const I18N = {
   en:{ phrase:[
       'The same moon looks down on all of us and knows our hidden feelings.',
@@ -191,8 +191,9 @@ toggleMotion?.addEventListener('change', ()=>document.body.classList.toggle('red
 
 /* ---------------- mobile detection & renderers ---------------- */
 const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-const DOT_RADIUS = IS_TOUCH ? 11 : 8;
-const touchRenderer = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ tolerance: IS_TOUCH ? 12 : 6, padding: 0.25 }) : undefined;
+const DOT_RADIUS = IS_TOUCH ? 12 : 8;
+const TAP_TOL = IS_TOUCH ? 46 : 26;            // wider mobile tolerance
+const touchRenderer = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ tolerance: IS_TOUCH ? 14 : 6, padding: 0.25 }) : undefined;
 const lineRenderer  = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ padding: 0.25 }) : undefined;
 
 /* ---------------- map setup ---------------- */
@@ -208,7 +209,7 @@ localStorage.setItem('mmOwnerKey', ownerKey);
 (function initMap(){
   map = L.map('map', {
     zoomControl:true, minZoom:2, worldCopyJump:true, attributionControl:true,
-    preferCanvas:true, tap: IS_TOUCH, tapTolerance: IS_TOUCH ? 25 : 15,
+    preferCanvas:true, tap: IS_TOUCH, tapTolerance: IS_TOUCH ? 28 : 15,
     touchZoom:true, closePopupOnClick:false
   });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
@@ -224,9 +225,9 @@ localStorage.setItem('mmOwnerKey', ownerKey);
 
   lineLayer = L.layerGroup().addTo(map);
 
-  // Map click: nearest-dot open; otherwise choose posting spot
+  // Map tap: open nearest visible dot if close enough; otherwise set post spot
   map.on('click', e=>{
-    const nm = nearestMarker(e.latlng, 28);
+    const nm = nearestMarker(e.latlng, TAP_TOL);
     if (nm){ openMarkerPopup(nm); return; }
     selectedSpot = { lat: e.latlng.lat, lng: e.latlng.lng };
     chosenSpot && (chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`);
@@ -321,7 +322,6 @@ function renderPulses(){
       radius: DOT_RADIUS,
       color: 'rgba(255,255,255,.22)',
       weight: 1,
-      opacity: 1,
       fillColor: moodColor(p.mood),
       fillOpacity: .96,
       renderer: touchRenderer,
@@ -329,6 +329,7 @@ function renderPulses(){
       keyboard:true
     });
 
+    // We still bind one, but we won't rely on it; openMarkerPopup draws a root popup.
     marker.bindPopup(popupHTML(p), {
       autoPan: true, autoClose: false, closeButton: true, keepInView: true,
       maxWidth: 280, autoPanPaddingTopLeft:[30,50], autoPanPaddingBottomRight:[30,50],
@@ -336,15 +337,11 @@ function renderPulses(){
     });
 
     const open = ()=>openMarkerPopup(marker, pid);
-
     marker.on('click', open);
     marker.on('dblclick', open);
     marker.on('keypress', (e)=>{ if (e.originalEvent?.key === 'Enter') open(); });
-    marker.on('touchstart', ()=>setTimeout(open, 0), {passive:true});
-    marker.on('touchend', ev=>{ ev.originalEvent?.preventDefault?.(); ev.originalEvent?.stopPropagation?.(); open(); }, {passive:false});
+    marker.on('touchend', (ev)=>{ ev.originalEvent?.preventDefault?.(); ev.originalEvent?.stopPropagation?.(); open(); }, {passive:false});
     marker.on('pointerup', open);
-
-    marker.on('popupopen', (ev)=>attachPopupHandlers(ev.popup, pid));
 
     markers.set(pid, marker);
     clusterLayer.addLayer(marker);
@@ -368,33 +365,29 @@ function moodColor(m){
   }
 }
 
-/* ----- OPEN POPUP helpers (cluster-aware + fallback) ----- */
+/* ----- OPEN POPUP (cluster-aware, render on map root) ----- */
 function openMarkerPopup(markerOrId, maybeId){
   let marker = markerOrId, idStr = maybeId;
   if (typeof markerOrId === 'string'){ idStr = markerOrId; marker = markers.get(idStr); }
   if (!marker) return;
 
-  // Ask MarkerCluster to make the child visible (zoom or spiderfy), then open
-  try{
-    clusterLayer.zoomToShowLayer(marker, function(){
-      try {
-        marker.openPopup();
-        const ll = marker.getLatLng();
-        try { map.panInside(ll, { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); } catch {}
-      } catch {}
-    });
-    return;
-  }catch{}
+  const p = byId.get(idStr) || {};
+  const html = popupHTML(p);
+  const ll = marker.getLatLng();
 
-  // Fallback: raw popup at lat/lng
-  const p = byId.get(idStr);
-  if (p){
-    L.popup({
-      autoPan:true, autoClose:false, closeButton:true, keepInView:true,
-      maxWidth:280, autoPanPaddingTopLeft:[30,50], autoPanPaddingBottomRight:[30,50],
-      className:'mm-popup'
-    }).setLatLng([p.lat, p.lng]).setContent(popupHTML(p)).openOn(map);
-  }
+  // Make sure the marker is visible (zoom/spiderfy), then show a ROOT popup.
+  clusterLayer.zoomToShowLayer(marker, function(){
+    try{
+      const popup = L.popup({
+        autoPan:true, autoClose:false, closeButton:true, keepInView:true,
+        maxWidth:280, autoPanPaddingTopLeft:[30,50], autoPanPaddingBottomRight:[30,50],
+        className:'mm-popup'
+      }).setLatLng(ll).setContent(html).openOn(map);
+
+      attachPopupHandlers(popup, asId(p.id));
+      try { map.panInside(ll, { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); } catch {}
+    }catch{}
+  });
 }
 
 function nearestMarker(latlng, pxTol=26){
@@ -449,7 +442,7 @@ function updateHeat(){
   }
 }
 
-/* ---------------- create & owner-only delete (unchanged) ---------------- */
+/* ---------------- create & owner-only delete ---------------- */
 submitMood?.addEventListener('click', postPulse);
 
 async function postPulse(){
