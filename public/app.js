@@ -1,24 +1,28 @@
 /* =========================================================================
-   Micromoon — Front-end Map Logic
-   - Stable same-mood connections within radius
-   - Popup Delete with server attempt + local fallback
-   - Heatmap & clusters
-   - Language switching (EN, DE, ES, FR, AR, RU, ZH)
-   - Mobile-friendly; no socket.io; backend unchanged
+   Micromoon — Front-end Map Logic (safe full rewrite)
+   - Same-mood connections within chosen radius & window
+     * Consent defaults to allowed (only explicit false disables)
+     * Fast & safe prefilter using latitude-aware km/deg + precise Haversine
+   - Delete only on MY dots
+     * Tracks my created ids in localStorage:mmOwnedIds
+     * Tries DELETE /api/pulses/:id with X-Owner header; else hides locally
+   - Heatmap + cluster; language switching; sparkline; crosshair; mobile-ready
+   - No backend changes required; all DOM IDs preserved
    ======================================================================== */
 
-/* ---------------- helpers ---------------- */
+/* ---------------- small helpers ---------------- */
 const $  = (s, r=document) => r.querySelector(s);
-const $$ = (s, r=document) => [...r.querySelectorAll(s)];
-const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-const toRad = d => d * Math.PI/180;
+const $$ = (s, r=document) => Array.prototype.slice.call(r.querySelectorAll(s));
+const toRad = d => d * Math.PI / 180;
 const kmBetween = (A, B) => {
-  const R=6371, dLat=toRad(B.lat-A.lat), dLng=toRad(B.lng-A.lng);
-  const sA = Math.sin(dLat/2)**2 + Math.cos(toRad(A.lat))*Math.cos(toRad(B.lat))*Math.sin(dLng/2)**2;
-  return 2*R*Math.asin(Math.sqrt(sA));
+  const R = 6371;
+  const dLat = toRad(B.lat - A.lat);
+  const dLng = toRad(B.lng - A.lng);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(A.lat)) * Math.cos(toRad(B.lat)) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 };
-const esc = (s='') => s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-const wait = ms => new Promise(r=>setTimeout(r,ms));
+const esc = (s='') => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ---------------- DOM refs ---------------- */
 const deepPhrase = $('#deepPhrase');
@@ -80,7 +84,8 @@ const I18N = {
     veryLow:'very low', low:'low', neutral:'neutral', good:'good', great:'great',
     pulsed:'Pulsed ✨', loadFail:'Could not load pulses', postFail:'Could not pulse',
     del:'Delete', hidden:'Hidden on this device', delOK:'Dot deleted',
-    tooMany:'Too many dots to connect smoothly. Zoom or lower the window.'
+    tooMany:'Too many dots to connect smoothly. Zoom or lower the window.',
+    pickSpot:'Pick a mood and a spot', linkCopied:'Link copied'
   },
   de: {
     phrase:[
@@ -98,105 +103,95 @@ const I18N = {
     veryLow:'sehr niedrig', low:'niedrig', neutral:'neutral', good:'gut', great:'sehr gut',
     pulsed:'Gepulst ✨', loadFail:'Punkte konnten nicht geladen werden', postFail:'Senden fehlgeschlagen',
     del:'Löschen', hidden:'Auf diesem Gerät verborgen', delOK:'Punkt gelöscht',
-    tooMany:'Zu viele Punkte für flüssige Verbindungen. Zoome oder verringere das Zeitfenster.'
+    tooMany:'Zu viele Punkte für flüssige Verbindungen. Zoome oder verringere das Zeitfenster.',
+    pickSpot:'Wähle Stimmung und Ort', linkCopied:'Link kopiert'
   },
   es: {
     phrase:[
       'La misma luna nos mira a todos y conoce nuestros sentimientos ocultos.',
       'En Micromoon esos sentimientos se vuelven luces en un mapa compartido; brillan un día y vuelven a la noche.'
     ],
-    pulseTitle:'Pulsa tu ánimo',
-    howFeel:'¿Cómo te sientes?',
-    happening:'¿Qué pasa?',
-    optional:'(opcional, 280 caracteres)',
-    orClick:'o toca el mapa',
+    pulseTitle:'Pulsa tu ánimo', howFeel:'¿Cómo te sientes?', happening:'¿Qué pasa?',
+    optional:'(opcional, 280 caracteres)', orClick:'o toca el mapa',
     allowConnect:'Permitir conectar mi punto',
     postsInfo:'Las publicaciones son anónimas y visibles por 24 horas.',
     window:'Ventana', radius:'Radio',
     veryLow:'muy bajo', low:'bajo', neutral:'neutral', good:'bien', great:'genial',
     pulsed:'Enviado ✨', loadFail:'No se pudieron cargar los puntos', postFail:'No se pudo enviar',
     del:'Eliminar', hidden:'Oculto en este dispositivo', delOK:'Punto eliminado',
-    tooMany:'Demasiados puntos para conectar con fluidez. Acerca el mapa o reduce la ventana.'
+    tooMany:'Demasiados puntos para conectar con fluidez. Acerca el mapa o reduce la ventana.',
+    pickSpot:'Elige estado y lugar', linkCopied:'Enlace copiado'
   },
   fr: {
     phrase:[
       'La même lune nous regarde tous et connaît nos sentiments cachés.',
       'Sur Micromoon ces sentiments deviennent des lumières sur une carte commune, elles brillent un jour puis retournent à la nuit.'
     ],
-    pulseTitle:'Pulse ton humeur',
-    howFeel:'Comment te sens-tu ?',
-    happening:'Que se passe-t-il ?',
-    optional:'(optionnel, 280 caractères)',
-    orClick:'ou clique sur la carte',
+    pulseTitle:'Pulse ton humeur', howFeel:'Comment te sens-tu ?', happening:'Que se passe-t-il ?',
+    optional:'(optionnel, 280 caractères)', orClick:'ou clique sur la carte',
     allowConnect:'Autoriser à relier mon point',
     postsInfo:'Les posts sont anonymes et visibles 24 h.',
     window:'Fenêtre', radius:'Rayon',
     veryLow:'très bas', low:'bas', neutral:'neutre', good:'bien', great:'super',
     pulsed:'Envoyé ✨', loadFail:'Chargement impossible', postFail:'Envoi impossible',
     del:'Supprimer', hidden:'Masqué sur cet appareil', delOK:'Point supprimé',
-    tooMany:'Trop de points pour relier correctement. Zoome ou réduis la fenêtre.'
+    tooMany:'Trop de points pour relier correctement. Zoome ou réduis la fenêtre.',
+    pickSpot:'Choisis un état et un lieu', linkCopied:'Lien copié'
   },
   ar: {
     phrase:[
       'القمر نفسه يطل علينا جميعًا ويعرف مشاعرنا الخفية.',
       'على ميكرومون تتحول تلك المشاعر إلى أضواء على خريطة مشتركة، تتوهّج يومًا ثم تعود إلى الليل.'
     ],
-    pulseTitle:'انشر مزاجك',
-    howFeel:'كيف تشعر؟',
-    happening:'ماذا يحدث؟',
-    optional:'(اختياري، 280 حرفًا)',
-    orClick:'أو اضغط على الخريطة',
+    pulseTitle:'انشر مزاجك', howFeel:'كيف تشعر؟', happening:'ماذا يحدث؟',
+    optional:'(اختياري، 280 حرفًا)', orClick:'أو اضغط على الخريطة',
     allowConnect:'السماح للآخرين بربط نقطتي',
     postsInfo:'المنشورات مجهولة وتبقى 24 ساعة ثم تختفي.',
     window:'المدة', radius:'نطاق',
     veryLow:'منخفض جدًا', low:'منخفض', neutral:'محايد', good:'جيد', great:'رائع',
     pulsed:'تم النشر ✨', loadFail:'تعذر تحميل النقاط', postFail:'تعذر النشر',
     del:'حذف', hidden:'مخفي على هذا الجهاز', delOK:'تم الحذف',
-    tooMany:'نقاط كثيرة جدًا للربط بسلاسة. قرّب الخريطة أو قلّل المدة.'
+    tooMany:'نقاط كثيرة جدًا للربط بسلاسة. قرّب الخريطة أو قلّل المدة.',
+    pickSpot:'اختر المزاج والمكان', linkCopied:'تم نسخ الرابط'
   },
   ru: {
     phrase:[
       'Одна и та же луна смотрит на всех нас и знает наши скрытые чувства.',
       'На Micromoon эти чувства становятся огнями на общей карте: один день светят и тают в ночи.'
     ],
-    pulseTitle:'Отправь настроение',
-    howFeel:'Как ты себя чувствуешь?',
-    happening:'Что происходит?',
-    optional:'(необязательно, 280 символов)',
-    orClick:'или нажми на карту',
+    pulseTitle:'Отправь настроение', howFeel:'Как ты себя чувствуешь?', happening:'Что происходит?',
+    optional:'(необязательно, 280 символов)', orClick:'или нажми на карту',
     allowConnect:'Разрешить соединять мою точку',
     postsInfo:'Посты анонимны и видны 24 часа.',
     window:'Окно', radius:'Радиус',
     veryLow:'очень плохо', low:'плохо', neutral:'нейтр.', good:'хорошо', great:'отлично',
     pulsed:'Отправлено ✨', loadFail:'Не удалось загрузить точки', postFail:'Не удалось отправить',
     del:'Удалить', hidden:'Скрыто на этом устройстве', delOK:'Точка удалена',
-    tooMany:'Слишком много точек для соединения. Уменьшите окно или приблизьте карту.'
+    tooMany:'Слишком много точек для соединения. Уменьшите окно или приблизьте карту.',
+    pickSpot:'Выбери настроение и место', linkCopied:'Ссылка скопирована'
   },
   zh: {
     phrase:[
       '同一轮明月照着我们 也懂我们的隐秘心绪。',
-      '在 Micromoon 这些心绪成了共享地图上的光点 只停留一天 随夜色淡去。'
+      '在 Micromoon 这些心绪化作共享地图上的光点 只停留一天 随夜色淡去。'
     ],
-    pulseTitle:'发布心情',
-    howFeel:'你现在感觉如何？',
-    happening:'发生了什么？',
-    optional:'（可选，280 字）',
-    orClick:'或在地图上点选',
+    pulseTitle:'发布心情', howFeel:'你现在感觉如何？', happening:'发生了什么？',
+    optional:'（可选，280 字）', orClick:'或在地图上点选',
     allowConnect:'允许他人与我的点连线',
     postsInfo:'匿名展示 24 小时后消失。',
     window:'时间窗', radius:'半径',
     veryLow:'很差', low:'较差', neutral:'一般', good:'不错', great:'很好',
     pulsed:'已发布 ✨', loadFail:'加载失败', postFail:'发布失败',
     del:'删除', hidden:'在此设备隐藏', delOK:'已删除',
-    tooMany:'点位太多无法顺畅连线。请缩小时间窗或放大地图。'
+    tooMany:'点位太多无法顺畅连线。请缩小时间窗或放大地图。',
+    pickSpot:'请选择心情与地点', linkCopied:'已复制链接'
   }
 };
 let LANG = 'en';
 function setLang(code){
   LANG = I18N[code] ? code : 'en';
-  $$('.lang-btn').forEach(b=>b.classList.toggle('active', b.dataset.lang===LANG));
-  document.documentElement.dir = (LANG==='ar' ? 'rtl' : 'ltr');
-
+  $$('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === LANG));
+  document.documentElement.dir = (LANG === 'ar' ? 'rtl' : 'ltr');
   const t = I18N[LANG];
   deepPhrase.innerHTML = t.phrase.map(s => `<span class="line"><span class="brand-gradient">${esc(s)}</span></span>`).join(' ');
   $('#ui-pulseTitle').textContent = t.pulseTitle;
@@ -209,38 +204,37 @@ function setLang(code){
   $('#ui-window').textContent = t.window;
   $('#ui-radius').textContent = t.radius;
 }
-langButtons.forEach(b=>b.addEventListener('click', ()=>setLang(b.dataset.lang)));
+langButtons.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
 setLang('en');
 
-/* ---------------- moon phase label (fun) ---------------- */
+/* ---------------- moon phase label (approx) ---------------- */
 (function moonPhase(){
   const now = new Date();
   const syn = 29.530588853;
   const ref = new Date(Date.UTC(2000,0,6,18,14));
-  const age = ((now-ref)/86400000) % syn;
-  const idx = Math.round(age/syn*8)%8;
+  const age = ((now - ref) / 86400000) % syn;
+  const idx = Math.round(age / syn * 8) % 8;
   const names = ['New','Waxing crescent','First quarter','Waxing gibbous','Full','Waning gibbous','Last quarter','Waning crescent'];
   moonLabel.textContent = `Moon phase: ${names[idx]}`;
 })();
 
 /* ---------------- motion toggle ---------------- */
-toggleMotion?.addEventListener('change', ()=>{
+toggleMotion && toggleMotion.addEventListener('change', ()=>{
   document.body.classList.toggle('reduce-motion', !!toggleMotion.checked);
 });
 
-/* ---------------- map setup ---------------- */
+/* ---------------- map init ---------------- */
 let map, clusterLayer, heatLayer, lineLayer;
 let pulses = [];
-const markers = new Map();          // id -> marker
-const hidden = new Set(JSON.parse(localStorage.getItem('mmHidden') || '[]'));
+const markers = new Map();                                  // id -> marker
+const hidden  = new Set(JSON.parse(localStorage.getItem('mmHidden')   || '[]'));     // locally hidden ids
+const owned   = new Set(JSON.parse(localStorage.getItem('mmOwnedIds') || '[]'));     // my created ids
+let ownerKey  = localStorage.getItem('mmOwnerKey');
+if (!ownerKey) { try { ownerKey = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Math.random()); } catch(e){ ownerKey = String(Math.random()); } localStorage.setItem('mmOwnerKey', ownerKey); }
 
 (function initMap(){
-  map = L.map('map', {
-    zoomControl: true, minZoom: 2, worldCopyJump: true, attributionControl: true
-  });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, attribution: '&copy; OpenStreetMap'
-  }).addTo(map);
+  map = L.map('map', { zoomControl:true, minZoom:2, worldCopyJump:true, attributionControl:true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution:'&copy; OpenStreetMap' }).addTo(map);
   map.setView([20, 0], 2);
 
   clusterLayer = L.markerClusterGroup({ showCoverageOnHover:false, chunkedLoading:true });
@@ -248,7 +242,7 @@ const hidden = new Set(JSON.parse(localStorage.getItem('mmHidden') || '[]'));
 
   lineLayer = L.layerGroup().addTo(map);
 
-  map.on('click', e => {
+  map.on('click', e=>{
     selectedSpot = { lat: e.latlng.lat, lng: e.latlng.lng };
     chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`;
     submitMood.disabled = (selectedMood === null);
@@ -291,12 +285,12 @@ toggleCluster.addEventListener('change', ()=>{
   else { if (map.hasLayer(clusterLayer)) map.removeLayer(clusterLayer); }
 });
 
-/* ---------------- loading & rendering ---------------- */
+/* ---------------- load & render ---------------- */
 async function refreshPulses(){
   try{
     const hours = Number(windowHoursSel.value || 24);
     const res = await fetch(`/api/pulses?windowHours=${hours}`);
-    if(!res.ok) throw new Error(`GET /api/pulses ${res.status}`);
+    if (!res.ok) throw new Error(`GET /api/pulses ${res.status}`);
     const arr = await res.json();
     pulses = (Array.isArray(arr) ? arr : []).filter(p => !hidden.has(p.id));
     renderPulses();
@@ -305,13 +299,12 @@ async function refreshPulses(){
     toast(I18N[LANG].loadFail);
   }
 }
+
 function renderPulses(){
-  // clear layers
   clusterLayer.clearLayers();
   lineLayer.clearLayers();
   if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
 
-  // add markers
   markers.clear();
   for(const p of pulses){
     const marker = L.circleMarker([p.lat, p.lng], {
@@ -341,35 +334,45 @@ function moodColor(m){
   }
 }
 
-/* ---------------- connections ---------------- */
+/* ---------------- connections (robust) ---------------- */
 function buildConnections(){
   lineLayer.clearLayers();
-  if(!toggleConnections.checked) return;
+  if (!toggleConnections.checked) return;
 
-  const R = Number(radiusInput.value || 120); // km
-  const MAX = 800; // performance guard
-  if (pulses.length > MAX) { toast(I18N[LANG].tooMany); return; }
+  const R = Number(radiusInput.value || 120);       // km
+  const MAX = 1400;                                  // perf guard
+  const N = Math.min(pulses.length, MAX);
 
-  // Only dots with explicit consent connect (connect/allow_connect/connect_consent true)
-  const allowed = pulses.filter(p=>{
-    const c = (p.connect===true) || (p.allow_connect===true) || (p.connect_consent===true);
-    return c === true;
-  });
+  // Consent default: allowed. Only explicit false disables a point.
+  const ok = p => !(p.connect === false || p.allow_connect === false || p.connect_consent === false);
 
-  // O(n^2) with quick bounding-box precheck
-  for(let i=0;i<allowed.length;i++){
-    const A = allowed[i];
-    for(let j=i+1;j<allowed.length;j++){
-      const B = allowed[j];
+  for (let i=0;i<N;i++){
+    const A = pulses[i];
+    if (!ok(A)) continue;
+
+    // lat-aware rough bbox (km per degree varies by cos(lat))
+    const cosLatA = Math.abs(Math.cos(toRad(A.lat)));
+    const lonKmPerDegA = Math.max(0.1, 111.32 * cosLatA);
+    const latKmPerDeg = 111.32;
+
+    for (let j=i+1;j<N;j++){
+      const B = pulses[j];
+      if (!ok(B)) continue;
       if (A.mood !== B.mood) continue;
 
-      // deg->km quick skip
-      if (Math.abs(A.lat-B.lat)*111 > R) continue;
-      if (Math.abs(A.lng-B.lng)*85  > R) continue;
+      // quick reject using bbox in km
+      const dLatKm = Math.abs(A.lat - B.lat) * latKmPerDeg;
+      if (dLatKm > R) continue;
+      const cosLatB = Math.abs(Math.cos(toRad(B.lat)));
+      const lonKmPerDegB = Math.max(0.1, 111.32 * cosLatB);
+      const avgLonKmPerDeg = (lonKmPerDegA + lonKmPerDegB) / 2;
+      const dLonKm = Math.abs(A.lng - B.lng) * avgLonKmPerDeg;
+      if (dLonKm > R) continue;
 
+      // precise check
       if (kmBetween({lat:A.lat,lng:A.lng},{lat:B.lat,lng:B.lng}) <= R){
         L.polyline([[A.lat, A.lng], [B.lat, B.lng]], {
-          color: moodColor(A.mood), opacity: .35, weight: 2, interactive:false
+          color: moodColor(A.mood), opacity: .38, weight: 2, interactive:false
         }).addTo(lineLayer);
       }
     }
@@ -380,37 +383,43 @@ function buildConnections(){
 function updateHeat(){
   if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
   if (!toggleHeat.checked) return;
-  const pts = pulses.map(p => [p.lat, p.lng, 0.30 + 0.70*(Math.abs(Number(p.mood))+1)/3]);
+  const pts = pulses.map(p => [p.lat, p.lng, 0.30 + 0.70 * (Math.abs(Number(p.mood))+1)/3]);
   if (pts.length){
     heatLayer = L.heatLayer(pts, { radius:22, blur:18, maxZoom:11, minOpacity:.2 });
     heatLayer.addTo(map);
   }
 }
 
-/* ---------------- create & delete ---------------- */
+/* ---------------- create & owner-only delete ---------------- */
 submitMood.addEventListener('click', postPulse);
 
 async function postPulse(){
-  if (selectedMood===null || !selectedSpot) return toast('Pick a mood and a spot');
+  if (selectedMood === null || !selectedSpot) return toast(I18N[LANG].pickSpot);
   submitMood.disabled = true;
   try{
     const body = {
       mood: selectedMood,
-      note: (note.value||'').slice(0,280),
+      note: (note.value || '').slice(0,280),
       lat: selectedSpot.lat,
       lng: selectedSpot.lng,
-      connect: !!connectConsent.checked
+      connect: !!connectConsent.checked,
+      ownerKey: ownerKey            // harmless if backend ignores
     };
     const res = await fetch('/api/pulses', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body)
     });
-    if(!res.ok) throw new Error(`POST /api/pulses ${res.status}`);
+    if (!res.ok) throw new Error(`POST /api/pulses ${res.status}`);
     const created = await res.json();
+
+    // record ownership locally so only I see Delete
+    owned.add(created.id);
+    localStorage.setItem('mmOwnedIds', JSON.stringify(Array.from(owned)));
+
     toast(I18N[LANG].pulsed);
     pulses.unshift(created);
     renderPulses();
-    shareLinkBtn.disabled = false;
+    shareLinkBtn && (shareLinkBtn.disabled = false);
   }catch(e){
     console.error(e);
     toast(I18N[LANG].postFail);
@@ -423,38 +432,39 @@ function popupHTML(p){
   const T = I18N[LANG];
   const name = ({'-2':T.veryLow,'-1':T.low,'0':T.neutral,'1':T.good,'2':T.great})[String(p.mood)] || 'mood';
   const noteHtml = p.note ? `<div style="margin-top:6px;color:#cfe3ff">${esc(p.note)}</div>` : '';
+  const delBtn = owned.has(p.id)
+    ? `<button class="mm-del" data-id="${esc(String(p.id))}"
+         style="padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
+                background:#2a3f66;color:#fff;cursor:pointer;">${esc(T.del)}</button>`
+    : '';
   return `
     <div style="min-width:180px">
       <div style="font-weight:800">${esc(name)}</div>
       ${noteHtml}
-      <div style="display:flex; gap:8px; margin-top:10px;">
-        <button class="mm-del" data-id="${esc(String(p.id))}"
-          style="padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
-                 background:#2a3f66;color:#fff;cursor:pointer;">
-          ${esc(T.del)}
-        </button>
-      </div>
+      <div style="display:flex; gap:8px; margin-top:10px;">${delBtn}</div>
     </div>
   `;
 }
 function attachPopupHandlers(id){
-  const b = document.body.querySelector(`.mm-del[data-id="${CSS.escape(String(id))}"]`);
-  if (b) b.onclick = ()=>deletePulse(id);
+  const btn = document.body.querySelector(`.mm-del[data-id="${CSS.escape(String(id))}"]`);
+  if (btn) btn.onclick = ()=>deletePulse(id);
 }
 
 async function deletePulse(id){
-  // Try server delete first
+  if (!owned.has(id)) return; // safety: only my dots show Delete
   try{
-    const res = await fetch(`/api/pulses/${encodeURIComponent(id)}`, { method:'DELETE' });
+    const res = await fetch(`/api/pulses/${encodeURIComponent(id)}`, {
+      method:'DELETE', headers: { 'X-Owner': ownerKey }
+    });
     if (res.ok){
       removePulse(id);
       return toast(I18N[LANG].delOK);
     }
     throw new Error(`DELETE ${res.status}`);
   }catch(e){
-    console.warn('Server delete unavailable, hiding locally', e);
+    // fallback: local hide (still only for me)
     hidden.add(id);
-    localStorage.setItem('mmHidden', JSON.stringify([...hidden]));
+    localStorage.setItem('mmHidden', JSON.stringify(Array.from(hidden)));
     removePulse(id);
     toast(I18N[LANG].hidden);
   }
@@ -462,45 +472,43 @@ async function deletePulse(id){
 function removePulse(id){
   const m = markers.get(id);
   if (m){ clusterLayer.removeLayer(m); markers.delete(id); }
-  pulses = pulses.filter(p=>p.id!==id);
-  buildConnections(); updateHeat();
+  pulses = pulses.filter(p => p.id !== id);
+  buildConnections();
+  updateHeat();
   liveCount.textContent = `Now: ${pulses.length} pulses`;
 }
 
-/* ---------------- share (simple) ---------------- */
-shareLinkBtn?.addEventListener('click', async ()=>{
+/* ---------------- share link ---------------- */
+shareLinkBtn && shareLinkBtn.addEventListener('click', async ()=>{
   const url = location.origin;
   try{
-    if (navigator.share){
+    if (navigator.share) {
       await navigator.share({ title:'Micromoon', text:'Under the same sky.', url });
     } else {
       await navigator.clipboard.writeText(url);
-      toast('Link copied');
+      toast(I18N[LANG].linkCopied);
     }
   }catch(e){
-    await navigator.clipboard.writeText(url);
-    toast('Link copied');
+    try { await navigator.clipboard.writeText(url); } catch(_) {}
+    toast(I18N[LANG].linkCopied);
   }
 });
 
 /* ---------------- sparkline ---------------- */
 function drawSparkline(){
-  const ctx = spark?.getContext?.('2d'); if(!ctx) return;
+  if (!spark || !spark.getContext) return;
+  const ctx = spark.getContext('2d');
   const W = spark.width, H = spark.height;
   ctx.clearRect(0,0,W,H);
-  ctx.globalAlpha = 1;
-
-  // histogram across last 24h by hour (if created_at exists)
-  const now = Date.now(), bins = Array(24).fill(0);
-  for(const p of pulses){
+  const now = Date.now(), bins = new Array(24).fill(0);
+  for (const p of pulses){
     const t = Date.parse(p.created_at || p.createdAt || p.created || '');
     if (!isFinite(t)) continue;
     const diffH = Math.max(0, Math.min(23, Math.floor((now - t)/3600000)));
-    bins[23-diffH]++; // rightmost = now
+    bins[23 - diffH]++; // rightmost = now
   }
   const max = Math.max(1, ...bins);
-  const pad = 2, step = (W - pad*2) / (bins.length-1);
-
+  const pad = 2, step = (W - pad*2) / (bins.length - 1);
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#b6d3ff';
   ctx.beginPath();
@@ -512,7 +520,7 @@ function drawSparkline(){
   ctx.stroke();
 }
 
-/* ---------------- stars canvas (simple drifting dots) ---------------- */
+/* ---------------- subtle starfield (kept) ---------------- */
 (function starfield(){
   const c = $('#stars'); if(!c) return;
   const ctx = c.getContext('2d');
@@ -538,7 +546,7 @@ function drawSparkline(){
 /* ---------------- periodic refresh ---------------- */
 async function loopRefresh(){
   while(true){
-    await wait(60000); // 60s
+    await sleep(60000);
     await refreshPulses();
   }
 }
@@ -546,4 +554,4 @@ async function loopRefresh(){
 /* ---------------- init ---------------- */
 radiusValue.textContent = `${radiusInput.value}km`;
 refreshPulses();
-loopRefresh().catch(()=>{ /* ignore */ });
+loopRefresh().catch(()=>{});
