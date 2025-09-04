@@ -1,9 +1,10 @@
 /* =========================================================================
-   Micromoon — Front-end Map Logic (mobile popup + owner delete + fixes)
-   - FIX: circleMarker z-order via bringToFront() (no setZIndexOffset)
-   - FIX: auto-create #toastHost so toasts never throw
-   - Reliable popups on touch; owner-only delete; connections; heatmap; i18n
-   - NO HTML changes
+   Micromoon — Front-end Map Logic (popups readable + connections fixed)
+   - Popups: reliable open on mobile (touchend/pointerup) and auto-pan into view
+   - Popup text: robust fallbacks (note|text|message|content|body|desc)
+   - Connections: strict by numeric mood (handles string vs number)
+   - Owner-only delete preserved; heatmap/clusters/i18n unchanged
+   - No HTML changes required
    ======================================================================== */
 
 /* ---------------- helpers ---------------- */
@@ -18,7 +19,8 @@ const kmBetween = (A, B) => {
 const esc = (s='') => s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const debounce = (fn, d=120)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),d); }; };
-const asId = v => String(v ?? '');   // normalize ids (string-safe)
+const asId = v => String(v ?? '');    // normalize ids (string-safe)
+const mVal = v => Number(v);           // normalize mood to number
 
 /* ---------------- DOM refs ---------------- */
 const deepPhrase = $('#deepPhrase');
@@ -46,7 +48,7 @@ const liveCount = $('#liveCount');
 const spark = $('#spark');
 const mapEl = $('#map');
 
-/* ---------------- toast ---------------- */
+/* ---------------- toast (auto host) ---------------- */
 function getToastHost(){
   let host = document.getElementById('toastHost');
   if (!host){
@@ -77,7 +79,7 @@ function toast(txt, ms=2400){
   setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(-6px)'; setTimeout(()=>el.remove(),250); }, ms);
 }
 
-/* ---------------- i18n ---------------- */
+/* ---------------- i18n (same as before) ---------------- */
 const I18N = {
   en:{ phrase:[
       'The same moon looks down on all of us and knows our hidden feelings.',
@@ -190,15 +192,15 @@ function setLang(code){
   document.documentElement.dir = (LANG==='ar' ? 'rtl' : 'ltr');
   const t = I18N[LANG];
   deepPhrase.innerHTML = t.phrase.map(s => `<span class="line"><span class="brand-gradient">${esc(s)}</span></span>`).join(' ');
-  $('#ui-pulseTitle').textContent = t.pulseTitle;
-  $('#ui-howFeel').textContent = t.howFeel;
-  $('#ui-whatsHappening').textContent = t.happening;
-  $('#ui-optional').textContent = t.optional;
-  $('#ui-orClickMap').textContent = t.orClick;
-  $('#ui-allowConnect').textContent = t.allowConnect;
-  $('#ui-postsInfo').textContent = t.postsInfo;
-  $('#ui-window').textContent = t.window;
-  $('#ui-radius').textContent = t.radius;
+  $('#ui-pulseTitle')?.textContent = t.pulseTitle;
+  $('#ui-howFeel')?.textContent = t.howFeel;
+  $('#ui-whatsHappening')?.textContent = t.happening;
+  $('#ui-optional')?.textContent = t.optional;
+  $('#ui-orClickMap')?.textContent = t.orClick;
+  $('#ui-allowConnect')?.textContent = t.allowConnect;
+  $('#ui-postsInfo')?.textContent = t.postsInfo;
+  $('#ui-window')?.textContent = t.window;
+  $('#ui-radius')?.textContent = t.radius;
 }
 langButtons.forEach(b=>b.addEventListener('click', ()=>setLang(b.dataset.lang)));
 setLang('en');
@@ -207,13 +209,13 @@ setLang('en');
 (function(){
   const now = new Date(), syn = 29.530588853, ref = new Date(Date.UTC(2000,0,6,18,14));
   const age = ((now-ref)/86400000) % syn; const idx = Math.round(age/syn*8)%8;
-  moonLabel.textContent = `Moon phase: ${['New','Waxing crescent','First quarter','Waxing gibbous','Full','Waning gibbous','Last quarter','Waning crescent'][idx]}`;
+  moonLabel && (moonLabel.textContent = `Moon phase: ${['New','Waxing crescent','First quarter','Waxing gibbous','Full','Waning gibbous','Last quarter','Waning crescent'][idx]}`);
 })();
 
 /* ---------------- motion toggle ---------------- */
 toggleMotion?.addEventListener('change', ()=>document.body.classList.toggle('reduce-motion', !!toggleMotion.checked));
 
-/* ---------------- mobile detection & renderer ---------------- */
+/* ---------------- mobile detection & renderers ---------------- */
 const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 const HIT_STROKE = IS_TOUCH ? 36 : 18; // invisible stroke width for easy taps
 const DOT_RADIUS = IS_TOUCH ? 11 : 8;
@@ -244,20 +246,19 @@ localStorage.setItem('mmOwnerKey', ownerKey);
     spiderfyOnMaxZoom:true, spiderfyOnEveryZoom:true, disableClusteringAtZoom:17
   });
   clusterLayer.on('clusterclick', a=>a.layer.spiderfy());
-  clusterLayer.on('spiderfied', () => setTimeout(()=>map.closePopup(), 0));
   map.addLayer(clusterLayer);
 
   lineLayer = L.layerGroup().addTo(map);
 
   map.on('click', e=>{
     selectedSpot = { lat: e.latlng.lat, lng: e.latlng.lng };
-    chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`;
-    submitMood.disabled = (selectedMood === null);
+    chosenSpot && (chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`);
+    submitMood && (submitMood.disabled = (selectedMood === null));
   });
 
+  // ensure popups are fully visible
   map.on('popupopen', e=>{
-    try { map.panInside(e.popup.getLatLng(), { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); }
-    catch{}
+    try { map.panInside(e.popup.getLatLng(), { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); } catch {}
   });
 })();
 
@@ -265,38 +266,39 @@ localStorage.setItem('mmOwnerKey', ownerKey);
 let selectedMood = null;
 let selectedSpot = null;
 
-moodPicker.addEventListener('click', e=>{
+moodPicker?.addEventListener('click', e=>{
   const b = e.target.closest('button[data-mood]'); if(!b) return;
   $$('#moodPicker button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active'); selectedMood = Number(b.dataset.mood);
-  submitMood.disabled = !selectedSpot;
+  submitMood && (submitMood.disabled = !selectedSpot);
 });
 
-useMyLocationBtn.addEventListener('click', ()=>{
+useMyLocationBtn?.addEventListener('click', ()=>{
   if(!navigator.geolocation) return toast('Location not available');
   navigator.geolocation.getCurrentPosition(pos=>{
     selectedSpot = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     map.setView([selectedSpot.lat, selectedSpot.lng], 10);
-    chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`;
-    submitMood.disabled = (selectedMood === null);
+    chosenSpot && (chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`);
+    submitMood && (submitMood.disabled = (selectedMood === null));
   }, ()=>toast('Could not get location'));
 });
 
-toggleCrosshairBtn.addEventListener('click', ()=>$('#crosshair').classList.toggle('hidden'));
+toggleCrosshairBtn?.addEventListener('click', ()=>$('#crosshair')?.classList.toggle('hidden'));
 
-radiusInput.addEventListener('input', ()=>{
-  radiusValue.textContent = `${radiusInput.value}km`;
-  if (toggleConnections.checked) buildConnections();
+radiusInput?.addEventListener('input', ()=>{
+  radiusValue && (radiusValue.textContent = `${radiusInput.value}km`);
+  if (toggleConnections?.checked) buildConnections();
 });
-windowHoursSel.addEventListener('change', ()=>refreshPulses());
-toggleConnections.addEventListener('change', ()=>buildConnections());
-toggleHeat.addEventListener('change', ()=>updateHeat());
-toggleCluster.addEventListener('change', ()=>{
+windowHoursSel?.addEventListener('change', ()=>refreshPulses());
+toggleConnections?.addEventListener('change', ()=>buildConnections());
+toggleHeat?.addEventListener('change', ()=>updateHeat());
+toggleCluster?.addEventListener('change', ()=>{
+  if (!toggleCluster) return;
   if (toggleCluster.checked) { if (!map.hasLayer(clusterLayer)) map.addLayer(clusterLayer); }
   else { if (map.hasLayer(clusterLayer)) map.removeLayer(clusterLayer); }
 });
 
-/* ---------------- LAYOUT FIX: equalize cards + map offset ---------------- */
+/* ---------------- layout equalize ---------------- */
 function cardByHeading(startsWith){
   const hs = $$('h1,h2,h3,.card-title,[role="heading"]');
   for(const h of hs){
@@ -321,7 +323,7 @@ document.addEventListener('DOMContentLoaded', eqNow);
 /* ---------------- load & render ---------------- */
 async function refreshPulses(){
   try{
-    const hours = Number(windowHoursSel.value || 24);
+    const hours = Number(windowHoursSel?.value || 24);
     const res = await fetch(`/api/pulses?windowHours=${hours}`);
     if(!res.ok) throw new Error(`GET /api/pulses ${res.status}`);
     const arr = await res.json();
@@ -340,8 +342,8 @@ function renderPulses(){
     const marker = L.circleMarker([p.lat, p.lng], {
       radius: DOT_RADIUS,
       color: 'rgba(255,255,255,.22)',
-      weight: HIT_STROKE,         // big invisible stroke used for hit testing
-      opacity: 0,                 // keep stroke invisible
+      weight: HIT_STROKE,   // big invisible stroke for easy taps
+      opacity: 0,           // invisible outline
       fillColor: moodColor(p.mood),
       fillOpacity: .96,
       renderer: touchRenderer,
@@ -350,23 +352,18 @@ function renderPulses(){
     });
 
     const popupOpts = {
-      autoPan: true,
-      autoClose: false,
-      closeButton: true,
-      keepInView: true,
-      maxWidth: 260,
-      autoPanPaddingTopLeft: [30,50],
-      autoPanPaddingBottomRight: [30,50],
+      autoPan: true, autoClose: false, closeButton: true, keepInView: true,
+      maxWidth: 280, autoPanPaddingTopLeft:[30,50], autoPanPaddingBottomRight:[30,50],
       className: 'mm-popup'
     };
     marker.bindPopup(popupHTML(p), popupOpts);
 
     const open = ()=>{ requestAnimationFrame(()=>{
       marker.openPopup();
-      try{ map.panInside(marker.getLatLng(), { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); }catch{}
+      try{ map.panInside(marker.getLatLng(), { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); } catch {}
     }); };
 
-    marker.on('add', ()=>{ try{ marker.bringToFront(); }catch{} }); // replace setZIndexOffset
+    marker.on('add', ()=>{ try{ marker.bringToFront(); }catch{} });
     marker.on('click', open);
     marker.on('keypress', (e)=>{ if (e.originalEvent?.key === 'Enter') open(); });
     marker.on('touchend', ev=>{ ev.originalEvent?.preventDefault?.(); ev.originalEvent?.stopPropagation?.(); open(); });
@@ -378,15 +375,15 @@ function renderPulses(){
     clusterLayer.addLayer(marker);
   }
 
-  liveCount.textContent = `Now: ${pulses.length} pulses`;
+  liveCount && (liveCount.textContent = `Now: ${pulses.length} pulses`);
   drawSparkline(); updateHeat();
-  if (toggleConnections.checked) buildConnections();
+  if (toggleConnections?.checked) buildConnections();
 
   eqNow();
 }
 
 function moodColor(m){
-  switch(Number(m)){
+  switch(mVal(m)){
     case -2: return '#8ebeff';
     case -1: return '#b5ccff';
     case  0: return '#dee7ff';
@@ -396,29 +393,32 @@ function moodColor(m){
   }
 }
 
-/* ---------------- connections ---------------- */
+/* ---------------- connections (mood by number) ---------------- */
 function buildConnections(){
   lineLayer.clearLayers();
-  if(!toggleConnections.checked) return;
+  if(!toggleConnections?.checked) return;
 
-  const R = Number(radiusInput.value || 120);
+  const R = Number(radiusInput?.value || 120);
   const MAX = 1400;
   const N = Math.min(pulses.length, MAX);
   const ok = p => !(p.connect === false || p.allow_connect === false || p.connect_consent === false);
 
   for(let i=0;i<N;i++){
     const A = pulses[i]; if(!ok(A)) continue;
+    const aMood = mVal(A.mood);
     const latKm = 111.32, lonKmA = Math.max(0.1, 111.32*Math.abs(Math.cos(toRad(A.lat))));
     for(let j=i+1;j<N;j++){
-      const B = pulses[j]; if(!ok(B) || A.mood!==B.mood) continue;
+      const B = pulses[j]; if(!ok(B)) continue;
+      if (aMood !== mVal(B.mood)) continue; // **numeric compare**
 
+      // Quick km pruning
       const dLatKm = Math.abs(A.lat-B.lat)*latKm; if(dLatKm>R) continue;
       const lonKmB = Math.max(0.1, 111.32*Math.abs(Math.cos(toRad(B.lat))));
       const dLonKm = Math.abs(A.lng-B.lng)*((lonKmA+lonKmB)/2); if(dLonKm>R) continue;
 
       if(kmBetween({lat:A.lat,lng:A.lng},{lat:B.lat,lng:B.lng})<=R){
         L.polyline([[A.lat,A.lng],[B.lat,B.lng]],{
-          color:moodColor(A.mood), opacity:.38, weight:2, interactive:false, renderer: lineRenderer
+          color:moodColor(aMood), opacity:.42, weight:2, interactive:false, renderer: lineRenderer
         }).addTo(lineLayer);
       }
     }
@@ -428,8 +428,8 @@ function buildConnections(){
 /* ---------------- heat ---------------- */
 function updateHeat(){
   if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
-  if (!toggleHeat.checked) return;
-  const pts = pulses.map(p => [p.lat, p.lng, 0.30 + 0.70*(Math.abs(Number(p.mood))+1)/3]);
+  if (!toggleHeat?.checked) return;
+  const pts = pulses.map(p => [p.lat, p.lng, 0.30 + 0.70*(Math.abs(mVal(p.mood))+1)/3]);
   if (pts.length){
     heatLayer = L.heatLayer(pts, { radius:22, blur:18, maxZoom:11, minOpacity:.2 });
     heatLayer.addTo(map);
@@ -437,7 +437,7 @@ function updateHeat(){
 }
 
 /* ---------------- create & owner-only delete ---------------- */
-submitMood.addEventListener('click', postPulse);
+submitMood?.addEventListener('click', postPulse);
 
 async function postPulse(){
   if (selectedMood===null || !selectedSpot) return toast(I18N[LANG].pickSpot);
@@ -445,9 +445,9 @@ async function postPulse(){
   try{
     const body = {
       mood:selectedMood,
-      note:(note.value||'').slice(0,280),
+      note:(note?.value||'').slice(0,280),
       lat:selectedSpot.lat, lng:selectedSpot.lng,
-      connect:!!connectConsent.checked,
+      connect:!!connectConsent?.checked,
       ownerKey
     };
     const res = await fetch('/api/pulses', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
@@ -467,15 +467,17 @@ async function postPulse(){
 
 function popupHTML(p){
   const T = I18N[LANG];
-  const name = ({'-2':T.veryLow,'-1':T.low,'0':T.neutral,'1':T.good,'2':T.great})[String(p.mood)] || 'mood';
-  const noteHtml = p.note ? `<div style="margin-top:6px;color:#cfe3ff">${esc(p.note)}</div>` : '';
+  const moodName = ({'-2':T.veryLow,'-1':T.low,'0':T.neutral,'1':T.good,'2':T.great})[String(mVal(p.mood))] || 'mood';
+  // robust note field fallback
+  const raw = p.note ?? p.text ?? p.message ?? p.content ?? p.body ?? p.desc ?? '';
+  const noteHtml = raw ? `<div style="margin-top:6px;color:#cfe3ff">${esc(String(raw))}</div>` : '';
   const delBtn = owned.has(asId(p.id))
     ? `<button class="mm-del" data-id="${esc(asId(p.id))}"
          style="padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
                 background:#2a3f66;color:#fff;cursor:pointer;">${esc(T.del)}</button>`
     : '';
-  return `<div style="min-width:200px">
-            <div style="font-weight:800">${esc(name)}</div>
+  return `<div style="min-width:210px">
+            <div style="font-weight:800">${esc(moodName)}</div>
             ${noteHtml}
             <div style="display:flex;gap:8px;margin-top:10px;">${delBtn}</div>
           </div>`;
@@ -504,7 +506,7 @@ function removePulse(idStr){
   const m = markers.get(idStr); if (m){ clusterLayer.removeLayer(m); markers.delete(idStr); }
   pulses = pulses.filter(p=>asId(p.id)!==idStr);
   buildConnections(); updateHeat();
-  liveCount.textContent = `Now: ${pulses.length} pulses`;
+  liveCount && (liveCount.textContent = `Now: ${pulses.length} pulses`);
   map.closePopup();
 }
 
@@ -554,6 +556,6 @@ function drawSparkline(){
 async function loopRefresh(){ while(true){ await sleep(60000); await refreshPulses(); } }
 
 /* ---------------- init ---------------- */
-radiusValue.textContent = `${radiusInput.value}km`;
+radiusValue && (radiusValue.textContent = `${radiusInput?.value ?? 120}km`);
 refreshPulses();
 loopRefresh().catch(()=>{});
