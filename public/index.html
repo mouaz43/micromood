@@ -13,141 +13,177 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
-  <!-- Inter font -->
+  <!-- Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,500;14..32,700;14..32,800&display=swap" rel="stylesheet"/>
 
   <style>
     :root{
-      --bg:#09132d; --bg2:#071024;
-      --text:#eaf1ff; --muted:#b9c9ee; --stroke:rgba(255,255,255,.12);
-      --card:#0e2144cc; --shadow:0 22px 60px rgba(0,0,0,.45); --r:24px;
-
-      /* mood-reactive palette (default = neutral) */
-      --m1:#a9d6ff; --m2:#63ffd1;             /* aurora gradient stops   */
-      --edge:#63ffd1;                          /* card edge glow          */
-
-      /* set by lunar HUD script */
-      --moon-fill: 52%;
+      --bg:#0a1431; --bg2:#071124;
+      --card:#0e2144cc; --stroke:rgba(255,255,255,.12);
+      --text:#eaf1ff; --muted:#b8c9ee;
+      --brand1:#a9d6ff; --brand2:#63ffd1; --accent:#69ffd3;
+      --shadow:0 22px 60px rgba(0,0,0,.45);
+      --radius:22px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
       margin:0; color:var(--text);
       font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: radial-gradient(1200px 820px at 78% 68%, #0e3464 0%, var(--bg) 45%, var(--bg2) 100%);
+      background: radial-gradient(1300px 900px at 75% 65%, #0d3160 0%, var(--bg) 45%, var(--bg2) 100%);
       overflow-x:hidden;
     }
 
-    /* SKY LAYERS */
-    .sky{position:fixed; inset:0; pointer-events:none}
+    /* sky layers */
+    .layer{position:fixed; inset:0; pointer-events:none}
     #stars{position:fixed; inset:0; z-index:1; pointer-events:none}
-    .aurora{z-index:0; filter:blur(42px) saturate(115%); animation:drift 22s linear infinite alternate;}
-    .aurora::before,
-    .aurora::after{
-      content:""; position:absolute; inset:-10% -10% auto -10%;
-      height:70%; background:
-        radial-gradient(1200px 420px at 25% 25%, color-mix(in oklab, var(--m2) 35%, transparent) 0 55%, transparent 56%),
-        radial-gradient(1000px 380px at 80% 70%, color-mix(in oklab, var(--m1) 35%, transparent) 0 55%, transparent 56%);
+    .aurora{
+      z-index:0;
+      background:
+        radial-gradient(1200px 420px at 25% 25%, rgba(120,255,230,.15), transparent 55%),
+        radial-gradient(1000px 380px at 80% 75%, rgba(120,190,255,.12), transparent 60%),
+        conic-gradient(from 210deg at 50% 50%, rgba(104,255,208,.06), rgba(0,0,0,0) 65%, rgba(160,220,255,.10));
+      filter: blur(42px) saturate(115%);
+      animation: drift 22s linear infinite alternate;
     }
-    .aurora::after{ inset:auto -10% -15% -10%; height:65%; filter:blur(20px) saturate(120%); opacity:.7 }
-    @keyframes drift{to{transform:translateY(-1.5%) translateX(1%)}}
-
-    .nebula{z-index:0; mix-blend-mode:screen; filter:blur(10px); animation:drift2 28s linear infinite alternate}
-    .nebula::before{
-      content:""; position:absolute; inset:0;
+    .nebula{
+      z-index:0;
       background-image:
         radial-gradient(800px 600px at 60% 40%, rgba(40,140,255,.08), transparent 60%),
         radial-gradient(700px 500px at 30% 70%, rgba(110,70,200,.08), transparent 60%),
         radial-gradient(900px 700px at 90% 10%, rgba(255,180,120,.05), transparent 70%);
+      mix-blend-mode: screen; filter: blur(10px);
+      animation: drift2 30s linear infinite alternate;
     }
+    @keyframes drift{to{transform:translateY(-1.5%) translateX(1%)}}
     @keyframes drift2{to{transform:translateY(1.3%) translateX(-1%)}}
 
+    /* shooting stars */
     .meteors{z-index:2}
     .meteors:before,.meteors:after{
       content:""; position:absolute; width:2px; height:2px; background:#fff; border-radius:50%;
       box-shadow:0 0 10px 2px rgba(255,255,255,.8),0 0 22px 6px rgba(160,220,255,.4);
-      animation:shoot 7s linear infinite;
+      animation: shoot 7s linear infinite;
     }
     .meteors:after{ animation-delay:3.5s; left:68%; top:18% }
     .meteors:before{ left:18%; top:70% }
-    @keyframes shoot{0%{opacity:0; transform:translate(0,0)}10%{opacity:1}55%{opacity:.85; transform:translate(260px,-160px)}100%{opacity:0; transform:translate(520px,-320px)}}
-
-    /* PAGE WRAP */
-    .page{position:relative; z-index:3; max-width:1200px; margin:0 auto; padding:22px clamp(14px,2vw,20px) 110px}
-
-    /* TOP BAR */
-    .top{display:flex; gap:10px; align-items:center; justify-content:space-between; position:sticky; top:0; padding:8px 0 12px; backdrop-filter:blur(8px); z-index:9}
-    .cluster{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .slab{display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:14px;
-      background:linear-gradient(180deg, rgba(15,34,68,.7), rgba(10,22,46,.5)); border:1px solid var(--stroke); box-shadow:var(--shadow)}
-    .lang{gap:8px} .lang-btn{background:transparent; color:var(--text); border:1px solid transparent; padding:8px 10px; border-radius:12px; cursor:pointer; font-weight:800}
-    .lang-btn.active{background:#163261; border-color:var(--stroke)}
-
-    /* BRAND + LUNAR HUD */
-    .brand{display:flex; align-items:center; gap:12px}
-    .logoWrap{position:relative; width:34px; height:34px}
-    .moon svg{display:block}
-    .sat{position:absolute; left:50%; top:50%; width:6px; height:6px; margin:-3px; background:#fff; border-radius:50%; box-shadow:0 0 12px 2px rgba(255,255,255,.65); animation:orbit 10s linear infinite}
-    @keyframes orbit{from{transform:rotate(0deg) translateX(22px) rotate(0)} to{transform:rotate(360deg) translateX(22px) rotate(-360deg)}}
-    .hud{
-      width:36px; height:36px; border-radius:50%;
-      background: conic-gradient(#69ffd3 var(--moon-fill), rgba(255,255,255,.16) 0);
-      box-shadow:0 0 0 1px rgba(255,255,255,.12) inset, 0 0 12px rgba(104,255,208,.35);
+    @keyframes shoot{
+      0%{opacity:0; transform:translate(0,0)}
+      10%{opacity:1}
+      55%{opacity:.85; transform:translate(260px,-160px)}
+      100%{opacity:0; transform:translate(520px,-320px)}
     }
 
-    /* HERO */
-    .hero{margin-top:10px; position:relative; overflow:hidden; border:1px solid var(--stroke); border-radius:26px; box-shadow:var(--shadow);
-      background:linear-gradient(180deg, rgba(15,34,68,.72), rgba(10,22,46,.58)); padding: clamp(24px,3vw,40px)}
-    .hero:before{content:""; position:absolute; inset:-2px; border-radius:inherit; background:radial-gradient(800px 160px at 12% -5%, rgba(160,220,255,.16), transparent 40%)}
-    #deepPhrase{font-weight:800; font-size:clamp(28px,4.2vw,46px); line-height:1.05; letter-spacing:-.02em; text-wrap:balance}
-    .brand-gradient{background:linear-gradient(90deg, var(--m1), var(--m2)); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:0 1px 0 rgba(0,0,0,.35)}
+    .page{position:relative; z-index:3; max-width:1200px; margin:0 auto; padding:24px clamp(14px,2vw,20px) 110px}
 
-    /* CONSTELLATION MESH */
+    /* top bar */
+    .top{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      position:sticky; top:0; padding:8px 0 12px; backdrop-filter:blur(8px); z-index:9;
+    }
+    .brand{
+      display:flex; gap:12px; align-items:center; padding:8px 12px;
+      border-radius:14px; background:linear-gradient(180deg, rgba(15,34,68,.7), rgba(10,22,46,.5));
+      border:1px solid var(--stroke); box-shadow:var(--shadow);
+      transform:translateZ(0);
+    }
+    .brand strong{font-weight:800; letter-spacing:.3px; font-size:18px}
+    .logoWrap{position:relative; width:28px; height:28px}
+    .moon{position:absolute; inset:0}
+    .sat{position:absolute; left:50%; top:50%; width:6px; height:6px; margin:-3px; background:#fff; border-radius:50%;
+      box-shadow:0 0 12px 2px rgba(255,255,255,.65);
+      animation: orbit 10s linear infinite}
+    @keyframes orbit{from{transform:rotate(0deg) translateX(18px) rotate(0)} to{transform:rotate(360deg) translateX(18px) rotate(-360deg)}}
+
+    .badge,.switch,.lang{
+      display:flex; align-items:center; gap:10px;
+      background:linear-gradient(180deg, rgba(15,34,68,.7), rgba(10,22,46,.5));
+      border:1px solid var(--stroke); border-radius:14px; padding:8px 12px; box-shadow:var(--shadow);
+    }
+    .lang{gap:8px; flex-wrap:wrap}
+    .lang-btn{background:transparent; color:var(--text); border:1px solid transparent; padding:8px 10px; border-radius:12px; cursor:pointer; font-weight:800}
+    .lang-btn.active{background:#163261; border-color:var(--stroke)}
+
+    /* hero */
+    .hero{
+      margin-top:10px; position:relative; overflow:hidden;
+      border:1px solid var(--stroke); border-radius:26px; box-shadow:var(--shadow);
+      background:linear-gradient(180deg, rgba(15,34,68,.72), rgba(10,22,46,.58));
+      padding: clamp(24px, 3vw, 40px);
+    }
+    .hero:before{
+      content:""; position:absolute; inset:-2px; border-radius:inherit;
+      background:radial-gradient(800px 160px at 12% -5%, rgba(160,220,255,.16), transparent 40%);
+      pointer-events:none;
+    }
+    #deepPhrase{
+      font-weight:800; font-size:clamp(28px,4.2vw,46px); line-height:1.05; letter-spacing:-.02em; text-wrap:balance;
+    }
+    .brand-gradient{
+      background: linear-gradient(90deg, var(--brand1), var(--brand2));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow:0 1px 0 rgba(0,0,0,.35)
+    }
+
+    /* constellation mesh that follows the cursor */
     .mesh{position:absolute; inset:0; pointer-events:none; opacity:.35}
     .mesh svg{width:100%; height:100%}
     .mesh .line{stroke:#cfe3ff; stroke-opacity:.35; stroke-width:1; stroke-dasharray:5 6}
     .mesh .star{fill:#fff; opacity:.8}
 
-    /* INFO PILLS */
     .infocards{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:14px}
     .pill{border:1px solid var(--stroke); background:var(--card); border-radius:16px; padding:12px 14px; color:var(--muted); font-weight:600; text-align:center}
 
-    /* CONTROLS */
+    /* controls */
     .controls{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:22px}
     .card{border:1px solid var(--stroke); background:var(--card); border-radius:26px; box-shadow:var(--shadow); padding:18px clamp(14px,2vw,20px); transform-style:preserve-3d; will-change:transform}
-    .card::after{content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; box-shadow:0 0 0 1px color-mix(in oklab, var(--edge) 30%, transparent) inset, 0 0 24px color-mix(in oklab, var(--edge) 20%, transparent)}
     .card h2,.card h3{margin:0 0 10px; letter-spacing:.02em}
-    .card h2{font-size:clamp(18px,2.1vw,22px)} .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap} .help{color:var(--muted); font-size:14px}
+    .card h2{font-size:clamp(18px,2.1vw,22px)}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .help{color:var(--muted); font-size:14px}
+
+    /* legend */
     .legend{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
     .chip{display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; border:1px solid var(--stroke); background:#0e2247ad; font-weight:700; color:#eaf1ff; box-shadow: inset 0 0 18px rgba(255,255,255,.06)}
-    .dot{width:9px; height:9px; border-radius:50%; box-shadow:0 0 10px currentColor}
+    .dot{width:9px; height:9px; border-radius:50%; box-shadow: 0 0 12px currentColor}
 
-    /* INPUTS */
+    /* inputs */
     #moodPicker{display:flex; gap:10px; flex-wrap:wrap}
     #moodPicker button{font-size:20px; line-height:1; padding:8px 10px; border-radius:12px; background:#162b55; color:var(--text); border:1px solid var(--stroke); cursor:pointer; transition:.18s ease}
-    #moodPicker button.active{outline:2px solid var(--m2); background:#0d2246}
+    #moodPicker button.active{outline:2px solid var(--accent); background:#0d2246}
     textarea{width:100%; min-height:110px; resize:vertical; border-radius:14px; border:1px solid var(--stroke); background:#0d1d3e; color:var(--text); padding:12px 14px; font:inherit}
     .btn{appearance:none; border:1px solid var(--stroke); background:#2b3f6b; color:#fff; padding:10px 14px; border-radius:14px; cursor:pointer; font-weight:800}
-    .btn.primary{background:#fff; color:#0e2147} .btn:disabled{opacity:.55; cursor:not-allowed}
-    label.checkbox{display:flex; gap:10px; align-items:center; user-select:none} input[type="checkbox"]{width:18px; height:18px; accent-color:#69ffd3}
-    .range{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center} input[type="range"]{width:100%}
+    .btn.primary{background:#fff; color:#0e2147}
+    .btn:disabled{opacity:.55; cursor:not-allowed}
+    label.checkbox{display:flex; gap:10px; align-items:center; user-select:none}
+    input[type="checkbox"]{width:18px; height:18px; accent-color:#69ffd3}
 
-    /* MAP */
+    .range{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center}
+    input[type="range"]{width:100%}
+
+    /* map */
     .mapWrap{margin-top:20px}
     #map{width:100%; height:clamp(420px,52vh,600px); border-radius:26px; overflow:hidden; border:1px solid var(--stroke); box-shadow:var(--shadow)}
-    #crosshair{position:absolute; inset:auto 0 0 0; height:0} #crosshair.hidden{display:none}
+    #crosshair{position:absolute; inset:auto 0 0 0; height:0}
+    #crosshair.hidden{display:none}
 
-    /* STORY */
-    .story{margin-top:36px; padding:26px clamp(14px,2vw,20px); border:1px solid var(--stroke); border-radius:26px; background:linear-gradient(180deg, rgba(15,34,68,.72), rgba(10,22,46,.58)); box-shadow:var(--shadow)}
-    .story h2{margin:0 0 8px; font-size:clamp(18px,2vw,22px)} .story p{margin:8px 0; color:#e9efff}
+    /* story / about */
+    .story{
+      margin-top:36px; padding:26px clamp(14px,2vw,20px);
+      border:1px solid var(--stroke); border-radius:26px;
+      background:linear-gradient(180deg, rgba(15,34,68,.72), rgba(10,22,46,.58));
+      box-shadow:var(--shadow);
+    }
+    .story h2{margin:0 0 8px; font-size:clamp(18px,2vw,22px)}
+    .story p{margin:8px 0; color:#e9efff}
     .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:12px}
     .step{border:1px solid var(--stroke); border-radius:18px; padding:14px; background:#0f2244b5}
     .step h3{margin:0 0 6px; font-size:16px}
     .footer{display:flex; justify-content:space-between; align-items:center; gap:14px; margin-top:14px; color:var(--muted); font-size:14px}
 
-    /* MOBILE */
+    /* mobile */
     @media (max-width:960px){
       .controls{grid-template-columns:1fr}
       .infocards,.steps{grid-template-columns:1fr}
@@ -155,90 +191,80 @@
       #map{height:64vh}
     }
 
-    /* ===== Mood-reactive themes (CSS :has — no JS needed) ===== */
-    .page:has(#moodPicker button.active[data-mood="-2"]){ --m1:#9cc2ff; --m2:#6aa6ff; --edge:#8ebeff; }
-    .page:has(#moodPicker button.active[data-mood="-1"]){ --m1:#b9cfff; --m2:#92b1ff; --edge:#b5ccff; }
-    .page:has(#moodPicker button.active[data-mood="0"]){ --m1:#a9d6ff; --m2:#63ffd1; --edge:#63ffd1; }
-    .page:has(#moodPicker button.active[data-mood="1"]){ --m1:#8cf2d8; --m2:#5df0b0; --edge:#8cffd9; }
-    .page:has(#moodPicker button.active[data-mood="2"]){ --m1:#6bffd0; --m2:#48ffac; --edge:#67ffb0; }
-
-    /* Reduce motion */
+    /* reduce motion kills fancy bits */
     .reduce-motion *{animation:none !important; transition:none !important}
   </style>
 </head>
 <body>
-  <!-- Background sky -->
-  <div class="sky aurora"></div>
-  <div class="sky nebula"></div>
-  <div class="sky meteors"></div>
+  <!-- background -->
+  <div class="layer aurora"></div>
+  <div class="layer nebula"></div>
+  <div class="layer meteors"></div>
   <canvas id="stars"></canvas>
 
   <div class="page">
-    <!-- TOP BAR -->
+    <!-- top bar -->
     <div class="top">
-      <div class="cluster">
-        <div class="slab brand" id="logoBrand" title="Micromoon">
-          <div class="logoWrap">
-            <div class="hud" aria-hidden="true"></div>
-            <div class="moon">
-              <svg viewBox="0 0 64 64" width="34" height="34" aria-hidden="true">
-                <defs>
-                  <radialGradient id="g" cx="40%" cy="40%">
-                    <stop offset="0%" stop-color="#f5fbff"/>
-                    <stop offset="100%" stop-color="#cde7ff"/>
-                  </radialGradient>
-                  <mask id="cres">
-                    <rect width="64" height="64" fill="white"/>
-                    <circle id="masker" cx="44" cy="28" r="22" fill="black">
-                      <animate attributeName="cx" values="44;40;44" dur="8s" repeatCount="indefinite"/>
-                      <animate attributeName="cy" values="28;26;28" dur="8s" repeatCount="indefinite"/>
-                    </circle>
-                  </mask>
-                </defs>
-                <circle cx="32" cy="32" r="22" fill="url(#g)" mask="url(#cres)"/>
-              </svg>
-            </div>
-            <div class="sat" aria-hidden="true"></div>
-          </div>
-          <strong>Micromoon</strong>
+      <div class="brand" id="logoBrand" title="Micromoon">
+        <div class="logoWrap" aria-hidden="true">
+          <!-- crescent with moving mask -->
+          <svg class="moon" viewBox="0 0 64 64">
+            <defs>
+              <radialGradient id="g" cx="40%" cy="40%">
+                <stop offset="0%" stop-color="#f5fbff"/>
+                <stop offset="100%" stop-color="#cde7ff"/>
+              </radialGradient>
+              <mask id="cres">
+                <rect width="64" height="64" fill="white"/>
+                <circle id="masker" cx="44" cy="28" r="22" fill="black">
+                  <animate attributeName="cx" values="44;40;44" dur="8s" repeatCount="indefinite"/>
+                  <animate attributeName="cy" values="28;26;28" dur="8s" repeatCount="indefinite"/>
+                </circle>
+              </mask>
+            </defs>
+            <circle cx="32" cy="32" r="22" fill="url(#g)" mask="url(#cres)"/>
+          </svg>
+          <div class="sat"></div>
         </div>
-
-        <div class="slab"><span>🌕</span><span id="moonLabel">Moon phase</span></div>
+        <strong>Micromoon</strong>
       </div>
 
-      <div class="cluster">
-        <div class="slab">
-          <label class="row" style="gap:8px;">
-            <input id="toggleMotion" type="checkbox"/>
-            <span>Reduce motion</span>
-          </label>
-        </div>
+      <div class="badge"><span>🌕</span><span id="moonLabel">Moon phase</span></div>
 
-        <div class="slab lang">
-          <button class="lang-btn active" data-lang="en">EN</button>
-          <button class="lang-btn" data-lang="de">DE</button>
-          <button class="lang-btn" data-lang="es">ES</button>
-          <button class="lang-btn" data-lang="fr">FR</button>
-          <button class="lang-btn" data-lang="ar">AR</button>
-          <button class="lang-btn" data-lang="ru">RU</button>
-          <button class="lang-btn" data-lang="zh">中文</button>
-        </div>
+      <div class="switch">
+        <label class="row" style="gap:8px;">
+          <input id="toggleMotion" type="checkbox"/>
+          <span>Reduce motion</span>
+        </label>
+      </div>
+
+      <div class="lang">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="de">DE</button>
+        <button class="lang-btn" data-lang="es">ES</button>
+        <button class="lang-btn" data-lang="fr">FR</button>
+        <button class="lang-btn" data-lang="ar">AR</button>
+        <button class="lang-btn" data-lang="ru">RU</button>
+        <button class="lang-btn" data-lang="zh">中文</button>
       </div>
     </div>
 
-    <!-- HERO -->
+    <!-- hero -->
     <section class="hero" aria-label="intro">
       <div id="deepPhrase" aria-live="polite"></div>
 
+      <!-- constellation mesh -->
       <div class="mesh" aria-hidden="true">
         <svg viewBox="0 0 1200 420" preserveAspectRatio="none">
           <g id="meshGroup">
+            <!-- stars -->
             <circle class="star" cx="120" cy="120" r="2"/>
             <circle class="star" cx="240" cy="170" r="2"/>
             <circle class="star" cx="340" cy="110" r="2"/>
             <circle class="star" cx="820" cy="210" r="2"/>
             <circle class="star" cx="910" cy="140" r="2"/>
             <circle class="star" cx="1020" cy="200" r="2"/>
+            <!-- lines -->
             <line class="line" x1="120" y1="120" x2="240" y2="170"/>
             <line class="line" x1="240" y1="170" x2="340" y2="110"/>
             <line class="line" x1="820" y1="210" x2="910" y2="140"/>
@@ -254,11 +280,11 @@
       </div>
     </section>
 
-    <!-- CONTROLS -->
+    <!-- controls (left/right) -->
     <section class="controls" aria-label="controls">
-      <!-- LEFT -->
       <section class="card" id="pulseCard">
         <h2 id="ui-pulseTitle">Pulse your mood</h2>
+
         <h3 id="ui-howFeel" style="margin-top:4px">How do you feel?</h3>
         <div id="moodPicker" class="row" aria-label="mood picker">
           <button type="button" data-mood="-2">😭</button>
@@ -290,7 +316,9 @@
           <button id="toggleCrosshair" class="btn" type="button">Crosshair ✦</button>
         </div>
 
-        <div class="help" style="margin-top:10px"><span id="chosenSpot">No spot selected yet.</span></div>
+        <div class="help" style="margin-top:10px">
+          <span id="chosenSpot">No spot selected yet.</span>
+        </div>
 
         <label class="checkbox" style="margin-top:12px">
           <input id="connectConsent" type="checkbox" checked/>
@@ -302,7 +330,9 @@
           <button id="shareLink" class="btn" disabled>Share</button>
         </div>
 
-        <p id="ui-postsInfo" class="help" style="margin-top:12px">Posts are anonymous and visible for 24 hours, then disappear.</p>
+        <p id="ui-postsInfo" class="help" style="margin-top:12px">
+          Posts are anonymous and visible for 24 hours, then disappear.
+        </p>
 
         <div class="row" style="margin-top:8px">
           <strong id="liveCount">Now: 0 pulses</strong>
@@ -310,11 +340,13 @@
         </div>
       </section>
 
-      <!-- RIGHT -->
       <section class="card" id="optionsCard">
         <h2>Map view</h2>
 
-        <label class="checkbox"><input id="toggleConnections" type="checkbox"/> <span>Connect similar moods</span></label>
+        <label class="checkbox">
+          <input id="toggleConnections" type="checkbox"/>
+          <span>Connect similar moods</span>
+        </label>
 
         <div class="row" style="margin-top:8px">
           <strong id="ui-window">Window</strong>
@@ -337,7 +369,9 @@
           <label class="checkbox"><input id="toggleCluster" type="checkbox" checked/> <span>Cluster</span></label>
         </div>
 
-        <p class="help" style="margin-top:8px">Tip: lower the window to 6–12h to see fresher activity.</p>
+        <p class="help" style="margin-top:8px">
+          Tip: lower the window to 6–12h to see fresher activity.
+        </p>
 
         <div class="infocards" style="margin-top:14px">
           <div class="pill"><strong>Anonymous</strong><br/>No login.</div>
@@ -347,22 +381,28 @@
       </section>
     </section>
 
-    <!-- MAP -->
+    <!-- map -->
     <section class="mapWrap">
       <div id="map" role="region" aria-label="map"></div>
       <div id="crosshair" class="hidden" aria-hidden="true"></div>
     </section>
 
-    <!-- STORY -->
+    <!-- story / about -->
     <section id="about" class="story">
       <h2>About Micromoon</h2>
-      <p>The same moon sees us all. Here, a feeling becomes a small light — anonymous, gentle, and temporary. Lights gather and fade. Sometimes they connect. Sometimes they simply keep each other company.</p>
+      <p>
+        The same moon sees us all. Here, a feeling becomes a small light — anonymous, gentle, and temporary.
+        Lights gather and fade. Sometimes they connect. Sometimes they simply keep each other company.
+      </p>
       <div class="steps">
-        <div class="step"><h3>Why</h3><p>To make distance feel smaller and notice what we share without asking for anything back.</p></div>
+        <div class="step"><h3>Why</h3><p>To make distance feel smaller. To notice what we share without asking for anything back.</p></div>
         <div class="step"><h3>How</h3><p>Pulse once. Add a few words if you want. Your dot glows for a day, then dissolves into the night.</p></div>
         <div class="step"><h3>Connection</h3><p>Turn on “connect similar” to draw quiet lines between close moods within your chosen radius.</p></div>
       </div>
-      <p style="margin-top:10px">This is a small personal project by <strong>Mouaz Almjarkesh</strong> — built to see if we still care about connection. Thank you for lighting the map.</p>
+      <p style="margin-top:10px">
+        This is a small personal project by <strong>Mouaz Almjarkesh</strong> — built to see if we still care about
+        connection. Thank you for lighting the map.
+      </p>
       <div class="footer">
         <span>© <span id="year"></span> Micromoon</span>
         <span>Built by <strong>Mouaz Almjarkesh</strong></span>
@@ -370,81 +410,41 @@
     </section>
   </div>
 
-  <!-- VISUAL HELPERS (no changes to app.js APIs) -->
+  <!-- micro-interactions (visual only) -->
   <script>
-    // Year
+    // footer year
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Lunar HUD ring value (same rough calc you already use)
+    // 3D tilt on cards (purely decorative)
     (function(){
-      const syn=29.530588853, ref=new Date(Date.UTC(2000,0,6,18,14));
-      const age=((new Date()-ref)/86400000)%syn; const pct=Math.max(0,Math.min(1,age/syn));
-      document.documentElement.style.setProperty('--moon-fill', (pct*100).toFixed(1)+'%');
+      const cards=[document.getElementById('pulseCard'),document.getElementById('optionsCard')];
+      const max=10; let rAF;
+      function onMove(e,card){
+        const r=card.getBoundingClientRect();
+        const x=(e.clientX-r.left)/r.width-.5, y=(e.clientY-r.top)/r.height-.5;
+        cancelAnimationFrame(rAF); rAF=requestAnimationFrame(()=>{card.style.transform=`rotateX(${-y*max}deg) rotateY(${x*max}deg)`;});
+      }
+      function reset(c){c.style.transform='rotateX(0) rotateY(0)';}
+      cards.forEach(c=>{ if(!c) return; c.addEventListener('mousemove',ev=>onMove(ev,c)); c.addEventListener('mouseleave',()=>reset(c)); c.addEventListener('touchstart',()=>reset(c),{passive:true}); });
     })();
 
-    // Reduce motion toggle
+    // constellation mesh follows cursor (disabled with Reduce motion)
     (function(){
-      const t=document.getElementById('toggleMotion');
-      t?.addEventListener('change', ()=>document.body.classList.toggle('reduce-motion', !!t.checked));
-    })();
-
-    // Constellation mesh follows pointer (throttled, damped on mobile)
-    (function(){
-      const mesh=document.getElementById('meshGroup'); if(!mesh) return;
-      const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints>0);
-      let sx=0, sy=0, raf;
+      const root=document.documentElement, mesh=document.getElementById('meshGroup'), motion=document.getElementById('toggleMotion');
+      if(!mesh) return;
+      let sx=0, sy=0;
       function move(e){
         if (document.body.classList.contains('reduce-motion')) return;
-        const cx = (e.clientX||innerWidth/2)/innerWidth - .5;
-        const cy = (e.clientY||innerHeight/2)/innerHeight - .5;
-        const scale = touch ? 6 : 12;
-        sx = cx*scale; sy = cy*(scale*.66);
-        cancelAnimationFrame(raf);
-        raf = requestAnimationFrame(()=>mesh.setAttribute('transform',`translate(${sx},${sy})`));
+        const x=e.clientX/innerWidth-0.5, y=e.clientY/innerHeight-0.5;
+        sx = x*12; sy = y*8;
+        mesh.setAttribute('transform',`translate(${sx},${sy})`);
       }
       window.addEventListener('mousemove',move,{passive:true});
-      window.addEventListener('touchmove',e=>move(e.touches[0]||e),{passive:true});
-    })();
-
-    // Pulse Bloom (tiny emoji fireflies near the Pulse button)
-    (function(){
-      const btn=document.getElementById('submitMood'); const host=document.querySelector('.page');
-      function bloom(x,y,emoji='✨'){
-        for(let i=0;i<12;i++){
-          const s=document.createElement('div');
-          s.textContent = emoji;
-          s.style.cssText = `position:fixed; left:${x}px; top:${y}px; font-size:${12+Math.random()*10}px; 
-            transform:translate(-50%,-50%); pointer-events:none; filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));
-            transition: transform 900ms ease, opacity 900ms ease; opacity:.9; z-index:99;`;
-          host.appendChild(s);
-          const ang=Math.random()*Math.PI*2, dist=30+Math.random()*60;
-          requestAnimationFrame(()=>{ s.style.transform=`translate(${Math.cos(ang)*dist}px, ${Math.sin(ang)*dist}px)`; s.style.opacity='0'; });
-          setTimeout(()=>s.remove(), 950);
-        }
-      }
-      btn?.addEventListener('click', e=>{
-        const r = btn.getBoundingClientRect(); bloom(r.left+r.width/2, r.top, '🟡');
-      });
-    })();
-
-    // Minimal star canvas (lightweight, respects Reduce motion)
-    (function(){
-      const c=document.getElementById('stars'); if(!c || !c.getContext) return;
-      const ctx=c.getContext('2d'); let W,H,stars=[];
-      function resize(){ W=c.width=innerWidth*devicePixelRatio; H=c.height=innerHeight*devicePixelRatio; make(); }
-      function make(){ const n=Math.floor((innerWidth*innerHeight)/12000);
-        stars = Array.from({length:n},()=>({ x:Math.random()*W, y:Math.random()*H, r:(Math.random()*1.2+0.2)*devicePixelRatio, s:Math.random()*0.6+0.2 })); }
-      function step(){
-        if (document.body.classList.contains('reduce-motion')) return;
-        ctx.clearRect(0,0,W,H); ctx.fillStyle='white';
-        for(const s of stars){ ctx.globalAlpha=s.s; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill(); s.y += 0.02*devicePixelRatio; if(s.y>H) s.y=-5; }
-        requestAnimationFrame(step);
-      }
-      resize(); addEventListener('resize',resize); step();
+      motion && motion.addEventListener('change',()=>{ document.body.classList.toggle('reduce-motion', motion.checked); mesh.setAttribute('transform','translate(0,0)'); });
     })();
   </script>
 
-  <!-- Your app logic (unchanged) -->
+  <!-- your app logic (unchanged) -->
   <script src="./app.js"></script>
 </body>
 </html>
