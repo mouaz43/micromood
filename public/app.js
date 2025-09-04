@@ -1,9 +1,8 @@
 /* =========================================================================
    Micromoon — Front-end Map Logic (READ DOTS RELIABLY)
-   - Bulletproof popups: multi-event open, nearest-dot on map tap, fallback popup
-   - Auto-pan popups into view
-   - Mood connections keep numeric compare
-   - No HTML changes, pulse logic untouched
+   - Popups now open even when the dot is inside a cluster (zoomToShowLayer)
+   - Auto-pan popups into view; nearest-dot tap on map for mobile
+   - Connections keep numeric compare; owner-only delete preserved
    ======================================================================== */
 
 /* ---------------- helpers ---------------- */
@@ -78,7 +77,7 @@ function toast(txt, ms=2400){
   setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(-6px)'; setTimeout(()=>el.remove(),250); }, ms);
 }
 
-/* ---------------- i18n (unchanged content, trimmed here) ---------------- */
+/* ---------------- i18n (same content as before) ---------------- */
 const I18N = {
   en:{ phrase:[
       'The same moon looks down on all of us and knows our hidden feelings.',
@@ -108,7 +107,59 @@ const I18N = {
     tooMany:'Zu viele Punkte für flüssige Verbindungen. Zoome oder verringere das Zeitfenster.',
     pickSpot:'Wähle Stimmung und Ort', linkCopied:'Link kopiert'
   },
-  // es/fr/ar/ru/zh kept as in your current file…
+  es:{ phrase:['La misma luna nos mira a todos y conoce nuestros sentimientos ocultos.',
+               'En Micromoon esos sentimientos se vuelven luces en un mapa compartido; brillan un día y vuelven a la noche.'],
+      pulseTitle:'Pulsa tu ánimo', howFeel:'¿Cómo te sientes?', happening:'¿Qué pasa?', optional:'(opcional, 280 caracteres)',
+      orClick:'o toca el mapa', allowConnect:'Permitir conectar mi punto', postsInfo:'Las publicaciones son anónimas y visibles por 24 horas.',
+      window:'Ventana', radius:'Radio', veryLow:'muy bajo', low:'bajo', neutral:'neutral', good:'bien', great:'genial',
+      pulsed:'Enviado ✨', loadFail:'No se pudieron cargar los puntos', postFail:'No se pudo enviar',
+      del:'Eliminar', hidden:'Oculto en este dispositivo', delOK:'Punto eliminado',
+      tooMany:'Demasiados puntos para conectar con fluidez. Acerca el mapa o reduce la ventana.',
+      pickSpot:'Elige estado y lugar', linkCopied:'Enlace copiado'
+  },
+  fr:{ phrase:['La même lune nous regarde tous et connaît nos sentiments cachés.',
+               'Sur Micromoon ces sentiments deviennent des lumières sur une carte commune, elles brillent un jour puis retournent à la nuit.'],
+      pulseTitle:'Pulse ton humeur', howFeel:'Comment te sens-tu ?', happening:'Que se passe-t-il ?', optional:'(optionnel, 280 caractères)',
+      orClick:'ou clique sur la carte', allowConnect:'Autoriser à relier mon point', postsInfo:'Les posts sont anonymes et visibles 24 h.',
+      window:'Fenêtre', radius:'Rayon', veryLow:'très bas', low:'bas', neutral:'neutre', good:'bien', great:'super',
+      pulsed:'Envoyé ✨', loadFail:'Chargement impossible', postFail:'Envoi impossible',
+      del:'Supprimer', hidden:'Masqué sur cet appareil', delOK:'Point supprimé',
+      tooMany:'Trop de points pour relier correctement. Zoome ou réduis la fenêtre.',
+      pickSpot:'Choisis un état et un lieu', linkCopied:'Lien copié'
+  },
+  ar:{ phrase:['القمر نفسه يطل علينا جميعًا ويعرف مشاعرنا الخفية.',
+               'على ميكرومون تتحول تلك المشاعر إلى أضواء على خريطة مشتركة، تتوهّج يومًا ثم تعود إلى الليل.'],
+      pulseTitle:'انشر مزاجك', howFeel:'كيف تشعر؟', happening:'ماذا يحدث؟', optional:'(اختياري، 280 حرفًا)',
+      orClick:'أو اضغط على الخريطة', allowConnect:'السماح للآخرين بربط نقطتي',
+      postsInfo:'المنشورات مجهولة وتبقى 24 ساعة ثم تختفي.',
+      window:'المدة', radius:'نطاق', veryLow:'منخفض جدًا', low:'منخفض', neutral:'محايد', good:'جيد', great:'رائع',
+      pulsed:'تم النشر ✨', loadFail:'تعذر تحميل النقاط', postFail:'تعذر النشر',
+      del:'حذف', hidden:'مخفي على هذا الجهاز', delOK:'تم الحذف',
+      tooMany:'نقاط كثيرة جدًا للربط بسلاسة. قرّب الخريطة أو قلّل المدة.',
+      pickSpot:'اختر المزاج والمكان', linkCopied:'تم نسخ الرابط'
+  },
+  ru:{ phrase:['Одна и та же луна смотрит на всех нас и знает наши скрытые чувства.',
+               'На Micromoon эти чувства становятся огнями на общей карте: один день светят и тают в ночи.'],
+      pulseTitle:'Отправь настроение', howFeel:'Как ты себя чувствуешь?', happening:'Что происходит?', optional:'(необязательно, 280 символов)',
+      orClick:'или нажми на карту', allowConnect:'Разрешить соединять мою точку',
+      postsInfo:'Посты анонимны и видны 24 часа.', window:'Окно', radius:'Радиус',
+      veryLow:'очень плохо', low:'плохо', neutral:'нейтр.', good:'хорошо', great:'отлично',
+      pulsed:'Отправлено ✨', loadFail:'Не удалось загрузить точки', postFail:'Не удалось отправить',
+      del:'Удалить', hidden:'Скрыто на этом устройстве', delOK:'Точка удалена',
+      tooMany:'Слишком много точек для соединения. Уменьшите окно или приблизьте карту.',
+      pickSpot:'Выбери настроение и место', linkCopied:'Ссылка скопирована'
+  },
+  zh:{ phrase:['同一轮明月照着我们 也懂我们的隐秘心绪。',
+               '在 Micromoon 这些心绪化作共享地图上的光点 只停留一天 随夜色淡去。'],
+      pulseTitle:'发布心情', howFeel:'你现在感觉如何？', happening:'发生了什么？', optional:'（可选，280 字）',
+      orClick:'或在地图上点选', allowConnect:'允许他人与我的点连线',
+      postsInfo:'匿名展示 24 小时后消失。', window:'时间窗', radius:'半径',
+      veryLow:'很差', low:'较差', neutral:'一般', good:'不错', great:'很好',
+      pulsed:'已发布 ✨', loadFail:'加载失败', postFail:'发布失败',
+      del:'删除', hidden:'在此设备隐藏', delOK:'已删除',
+      tooMany:'点位太多无法顺畅连线。请缩小时间窗或放大地图。',
+      pickSpot:'请选择心情与地点', linkCopied:'已复制链接'
+  }
 };
 let LANG = 'en';
 function setLang(code){
@@ -140,7 +191,6 @@ toggleMotion?.addEventListener('change', ()=>document.body.classList.toggle('red
 
 /* ---------------- mobile detection & renderers ---------------- */
 const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-const HIT_STROKE = IS_TOUCH ? 34 : 18; // invisible stroke width for easy taps
 const DOT_RADIUS = IS_TOUCH ? 11 : 8;
 const touchRenderer = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ tolerance: IS_TOUCH ? 12 : 6, padding: 0.25 }) : undefined;
 const lineRenderer  = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ padding: 0.25 }) : undefined;
@@ -148,8 +198,8 @@ const lineRenderer  = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ paddin
 /* ---------------- map setup ---------------- */
 let map, clusterLayer, heatLayer, lineLayer;
 let pulses = [];
-const markers = new Map();            // id -> marker
-const byId     = new Map();           // id -> pulse (for quick lookup)
+const markers = new Map();  // id -> marker
+const byId    = new Map();  // id -> pulse
 const hidden  = new Set(JSON.parse(localStorage.getItem('mmHidden')   || '[]').map(asId));
 const owned   = new Set(JSON.parse(localStorage.getItem('mmOwnedIds') || '[]').map(asId));
 let ownerKey  = localStorage.getItem('mmOwnerKey') || (crypto?.randomUUID?.() || String(Math.random()));
@@ -174,11 +224,10 @@ localStorage.setItem('mmOwnerKey', ownerKey);
 
   lineLayer = L.layerGroup().addTo(map);
 
-  // Map click: open nearest dot if close; otherwise select location
+  // Map click: nearest-dot open; otherwise choose posting spot
   map.on('click', e=>{
     const nm = nearestMarker(e.latlng, 28);
     if (nm){ openMarkerPopup(nm); return; }
-    // no nearby dot -> select spot for posting
     selectedSpot = { lat: e.latlng.lat, lng: e.latlng.lng };
     chosenSpot && (chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`);
     submitMood && (submitMood.disabled = (selectedMood === null));
@@ -271,8 +320,8 @@ function renderPulses(){
     const marker = L.circleMarker([p.lat, p.lng], {
       radius: DOT_RADIUS,
       color: 'rgba(255,255,255,.22)',
-      weight: HIT_STROKE,   // large invisible hit area
-      opacity: 0,
+      weight: 1,
+      opacity: 1,
       fillColor: moodColor(p.mood),
       fillOpacity: .96,
       renderer: touchRenderer,
@@ -280,7 +329,6 @@ function renderPulses(){
       keyboard:true
     });
 
-    // Bind popup (primary)
     marker.bindPopup(popupHTML(p), {
       autoPan: true, autoClose: false, closeButton: true, keepInView: true,
       maxWidth: 280, autoPanPaddingTopLeft:[30,50], autoPanPaddingBottomRight:[30,50],
@@ -289,8 +337,6 @@ function renderPulses(){
 
     const open = ()=>openMarkerPopup(marker, pid);
 
-    // MULTI-EVENT OPEN to be bulletproof
-    marker.on('add', ()=>{ try{ marker.bringToFront(); }catch{} });
     marker.on('click', open);
     marker.on('dblclick', open);
     marker.on('keypress', (e)=>{ if (e.originalEvent?.key === 'Enter') open(); });
@@ -322,24 +368,25 @@ function moodColor(m){
   }
 }
 
-/* ----- OPEN POPUP helpers (with fallback & auto-pan) ----- */
+/* ----- OPEN POPUP helpers (cluster-aware + fallback) ----- */
 function openMarkerPopup(markerOrId, maybeId){
   let marker = markerOrId, idStr = maybeId;
-  if (typeof markerOrId === 'string'){
-    idStr = markerOrId;
-    marker = markers.get(idStr);
-  }
+  if (typeof markerOrId === 'string'){ idStr = markerOrId; marker = markers.get(idStr); }
   if (!marker) return;
 
-  // Primary: open bound popup
-  try {
-    marker.openPopup();
-    const ll = marker.getLatLng();
-    try { map.panInside(ll, { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); } catch {}
+  // Ask MarkerCluster to make the child visible (zoom or spiderfy), then open
+  try{
+    clusterLayer.zoomToShowLayer(marker, function(){
+      try {
+        marker.openPopup();
+        const ll = marker.getLatLng();
+        try { map.panInside(ll, { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); } catch {}
+      } catch {}
+    });
     return;
-  } catch {}
+  }catch{}
 
-  // Fallback: create a popup at the point if something blocks the bound one
+  // Fallback: raw popup at lat/lng
   const p = byId.get(idStr);
   if (p){
     L.popup({
