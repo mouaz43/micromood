@@ -1,13 +1,10 @@
 /* =========================================================================
-   Micromoon — Front-end Map Logic (safe full rewrite)
-   - Same-mood connections within chosen radius & window
-     * Consent defaults to allowed (only explicit false disables)
-     * Fast & safe prefilter using latitude-aware km/deg + precise Haversine
-   - Delete only on MY dots
-     * Tracks my created ids in localStorage:mmOwnedIds
-     * Tries DELETE /api/pulses/:id with X-Owner header; else hides locally
-   - Heatmap + cluster; language switching; sparkline; crosshair; mobile-ready
-   - No backend changes required; all DOM IDs preserved
+   Micromoon — Front-end Map Logic (mobile tap fix, connections, owner-only delete)
+   - Mobile: bigger touch hit-area (Canvas renderer), map tapTolerance, touchend opens popup
+   - Connections: same mood within radius; consent defaults to allowed
+   - Delete: only for my own dots (local ownership, optional X-Owner to server)
+   - Heatmap + clusters; language switching; sparkline; crosshair; periodic refresh
+   - NO HTML changes
    ======================================================================== */
 
 /* ---------------- small helpers ---------------- */
@@ -18,7 +15,7 @@ const kmBetween = (A, B) => {
   const R = 6371;
   const dLat = toRad(B.lat - A.lat);
   const dLng = toRad(B.lng - A.lng);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(A.lat)) * Math.cos(toRad(B.lat)) * Math.sin(dLng/2)**2;
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(A.lat))*Math.cos(toRad(B.lat))*Math.sin(dLng/2)**2;
   return 2 * R * Math.asin(Math.sqrt(a));
 };
 const esc = (s='') => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -223,6 +220,10 @@ toggleMotion && toggleMotion.addEventListener('change', ()=>{
   document.body.classList.toggle('reduce-motion', !!toggleMotion.checked);
 });
 
+/* ---------------- mobile tap settings (NEW) ---------------- */
+const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+const touchRenderer = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ tolerance: IS_TOUCH ? 12 : 6, padding: 0.25 }) : undefined;
+
 /* ---------------- map init ---------------- */
 let map, clusterLayer, heatLayer, lineLayer;
 let pulses = [];
@@ -233,11 +234,26 @@ let ownerKey  = localStorage.getItem('mmOwnerKey');
 if (!ownerKey) { try { ownerKey = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Math.random()); } catch(e){ ownerKey = String(Math.random()); } localStorage.setItem('mmOwnerKey', ownerKey); }
 
 (function initMap(){
-  map = L.map('map', { zoomControl:true, minZoom:2, worldCopyJump:true, attributionControl:true });
+  map = L.map('map', {
+    zoomControl:true, minZoom:2, worldCopyJump:true, attributionControl:true,
+    // Mobile-tap friendliness
+    preferCanvas: true,
+    tap: IS_TOUCH,
+    tapTolerance: IS_TOUCH ? 25 : 15
+  });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution:'&copy; OpenStreetMap' }).addTo(map);
   map.setView([20, 0], 2);
 
-  clusterLayer = L.markerClusterGroup({ showCoverageOnHover:false, chunkedLoading:true });
+  clusterLayer = L.markerClusterGroup({
+    showCoverageOnHover:false,
+    chunkedLoading:true,
+    // mobile: make clusters easier to hit, and spiderfy when tapped
+    maxClusterRadius: IS_TOUCH ? 70 : 50,
+    spiderfyOnMaxZoom:true,
+    spiderfyOnEveryZoom:true,
+    disableClusteringAtZoom: 17
+  });
+  clusterLayer.on('clusterclick', (a)=> a.layer.spiderfy());
   map.addLayer(clusterLayer);
 
   lineLayer = L.layerGroup().addTo(map);
@@ -247,6 +263,9 @@ if (!ownerKey) { try { ownerKey = (crypto && crypto.randomUUID) ? crypto.randomU
     chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`;
     submitMood.disabled = (selectedMood === null);
   });
+
+  // iOS: ensure map doesn’t swallow quick taps on markers
+  map.on('touchend', ()=>{ /* keep default; markers handle their own touchend */ });
 })();
 
 /* ---------------- selections & controls ---------------- */
@@ -308,10 +327,25 @@ function renderPulses(){
   markers.clear();
   for(const p of pulses){
     const marker = L.circleMarker([p.lat, p.lng], {
-      radius: 8, color: 'rgba(255,255,255,.22)',
-      weight: 1, fillColor: moodColor(p.mood), fillOpacity: .92
+      radius: IS_TOUCH ? 11 : 8,
+      color: 'rgba(255,255,255,.22)',
+      weight: 1,
+      fillColor: moodColor(p.mood),
+      fillOpacity: .92,
+      renderer: touchRenderer,       // << mobile hit-area
+      bubblingMouseEvents: false,
+      keyboard: false
     });
-    marker.bindPopup(popupHTML(p));
+    marker.bindPopup(popupHTML(p), { autoPan:true });
+
+    // Mobile: ensure taps open popup reliably
+    marker.on('click', () => marker.openPopup());
+    marker.on('touchend', (ev) => {
+      try{ ev.originalEvent && ev.originalEvent.preventDefault && ev.originalEvent.preventDefault(); }catch(_){}
+      try{ ev.originalEvent && ev.originalEvent.stopPropagation && ev.originalEvent.stopPropagation(); }catch(_){}
+      marker.openPopup();
+    });
+
     marker.on('popupopen', ()=>attachPopupHandlers(p.id));
     markers.set(p.id, marker);
     clusterLayer.addLayer(marker);
@@ -343,14 +377,12 @@ function buildConnections(){
   const MAX = 1400;                                  // perf guard
   const N = Math.min(pulses.length, MAX);
 
-  // Consent default: allowed. Only explicit false disables a point.
   const ok = p => !(p.connect === false || p.allow_connect === false || p.connect_consent === false);
 
   for (let i=0;i<N;i++){
     const A = pulses[i];
     if (!ok(A)) continue;
 
-    // lat-aware rough bbox (km per degree varies by cos(lat))
     const cosLatA = Math.abs(Math.cos(toRad(A.lat)));
     const lonKmPerDegA = Math.max(0.1, 111.32 * cosLatA);
     const latKmPerDeg = 111.32;
@@ -360,7 +392,6 @@ function buildConnections(){
       if (!ok(B)) continue;
       if (A.mood !== B.mood) continue;
 
-      // quick reject using bbox in km
       const dLatKm = Math.abs(A.lat - B.lat) * latKmPerDeg;
       if (dLatKm > R) continue;
       const cosLatB = Math.abs(Math.cos(toRad(B.lat)));
@@ -369,7 +400,6 @@ function buildConnections(){
       const dLonKm = Math.abs(A.lng - B.lng) * avgLonKmPerDeg;
       if (dLonKm > R) continue;
 
-      // precise check
       if (kmBetween({lat:A.lat,lng:A.lng},{lat:B.lat,lng:B.lng}) <= R){
         L.polyline([[A.lat, A.lng], [B.lat, B.lng]], {
           color: moodColor(A.mood), opacity: .38, weight: 2, interactive:false
@@ -403,7 +433,7 @@ async function postPulse(){
       lat: selectedSpot.lat,
       lng: selectedSpot.lng,
       connect: !!connectConsent.checked,
-      ownerKey: ownerKey            // harmless if backend ignores
+      ownerKey: ownerKey
     };
     const res = await fetch('/api/pulses', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -412,7 +442,6 @@ async function postPulse(){
     if (!res.ok) throw new Error(`POST /api/pulses ${res.status}`);
     const created = await res.json();
 
-    // record ownership locally so only I see Delete
     owned.add(created.id);
     localStorage.setItem('mmOwnedIds', JSON.stringify(Array.from(owned)));
 
@@ -451,7 +480,7 @@ function attachPopupHandlers(id){
 }
 
 async function deletePulse(id){
-  if (!owned.has(id)) return; // safety: only my dots show Delete
+  if (!owned.has(id)) return; // safety
   try{
     const res = await fetch(`/api/pulses/${encodeURIComponent(id)}`, {
       method:'DELETE', headers: { 'X-Owner': ownerKey }
@@ -462,7 +491,6 @@ async function deletePulse(id){
     }
     throw new Error(`DELETE ${res.status}`);
   }catch(e){
-    // fallback: local hide (still only for me)
     hidden.add(id);
     localStorage.setItem('mmHidden', JSON.stringify(Array.from(hidden)));
     removePulse(id);
