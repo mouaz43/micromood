@@ -38,12 +38,33 @@ const I18N = {
 
 // ---------- modern hero phrase
 const HERO = {
-  en:`The same moon looks down on all of us and knows our hidden feelings.
+  en: `The same moon looks down on all of us and knows our hidden feelings.
 On Micromoon those feelings become lights on a shared map,
 glowing for one day before they fade back into the night.`,
-  de:`Der gleiche Mond schaut auf uns alle hinab und kennt unsere verborgenen Gefühle.
+
+  de: `Der gleiche Mond schaut auf uns alle hinab und kennt unsere verborgenen Gefühle.
 Auf Micromoon werden diese Gefühle zu Lichtern auf einer gemeinsamen Karte,
-sie leuchten einen Tag, bevor sie wieder in die Nacht zurückkehren.`
+sie leuchten einen Tag, bevor sie wieder in die Nacht zurückkehren.`,
+
+  es: `La misma luna nos mira a todos y conoce nuestros sentimientos ocultos.
+En Micromoon esos sentimientos se vuelven luces en un mapa compartido,
+que brillan durante un día antes de desvanecerse de nuevo en la noche.`,
+
+  fr: `La même lune nous regarde tous et connaît nos sentiments secrets.
+Sur Micromoon, ces sentiments deviennent des lumières sur une carte partagée,
+qui brillent un jour avant de se fondre à nouveau dans la nuit.`,
+
+  ar: `ينظر إلينا القمر نفسه جميعًا ويعرف مشاعرنا الخفية.
+في ميكرومون تتحول تلك المشاعر إلى أضواء على خريطة مشتركة،
+تلمع ليوم واحد قبل أن تذوب من جديد في الليل.`,
+
+  ru: `Одна и та же луна смотрит на всех нас и знает наши скрытые чувства.
+На Micromoon эти чувства становятся огоньками на общей карте,
+горящими один день, прежде чем снова раствориться в ночи.`,
+
+  zh: `同一轮月亮俯瞰着我们，懂得我们隐藏的情绪。
+在 Micromoon，这些情绪化作共享地图上的点点灯光，
+闪耀一天后又回归夜色。`
 };
 function renderHero(lang="en"){
   const el=$("#deepPhrase"); if(!el) return;
