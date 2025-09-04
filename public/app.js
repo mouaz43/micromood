@@ -1,10 +1,10 @@
 /* =========================================================================
-   Micromoon — Front-end Map Logic
-   - Layout fix: equalize the two control cards + ensure map starts below
-   - Mobile taps on markers (canvas renderer + tapTolerance + touchend)
-   - Same-mood connections (consent defaults to allowed; precise Haversine)
-   - Delete only on MY dots (local ownership; optional X-Owner header)
+   Micromoon — Front-end Map Logic (drop-in)
+   - Mobile taps on markers (canvas renderer + big invisible hit stroke + touchend)
+   - Owner-only delete (local ownerKey + owned IDs; X-Owner header fallback)
+   - Same-mood connections with consent (Haversine + radius)
    - Heatmap + clusters; i18n; sparkline; crosshair; periodic refresh
+   - Layout equalization for control cards
    - NO HTML changes
    ======================================================================== */
 
@@ -200,9 +200,12 @@ setLang('en');
 /* ---------------- motion toggle ---------------- */
 toggleMotion?.addEventListener('change', ()=>document.body.classList.toggle('reduce-motion', !!toggleMotion.checked));
 
-/* ---------------- mobile-tap renderer ---------------- */
+/* ---------------- mobile detection & renderer ---------------- */
 const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+const HIT_STROKE = IS_TOUCH ? 36 : 18; // big invisible stroke for easy taps
+const DOT_RADIUS = IS_TOUCH ? 11 : 8;
 const touchRenderer = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ tolerance: IS_TOUCH ? 12 : 6, padding: 0.25 }) : undefined;
+const lineRenderer  = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ padding: 0.25 }) : undefined;
 
 /* ---------------- map setup ---------------- */
 let map, clusterLayer, heatLayer, lineLayer;
@@ -216,7 +219,8 @@ localStorage.setItem('mmOwnerKey', ownerKey);
 (function initMap(){
   map = L.map('map', {
     zoomControl:true, minZoom:2, worldCopyJump:true, attributionControl:true,
-    preferCanvas:true, tap: IS_TOUCH, tapTolerance: IS_TOUCH ? 25 : 15
+    preferCanvas:true, tap: IS_TOUCH, tapTolerance: IS_TOUCH ? 25 : 15,
+    touchZoom:true, closePopupOnClick:false
   });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
   map.setView([20, 0], 2);
@@ -284,20 +288,15 @@ function equalizeCards(){
   const left  = cardByHeading('pulse your mood');
   const right = cardByHeading('map view');
   if(!left || !right) return;
-  // reset heights, then equalize
   left.style.height = 'auto'; right.style.height = 'auto';
   const h = Math.max(left.offsetHeight, right.offsetHeight);
   left.style.height = right.style.height = h + 'px';
-
-  // Make sure map starts below the taller card row
   if(mapEl){
     mapEl.style.marginTop = '16px';
     mapEl.style.display = 'block';
   }
 }
-// also ensure the note input fills width if any CSS collapsed it
 note && (note.style.width = '100%');
-
 const eqNow = ()=>requestAnimationFrame(equalizeCards);
 window.addEventListener('resize', debounce(eqNow, 120));
 document.addEventListener('DOMContentLoaded', eqNow);
@@ -320,30 +319,50 @@ function renderPulses(){
   markers.clear();
 
   for(const p of pulses){
+    // BIGGER TOUCH HITBOX: large invisible stroke; visual is controlled by fill
     const marker = L.circleMarker([p.lat, p.lng], {
-      radius: IS_TOUCH ? 11 : 8, color:'rgba(255,255,255,.22)', weight:1,
-      fillColor:moodColor(p.mood), fillOpacity:.92, renderer:touchRenderer,
-      bubblingMouseEvents:false, keyboard:false
+      radius: DOT_RADIUS,
+      color: 'rgba(255,255,255,.22)',
+      weight: HIT_STROKE,      // large stroke for hit testing
+      opacity: 0,              // invisible stroke (keeps look clean)
+      fillColor: moodColor(p.mood),
+      fillOpacity: .95,
+      renderer: touchRenderer,
+      bubblingMouseEvents:false,
+      keyboard:true
     });
-    marker.bindPopup(popupHTML(p), { autoPan:true });
+
+    marker.bindPopup(popupHTML(p), { autoPan:true, closeButton:true, autoClose:false, keepInView:true });
     marker.on('click', () => marker.openPopup());
-    marker.on('touchend', ev=>{ ev.originalEvent?.preventDefault?.(); ev.originalEvent?.stopPropagation?.(); marker.openPopup(); });
+    marker.on('keypress', (e)=>{ if (e.originalEvent?.key === 'Enter') marker.openPopup(); });
+
+    // Reliable mobile open: use touchend to avoid map click swallowing
+    marker.on('touchend', ev=>{
+      ev.originalEvent?.preventDefault?.();
+      ev.originalEvent?.stopPropagation?.();
+      marker.openPopup();
+    });
+
     marker.on('popupopen', ()=>attachPopupHandlers(p.id));
-    markers.set(p.id, marker); clusterLayer.addLayer(marker);
+    markers.set(p.id, marker);
+    clusterLayer.addLayer(marker);
   }
 
   liveCount.textContent = `Now: ${pulses.length} pulses`;
   drawSparkline(); updateHeat();
   if (toggleConnections.checked) buildConnections();
 
-  // After render, equalize again (heights changed)
   eqNow();
 }
 
 function moodColor(m){
   switch(Number(m)){
-    case -2: return '#8ebeff'; case -1: return '#b5ccff'; case 0: return '#dee7ff';
-    case  1: return '#9bffdb'; case  2: return '#67ffb0'; default: return '#cfe3ff';
+    case -2: return '#8ebeff';
+    case -1: return '#b5ccff';
+    case  0: return '#dee7ff';
+    case  1: return '#9bffdb';
+    case  2: return '#67ffb0';
+    default: return '#cfe3ff';
   }
 }
 
@@ -351,7 +370,10 @@ function moodColor(m){
 function buildConnections(){
   lineLayer.clearLayers();
   if(!toggleConnections.checked) return;
-  const R = Number(radiusInput.value || 120), MAX = 1400, N = Math.min(pulses.length, MAX);
+
+  const R = Number(radiusInput.value || 120);
+  const MAX = 1400;
+  const N = Math.min(pulses.length, MAX);
   const ok = p => !(p.connect === false || p.allow_connect === false || p.connect_consent === false);
 
   for(let i=0;i<N;i++){
@@ -359,11 +381,16 @@ function buildConnections(){
     const latKm = 111.32, lonKmA = Math.max(0.1, 111.32*Math.abs(Math.cos(toRad(A.lat))));
     for(let j=i+1;j<N;j++){
       const B = pulses[j]; if(!ok(B) || A.mood!==B.mood) continue;
+
+      // Quick bounds prune in km
       const dLatKm = Math.abs(A.lat-B.lat)*latKm; if(dLatKm>R) continue;
       const lonKmB = Math.max(0.1, 111.32*Math.abs(Math.cos(toRad(B.lat))));
       const dLonKm = Math.abs(A.lng-B.lng)*((lonKmA+lonKmB)/2); if(dLonKm>R) continue;
+
       if(kmBetween({lat:A.lat,lng:A.lng},{lat:B.lat,lng:B.lng})<=R){
-        L.polyline([[A.lat,A.lng],[B.lat,B.lng]],{ color:moodColor(A.mood), opacity:.38, weight:2, interactive:false }).addTo(lineLayer);
+        L.polyline([[A.lat,A.lng],[B.lat,B.lng]],{
+          color:moodColor(A.mood), opacity:.38, weight:2, interactive:false, renderer: lineRenderer
+        }).addTo(lineLayer);
       }
     }
   }
@@ -374,7 +401,10 @@ function updateHeat(){
   if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
   if (!toggleHeat.checked) return;
   const pts = pulses.map(p => [p.lat, p.lng, 0.30 + 0.70*(Math.abs(Number(p.mood))+1)/3]);
-  if (pts.length){ heatLayer = L.heatLayer(pts, { radius:22, blur:18, maxZoom:11, minOpacity:.2 }); heatLayer.addTo(map); }
+  if (pts.length){
+    heatLayer = L.heatLayer(pts, { radius:22, blur:18, maxZoom:11, minOpacity:.2 });
+    heatLayer.addTo(map);
+  }
 }
 
 /* ---------------- create & owner-only delete ---------------- */
@@ -384,12 +414,26 @@ async function postPulse(){
   if (selectedMood===null || !selectedSpot) return toast(I18N[LANG].pickSpot);
   submitMood.disabled = true;
   try{
-    const body = { mood:selectedMood, note:(note.value||'').slice(0,280), lat:selectedSpot.lat, lng:selectedSpot.lng, connect:!!connectConsent.checked, ownerKey };
+    const body = {
+      mood:selectedMood,
+      note:(note.value||'').slice(0,280),
+      lat:selectedSpot.lat, lng:selectedSpot.lng,
+      connect:!!connectConsent.checked,
+      ownerKey
+    };
     const res = await fetch('/api/pulses', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     if(!res.ok) throw new Error(`POST /api/pulses ${res.status}`);
     const created = await res.json();
-    owned.add(created.id); localStorage.setItem('mmOwnedIds', JSON.stringify([...owned]));
-    toast(I18N[LANG].pulsed); pulses.unshift(created); renderPulses(); shareLinkBtn && (shareLinkBtn.disabled=false);
+    if (created?.id != null) {
+      owned.add(created.id);
+      localStorage.setItem('mmOwnedIds', JSON.stringify([...owned]));
+      pulses.unshift(created);
+      renderPulses();
+      shareLinkBtn && (shareLinkBtn.disabled=false);
+      toast(I18N[LANG].pulsed);
+    } else {
+      throw new Error('No id in response');
+    }
   }catch(e){ console.error(e); toast(I18N[LANG].postFail); }
   finally{ submitMood.disabled=false; }
 }
@@ -405,10 +449,12 @@ function popupHTML(p){
     : '';
   return `<div style="min-width:180px"><div style="font-weight:800">${esc(name)}</div>${noteHtml}<div style="display:flex;gap:8px;margin-top:10px;">${delBtn}</div></div>`;
 }
+
 function attachPopupHandlers(id){
   const btn = document.body.querySelector(`.mm-del[data-id="${CSS.escape(String(id))}"]`);
   if (btn) btn.onclick = ()=>deletePulse(id);
 }
+
 async function deletePulse(id){
   if (!owned.has(id)) return;
   try{
@@ -416,22 +462,29 @@ async function deletePulse(id){
     if (res.ok){ removePulse(id); return toast(I18N[LANG].delOK); }
     throw new Error(`DELETE ${res.status}`);
   }catch(e){
+    // If backend doesn't support delete, hide locally so the user experience is consistent
     hidden.add(id); localStorage.setItem('mmHidden', JSON.stringify([...hidden]));
     removePulse(id); toast(I18N[LANG].hidden);
   }
 }
+
 function removePulse(id){
   const m = markers.get(id); if (m){ clusterLayer.removeLayer(m); markers.delete(id); }
-  pulses = pulses.filter(p=>p.id!==id); buildConnections(); updateHeat();
+  pulses = pulses.filter(p=>p.id!==id);
+  buildConnections(); updateHeat();
   liveCount.textContent = `Now: ${pulses.length} pulses`;
 }
 
 /* ---------------- share ---------------- */
 shareLinkBtn?.addEventListener('click', async ()=>{
   const url = location.origin;
-  try{ if (navigator.share) await navigator.share({ title:'Micromoon', text:'Under the same sky.', url });
-       else { await navigator.clipboard.writeText(url); toast(I18N[LANG].linkCopied); } }
-  catch{ try{ await navigator.clipboard.writeText(url);}catch{} toast(I18N[LANG].linkCopied); }
+  try{
+    if (navigator.share) await navigator.share({ title:'Micromoon', text:'Under the same sky.', url });
+    else { await navigator.clipboard.writeText(url); toast(I18N[LANG].linkCopied); }
+  }catch{
+    try{ await navigator.clipboard.writeText(url);}catch{}
+    toast(I18N[LANG].linkCopied);
+  }
 });
 
 /* ---------------- sparkline ---------------- */
@@ -442,7 +495,8 @@ function drawSparkline(){
   const now = Date.now(), bins = new Array(24).fill(0);
   for(const p of pulses){
     const t = Date.parse(p.created_at || p.createdAt || p.created || ''); if (!isFinite(t)) continue;
-    const diffH = Math.max(0, Math.min(23, Math.floor((now - t)/3600000))); bins[23-diffH]++;
+    const diffH = Math.max(0, Math.min(23, Math.floor((now - t)/3600000)));
+    bins[23-diffH]++;
   }
   const max = Math.max(1, ...bins), pad = 2, step = (W - pad*2) / (bins.length - 1);
   ctx.lineWidth = 2; ctx.strokeStyle = '#b6d3ff'; ctx.beginPath();
