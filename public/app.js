@@ -1,10 +1,8 @@
 /* =========================================================================
-   Micromoon — Front-end Map Logic (mobile popup + owner delete fixed)
-   - Reliable popups on touch (touchend + pointerup + small delay)
-   - Popups always panned fully into view (autoPan + padding)
-   - Marker z-order above overlays; cluster spiderfy behavior tuned
-   - Owner-only delete uses string IDs consistently; X-Owner header
-   - Same-mood connections, heatmap, i18n, sparkline, refresh, layout equalize
+   Micromoon — Front-end Map Logic (mobile popup + owner delete + fixes)
+   - FIX: circleMarker z-order via bringToFront() (no setZIndexOffset)
+   - FIX: auto-create #toastHost so toasts never throw
+   - Reliable popups on touch; owner-only delete; connections; heatmap; i18n
    - NO HTML changes
    ======================================================================== */
 
@@ -46,21 +44,35 @@ const toggleMotion = $('#toggleMotion');
 
 const liveCount = $('#liveCount');
 const spark = $('#spark');
-const toastHost = $('#toastHost');
 const mapEl = $('#map');
 
 /* ---------------- toast ---------------- */
+function getToastHost(){
+  let host = document.getElementById('toastHost');
+  if (!host){
+    host = document.createElement('div');
+    host.id = 'toastHost';
+    host.style.cssText = `
+      position:fixed; left:50%; bottom:20px; transform:translateX(-50%);
+      z-index:10000; display:flex; gap:8px; flex-direction:column;
+      align-items:center; pointer-events:none;
+    `;
+    document.body.appendChild(host);
+  }
+  return host;
+}
 function toast(txt, ms=2400){
+  const host = getToastHost();
   const el = document.createElement('div');
   el.style.cssText = `
     padding:10px 14px;border:1px solid rgba(255,255,255,.18);
     background:rgba(14,30,60,.92);backdrop-filter:blur(8px);
     border-radius:12px;color:#eaf1ff;font-weight:800;
     box-shadow:0 10px 28px rgba(0,0,0,.45); transform:translateY(6px);
-    transition:.25s ease; max-width:92vw; text-align:center;
+    transition:.25s ease; max-width:92vw; text-align:center; pointer-events:auto;
   `;
   el.textContent = txt;
-  toastHost.appendChild(el);
+  host.appendChild(el);
   requestAnimationFrame(()=>{ el.style.transform='translateY(0)'; el.style.opacity='1'; });
   setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(-6px)'; setTimeout(()=>el.remove(),250); }, ms);
 }
@@ -232,7 +244,6 @@ localStorage.setItem('mmOwnerKey', ownerKey);
     spiderfyOnMaxZoom:true, spiderfyOnEveryZoom:true, disableClusteringAtZoom:17
   });
   clusterLayer.on('clusterclick', a=>a.layer.spiderfy());
-  // When spiderfied, ensure taps open popups
   clusterLayer.on('spiderfied', () => setTimeout(()=>map.closePopup(), 0));
   map.addLayer(clusterLayer);
 
@@ -244,7 +255,6 @@ localStorage.setItem('mmOwnerKey', ownerKey);
     submitMood.disabled = (selectedMood === null);
   });
 
-  // Keep popups inside the visible map (important on mobile + overflow clips)
   map.on('popupopen', e=>{
     try { map.panInside(e.popup.getLatLng(), { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); }
     catch{}
@@ -339,9 +349,6 @@ function renderPulses(){
       keyboard:true
     });
 
-    // Ensure marker sits above heat/lines
-    marker.setZIndexOffset(1000);
-
     const popupOpts = {
       autoPan: true,
       autoClose: false,
@@ -354,16 +361,12 @@ function renderPulses(){
     };
     marker.bindPopup(popupHTML(p), popupOpts);
 
-    // Reliable open on all inputs
-    const open = ()=>{ try{
-      // Delay a frame so cluster/touch handlers settle
-      requestAnimationFrame(()=>{
-        marker.openPopup();
-        // Extra safety: bring into view
-        try{ map.panInside(marker.getLatLng(), { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); }catch{}
-      });
-    }catch{} };
+    const open = ()=>{ requestAnimationFrame(()=>{
+      marker.openPopup();
+      try{ map.panInside(marker.getLatLng(), { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); }catch{}
+    }); };
 
+    marker.on('add', ()=>{ try{ marker.bringToFront(); }catch{} }); // replace setZIndexOffset
     marker.on('click', open);
     marker.on('keypress', (e)=>{ if (e.originalEvent?.key === 'Enter') open(); });
     marker.on('touchend', ev=>{ ev.originalEvent?.preventDefault?.(); ev.originalEvent?.stopPropagation?.(); open(); });
@@ -409,7 +412,6 @@ function buildConnections(){
     for(let j=i+1;j<N;j++){
       const B = pulses[j]; if(!ok(B) || A.mood!==B.mood) continue;
 
-      // Quick bounds prune in km
       const dLatKm = Math.abs(A.lat-B.lat)*latKm; if(dLatKm>R) continue;
       const lonKmB = Math.max(0.1, 111.32*Math.abs(Math.cos(toRad(B.lat))));
       const dLonKm = Math.abs(A.lng-B.lng)*((lonKmA+lonKmB)/2); if(dLonKm>R) continue;
@@ -535,7 +537,7 @@ function drawSparkline(){
   ctx.stroke();
 }
 
-/* ---------------- subtle starfield ---------------- */
+/* ---------------- starfield ---------------- */
 (function starfield(){
   const c = $('#stars'); if(!c) return;
   const ctx = c.getContext('2d'); let W,H,stars=[];
