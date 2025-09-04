@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <!--
-    Micromoon — Deluxe Cosmic UI
-    - All required #ids preserved for app.js:
+    Micromoon — Deluxe Cosmic UI (mobile-polished)
+    Keeps every #id your app.js expects:
       #stars #deepPhrase #tagline #moodPicker #note #useMyLocation #toggleCrosshair
       #chosenSpot #connectConsent #submitMood #shareLink #ui-* #toggleConnections
       #windowHours #radiusKm #radiusValue #toggleHeat #toggleCluster #crosshair #map
-      #toastHost .lang-btn[data-lang] #moonBadge #moonLabel #toggleMotion
-    - No backend changes. Safe drop-in.
+      #toastHost .lang-btn[data-lang] #moonBadge #moonLabel #toggleMotion #spark #liveCount
   -->
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Mobile-safe viewport (iOS notch support) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Micromoon — anonymous, 24-hour moods</title>
 
   <!-- OpenGraph / Twitter -->
@@ -242,6 +242,52 @@
     .reduce-motion .brand-gradient,
     .reduce-motion .parallax-sky,
     .reduce-motion .constellations{ animation:none }
+
+    /* ----------------------------- Mobile polish (safe) */
+    /* Prevent any background from causing horizontal overflow on iOS */
+    .parallax-sky, .constellations, #stars {
+      left: 0; right: 0; top: 0; bottom: 0; width: 100vw; height: 100vh;
+    }
+    html, body { width: 100%; overflow-x: hidden; }
+    * { min-width: 0; } /* allow flex children to shrink */
+
+    /* Safe-area insets for iPhones with notch */
+    :root {
+      --safe-l: env(safe-area-inset-left, 0px);
+      --safe-r: env(safe-area-inset-right, 0px);
+    }
+
+    /* Tablet & narrow screens */
+    @media (max-width: 980px) {
+      .container { max-width: 100%; padding-left: max(18px, var(--safe-l)); padding-right: max(18px, var(--safe-r)); }
+      header { gap: 10px; }
+      .top-controls { flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
+      .langbar { flex: 1 1 100%; justify-content: space-between; }
+      .hero { grid-template-columns: 1fr; gap: 16px; }
+      .grid { grid-template-columns: 1fr; gap: 16px; }
+      #map { height: 480px; }
+    }
+
+    /* Phones */
+    @media (max-width: 640px) {
+      .container { padding-left: max(14px, var(--safe-l)); padding-right: max(14px, var(--safe-r)); }
+      .langbar { width: 100%; padding: 6px; }
+      .lang-btn { padding: 6px 8px; font-size: 12px; }
+      .badge { flex: 0 1 auto; }
+      #tagline { font-size: 12px; }
+      #deepPhrase { font-size: clamp(22px, 7.5vw, 38px); line-height: 1.12; }
+      .card { padding: 16px; border-radius: 16px; }
+      .hero-right, .hero-stats { gap: 10px; }
+      .legend { gap: 8px; }
+      #map { height: 420px; }
+    }
+
+    /* Ultra small phones */
+    @media (max-width: 380px) {
+      .langbar { gap: 2px; }
+      .lang-btn { padding: 5px 6px; font-size: 11px; }
+      #deepPhrase { font-size: clamp(20px, 8.2vw, 34px); }
+    }
   </style>
 </head>
 <body>
@@ -386,12 +432,12 @@
             <span id="radiusValue">120km</span>
           </div>
 
-          <label style="display:flex; gap:8px; align-items:center;">
-            <input type="checkbox" id="toggleHeat" /> Heatmap
-          </label>
-          <label style="display:flex; gap:8px; align-items:center;">
-            <input type="checkbox" id="toggleCluster" checked /> Cluster
-          </label>
+        <label style="display:flex; gap:8px; align-items:center;">
+          <input type="checkbox" id="toggleHeat" /> Heatmap
+        </label>
+        <label style="display:flex; gap:8px; align-items:center;">
+          <input type="checkbox" id="toggleCluster" checked /> Cluster
+        </label>
         </div>
 
         <p class="muted" style="margin-top:10px;">Tip: lower the window to 6–12h to see fresher activity.</p>
@@ -420,7 +466,7 @@
       <div id="map"></div>
     </section>
 
-    <!-- Expanded Info / Story / FAQ for depth & polish -->
+    <!-- Expanded Info / Story / FAQ -->
     <section class="info-grid" style="margin-top:20px;">
       <div class="info-card">
         <h4>Why Micromoon?</h4>
@@ -448,7 +494,7 @@
       </div>
     </section>
 
-    <!-- FAQ block to enrich content and keep single-file -->
+    <!-- FAQ block -->
     <section class="card" style="margin-top:20px;">
       <h3>FAQ</h3>
       <details open>
