@@ -1,263 +1,281 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Micromoon — under the same sky</title>
-  <meta name="description" content="Micromoon: anonymous moods on a live world map. Dots glow for 24 hours, then fade back to night.">
+  <title>Micromoon — anonymous, 24-hour moods</title>
+
+  <!-- OpenGraph / Twitter -->
+  <meta property="og:title" content="Micromoon — anonymous, 24-hour moods">
+  <meta property="og:description" content="Under the same sky, our moods become lights on a shared map for 24 hours.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/og-card.jpg">
+  <meta property="og:url" content="https://micromoon.onrender.com">
+  <meta name="twitter:card" content="summary_large_image">
 
   <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
-
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            night: { 900:'#0a1224', 800:'#0f1b35', 700:'#152449' },
-            brand: { 500:'#8e6e5a' }
-          },
-          maxWidth: { '8xl': '80rem', '9xl': '96rem' }
-        }
-      }
-    }
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
   <!-- Leaflet + plugins -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
-  <!-- Socket.IO -->
-  <script src="/socket.io/socket.io.js"></script>
-
-  <!-- Your base styles -->
-  <link rel="stylesheet" href="/styles.css" />
-
-  <!-- Modern hero styles (self-contained) -->
+  <!-- Minimal CSS (no build tools) -->
   <style>
-    .font-display{ font-family: "Space Grotesk", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    :root{
+      --bg:#071529;
+      --panel:#0f2242;
+      --panel-2:#0b1a33;
+      --text:#e9f0ff;
+      --muted:#a4b2c9;
+      --brand:#b6d3ff;
+      --accent:#6aa7ff;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--text); background:radial-gradient(1200px 800px at 40% -10%, #0d1e3a 0%, #071529 60%, #051021 100%);
+      font-family: "Outfit",system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji";
+      overflow-x:hidden;
+    }
+    a{color:var(--brand); text-decoration:none}
+    .container{max-width:1200px; margin:0 auto; padding:24px}
+    /* Aurora layer */
+    .aurora:before{
+      content:""; position:fixed; inset:-20%;
+      background:
+        radial-gradient(60% 40% at 20% 20%, rgba(105,188,255,.15), transparent 60%),
+        radial-gradient(50% 35% at 80% 10%, rgba(157,137,255,.12), transparent 60%),
+        radial-gradient(55% 45% at 70% 70%, rgba(88,255,220,.10), transparent 60%);
+      filter: blur(40px) saturate(120%);
+      animation: aurora 18s ease-in-out infinite alternate;
+      pointer-events:none; z-index:0; mix-blend-mode:screen;
+    }
+    @keyframes aurora {
+      0%{ transform: translateY(-2%) scale(1); opacity:.7 }
+      100%{ transform: translateY(2%) scale(1.02); opacity:.9 }
+    }
+    /* Starfield canvas below content */
+    #stars{ position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+    header{
+      position:relative; z-index:2;
+      display:flex; align-items:center; gap:12px; justify-content:flex-end;
+    }
+    .langbar{
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15);
+      border-radius:14px; padding:6px; display:flex; gap:4px; backdrop-filter: blur(8px);
+    }
+    .lang-btn{
+      border:0; padding:6px 10px; border-radius:10px; color:var(--text);
+      background:transparent; cursor:pointer; font-weight:600; font-size:12px; opacity:.8;
+    }
+    .lang-btn.active{ background:rgba(255,255,255,.16); opacity:1; }
+    .badge{
+      margin-left:auto; font-size:12px; opacity:.8; display:flex; align-items:center; gap:8px;
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14);
+      padding:6px 10px; border-radius:12px; backdrop-filter: blur(8px);
+    }
+    .toggle{ display:flex; align-items:center; gap:8px; font-size:12px; opacity:.85; }
+    .toggle input{ accent-color: #6aa7ff; width:18px; height:18px; }
+
+    .ribbon{
+      position:fixed; right:-44px; top:22px; z-index:5; transform: rotate(35deg);
+      background: linear-gradient(90deg, #6aa7ff, #b6d3ff); color:#0a1730; font-weight:800;
+      padding:8px 56px; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+
+    .hero{ position:relative; z-index:1; margin-top:12px; margin-bottom:18px; }
     #deepPhrase{
-      font-size: clamp(28px, 5.8vw, 76px);
-      line-height: 1.05;
-      letter-spacing: -0.015em;
-      text-wrap: balance;
+      font-size: clamp(28px, 5vw, 52px);
+      line-height: 1.08;
+      letter-spacing:-0.02em; font-weight:800; text-wrap:balance;
+      text-shadow: 0 2px 0 rgba(0,0,0,.18);
     }
-    #deepPhrase .line{
-      display:block;
-      transform-origin:50% 60%;
-      animation:headline-rise .7s ease both;
-      animation-delay: calc(var(--i, 0) * 120ms);
-      will-change: transform, opacity, filter;
-    }
-    @keyframes headline-rise{
-      from{opacity:0; transform:translateY(10px) scale(.985); filter:blur(1px)}
-      to{opacity:1; transform:translateY(0) scale(1); filter:blur(0)}
-    }
+    #deepPhrase .line{ display:block; opacity:0; transform: translateY(10px); animation: rise .7s cubic-bezier(.2,.9,.23,1) forwards; }
+    #deepPhrase .line:nth-child(1){ animation-delay: .05s }
+    #deepPhrase .line:nth-child(2){ animation-delay: .18s }
+    #deepPhrase .line:nth-child(3){ animation-delay: .32s }
+    @keyframes rise { to { opacity:1; transform: translateY(0) } }
     .brand-gradient{
-      background: linear-gradient(180deg, #ffffff 0%, #d8e4ff 70%);
-      -webkit-background-clip:text; background-clip:text; color:transparent;
-      text-shadow:0 10px 40px rgba(120,160,255,.18);
+      background: linear-gradient(90deg, #cfe2ff, #8ec5ff 30%, #cfe2ff 60%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      animation: shimmer 5.5s linear infinite; background-size: 200% 100%;
     }
-    /* language pills */
-    .lang-btn{ padding:.25rem .5rem; border-radius:.5rem; }
-    .lang-btn.active{ background:rgba(255,255,255,.18); }
+    @keyframes shimmer { 0%{ background-position: 200% 0 } 100%{ background-position: -200% 0 } }
+
+    .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr } }
+
+    .card{
+      position:relative; z-index:1;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:20px; padding:18px; box-shadow: 0 15px 40px rgba(0,0,0,.35);
+    }
+    .card h3{ margin:0 0 8px 0; font-size:18px }
+    .muted{ color:var(--muted) }
+
+    .composer textarea{
+      width:100%; min-height:120px; resize:vertical;
+      background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.14);
+      border-radius:16px; color:var(--text); padding:12px; font:inherit;
+    }
+    .btn{
+      appearance:none; border:0; border-radius:16px; padding:12px 18px; font-weight:700;
+      background:#fff; color:#0a172e; cursor:pointer;
+      box-shadow:0 8px 20px rgba(0,0,0,.35);
+    }
+    .btn.secondary{ background:#2a3f69; color:#e5edff; border:1px solid rgba(255,255,255,.2) }
+    .btn:disabled{ opacity:.5; cursor:not-allowed }
+
+    /* Map container */
+    #map{ width:100%; height:520px; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,.15) }
+
+    /* Emoji marker glow */
+    .dot-glow{
+      width:34px;height:34px;display:grid;place-items:center;border-radius:12px;
+      background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.35);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 0 0 0 rgba(182,211,255,.55), 0 12px 28px rgba(0,0,0,.35);
+      animation: breathe 3.6s ease-in-out infinite;
+    }
+    .dot-glow.fresh{ box-shadow:0 0 18px 6px rgba(130,190,255,.9), 0 0 40px rgba(120,170,255,.55); animation: fresh 2s ease-out 1, breathe 3.6s ease-in-out 1.5s infinite; }
+    @keyframes breathe { 0%,100%{ box-shadow:0 0 0 0 rgba(182,211,255,.45), 0 12px 28px rgba(0,0,0,.35) } 50%{ box-shadow:0 0 16px 6px rgba(182,211,255,.55), 0 12px 28px rgba(0,0,0,.35) } }
+    @keyframes fresh { 0%{ transform: scale(1.1); } 100%{ transform: scale(1); } }
+
+    /* Crosshair for manual pick */
+    #crosshair{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; border:1px dashed rgba(255,255,255,.28); width:44px; height:44px; border-radius:8px; }
+    .hidden{ display:none }
+
+    /* Live counter + sparkline */
+    .stat{ display:flex; align-items:center; gap:10px; font-weight:700 }
+    #spark{ width:130px; height:28px; display:block }
+
+    /* Toasts */
+    #toastHost{ position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); display: grid; gap:10px; z-index: 50; }
+
+    /* Reduce motion */
+    .reduce-motion .dot-glow,
+    .reduce-motion #deepPhrase .line{ animation:none }
+    .reduce-motion .brand-gradient{ animation:none }
+    .reduce-motion .aurora:before{ animation:none }
   </style>
 </head>
+<body class="aurora">
+  <canvas id="stars"></canvas>
 
-<body class="min-h-screen bg-night-900 text-white font-[Inter]">
-  <!-- star canvas -->
-  <canvas id="stars" class="fixed inset-0 -z-10"></canvas>
+  <div class="container">
+    <div class="ribbon">First 30 days</div>
 
-  <!-- top bar -->
-  <header class="w-full border-b border-white/10 bg-night-800/60 backdrop-blur sticky top-0 z-20">
-    <div class="max-w-9xl mx-auto px-5 py-3 flex items-center justify-between gap-3">
-      <div class="text-sm text-white/75" id="tagline">Micromoon — anonymous, 24-hour moods</div>
-      <div class="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
-        <button data-lang="en" class="lang-btn text-xs hover:bg-white/10">EN</button>
-        <button data-lang="de" class="lang-btn text-xs hover:bg-white/10">DE</button>
-        <button data-lang="es" class="lang-btn text-xs hover:bg-white/10">ES</button>
-        <button data-lang="fr" class="lang-btn text-xs hover:bg-white/10">FR</button>
-        <button data-lang="ar" class="lang-btn text-xs hover:bg-white/10">AR</button>
-        <button data-lang="ru" class="lang-btn text-xs hover:bg-white/10">RU</button>
-        <button data-lang="zh" class="lang-btn text-xs hover:bg-white/10">中文</button>
+    <header>
+      <div class="badge" id="moonBadge">🌖 <span id="moonLabel">Moon phase</span></div>
+      <div class="toggle"><input type="checkbox" id="toggleMotion"><label for="toggleMotion">Reduce motion</label></div>
+      <div class="langbar" id="langbar">
+        <button class="lang-btn" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="de">DE</button>
+        <button class="lang-btn" data-lang="es">ES</button>
+        <button class="lang-btn" data-lang="fr">FR</button>
+        <button class="lang-btn" data-lang="ar">AR</button>
+        <button class="lang-btn" data-lang="ru">RU</button>
+        <button class="lang-btn" data-lang="zh">中文</button>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- hero -->
-  <section id="hero" class="relative">
-    <div class="max-w-5xl mx-auto px-6 py-14 md:py-18 text-center">
-      <h1 id="deepPhrase" class="font-display text-white/95 drop-shadow-[0_1px_16px_rgba(120,160,255,0.15)]"></h1>
-    </div>
-  </section>
+    <p id="tagline" class="muted" style="margin:8px 0 2px 2px;">Micromoon — anonymous, 24-hour moods</p>
 
-  <!-- toasts -->
-  <div id="toastHost" class="fixed left-1/2 -translate-x-1/2 top-4 z-50 flex flex-col gap-2"></div>
+    <section class="hero">
+      <div id="deepPhrase"></div>
+      <div class="stat" style="margin-top:10px;">
+        <span id="liveCount">Now: 0 pulses</span>
+        <canvas id="spark" width="130" height="28"></canvas>
+      </div>
+    </section>
 
-  <!-- main two columns -->
-  <main class="max-w-9xl mx-auto px-5 pb-10 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">
-    <!-- left: composer -->
-    <section class="bg-white/5 rounded-3xl p-5 shadow-lg ring-1 ring-white/10">
-      <h2 id="ui-pulseTitle" class="font-semibold mb-3 text-lg md:text-xl">Pulse your mood</h2>
-
-      <div class="space-y-4">
-        <div>
-          <label id="ui-howFeel" class="block text-sm text-white/80 mb-2">How do you feel?</label>
-          <div id="moodPicker" class="grid grid-cols-5 gap-3" role="radiogroup" aria-label="Mood">
-            <button data-mood="-2" class="mood-btn text-2xl py-3" aria-label="Very low" role="radio">😢</button>
-            <button data-mood="-1" class="mood-btn text-2xl py-3" aria-label="Low" role="radio">🙁</button>
-            <button data-mood="0"  class="mood-btn text-2xl py-3" aria-label="Neutral" role="radio">😐</button>
-            <button data-mood="1"  class="mood-btn text-2xl py-3" aria-label="Good" role="radio">🙂</button>
-            <button data-mood="2"  class="mood-btn text-2xl py-3" aria-label="Great" role="radio">🤩</button>
-          </div>
+    <section class="grid">
+      <!-- Composer -->
+      <div class="card composer">
+        <h3 id="ui-pulseTitle">Pulse your mood</h3>
+        <p id="ui-howFeel" class="muted">How do you feel?</p>
+        <div id="moodPicker" style="display:flex; gap:10px; margin-bottom:12px;">
+          <button class="btn secondary" data-mood="-2">😢</button>
+          <button class="btn secondary" data-mood="-1">🙁</button>
+          <button class="btn secondary" data-mood="0">😐</button>
+          <button class="btn secondary" data-mood="1">🙂</button>
+          <button class="btn secondary" data-mood="2">🤩</button>
         </div>
 
-        <div>
-          <label for="note" class="block text-sm text-white/80 mb-2">
-            <span id="ui-whatsHappening">What’s happening?</span>
-            <span class="text-white/50" id="ui-optional">(optional, 280 chars)</span>
-          </label>
-          <textarea id="note" rows="4" maxlength="280" class="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-white/40" placeholder="A few words you want to share…"></textarea>
+        <p class="muted"><span id="ui-whatsHappening">What’s happening?</span> <span id="ui-optional">(optional, 280 chars)</span></p>
+        <textarea id="note" placeholder="A few words you want to share..."></textarea>
+
+        <div style="display:flex; gap:10px; align-items:center; margin:14px 0;">
+          <button class="btn secondary" id="useMyLocation">Use my location</button>
+          <span class="muted" id="ui-orClickMap">or click on the map</span>
+          <button class="btn secondary" id="toggleCrosshair">Crosshair ⌖</button>
         </div>
 
-        <div class="flex items-center gap-3 flex-wrap">
-          <button id="useMyLocation" class="px-4 py-2.5 rounded-2xl bg-brand-500/90 hover:bg-brand-500 transition text-black font-semibold">Use my location</button>
-          <span class="text-sm text-white/70" id="ui-orClickMap">or click on the map</span>
-          <button id="toggleCrosshair" class="text-xs px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 ml-auto">Crosshair ⌖</button>
-        </div>
+        <div class="muted" id="chosenSpot">No spot selected yet.</div>
 
-        <div id="chosenSpot" class="text-xs text-white/70">No spot selected yet.</div>
-
-        <label class="flex items-center gap-2 text-sm text-white/85 select-none">
-          <input type="checkbox" id="connectConsent" class="accent-brand-500" />
+        <label style="display:flex; align-items:center; gap:8px; margin:12px 0;">
+          <input type="checkbox" id="connectConsent" />
           <span id="ui-allowConnect">Allow others to connect my dot</span>
         </label>
 
-        <div class="flex gap-3">
-          <button id="submitMood" class="flex-1 mt-1 px-5 py-3 rounded-2xl bg-white text-black font-semibold hover:bg-white/90 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>Pulse</button>
-          <button id="shareLink" class="mt-1 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-50" disabled>Share</button>
+        <div style="display:flex; gap:10px; margin-top:8px;">
+          <button class="btn" id="submitMood" disabled>Pulse</button>
+          <button class="btn secondary" id="shareLink" disabled>Share</button>
         </div>
-
-        <p class="text-xs text-white/60" id="ui-postsInfo">Posts are anonymous and visible for 24 hours, then disappear.</p>
+        <p class="muted" id="ui-postsInfo" style="margin-top:10px;">Posts are anonymous and visible for 24 hours, then disappear.</p>
       </div>
-    </section>
 
-    <!-- right: controls + map -->
-    <section class="space-y-4 lg:col-start-2">
-      <!-- controls -->
-      <div class="bg-white/5 rounded-3xl p-4 shadow-lg ring-1 ring-white/10">
-        <h3 class="font-semibold mb-3 text-base md:text-lg">Map view</h3>
-        <div class="mm-controls grid gap-3 sm:grid-cols-2">
-          <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" id="toggleConnections" class="accent-brand-500" />
-            <span id="ui-connectSimilar">Connect similar moods</span>
-          </label>
+      <!-- Controls -->
+      <div class="card">
+        <h3>Map view</h3>
+        <label style="display:flex; gap:8px; align-items:center; margin:10px 0;">
+          <input type="checkbox" id="toggleConnections" />
+          <span>Connect similar moods</span>
+        </label>
 
-          <div class="flex items-center gap-2 text-sm">
-            <span id="ui-radius">Radius</span>
-            <input id="radiusKm" type="range" min="10" max="500" value="120" class="flex-1" />
-            <span id="radiusValue" class="w-14 text-right">120km</span>
-          </div>
-
-          <div class="flex items-center gap-2 text-sm">
+        <div class="mm-controls" style="display:flex; gap:20px; align-items:center;">
+          <div style="display:flex; align-items:center; gap:10px;">
             <span id="ui-window">Window</span>
-            <select id="windowHours" class="bg-night-700/70 border border-white/20 rounded-md px-2 py-1">
-              <option value="24" selected id="ui-24h">24h</option>
+            <select id="windowHours" class="btn secondary">
+              <option value="24" id="ui-24h">24h</option>
               <option value="12" id="ui-12h">12h</option>
-              <option value="6"  id="ui-6h">6h</option>
+              <option value="6" id="ui-6h">6h</option>
             </select>
           </div>
 
-          <div class="flex items-center gap-3 text-sm">
-            <label class="flex items-center gap-2">
-              <input type="checkbox" id="toggleHeat" class="accent-brand-500" />
-              <span>Heatmap</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input type="checkbox" id="toggleCluster" class="accent-brand-500" />
-              <span>Cluster</span>
-            </label>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span id="ui-radius">Radius</span>
+            <input id="radiusKm" type="range" min="20" max="300" step="1" value="120" />
+            <span id="radiusValue">120km</span>
           </div>
-        </div>
-        <p class="mt-2 text-xs text-white/50">Tip: lower the window to 6–12h to see fresher activity.</p>
-      </div>
 
-      <!-- map -->
-      <div class="relative rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-lg">
-        <div id="map" class="h-[80vh] w-full"></div>
-        <div id="crosshair" class="pointer-events-none hidden">
-          <div class="crosshair-vert"></div>
-          <div class="crosshair-horiz"></div>
+          <label style="display:flex; gap:8px; align-items:center;">
+            <input type="checkbox" id="toggleHeat" /> Heatmap
+          </label>
+          <label style="display:flex; gap:8px; align-items:center;">
+            <input type="checkbox" id="toggleCluster" checked /> Cluster
+          </label>
         </div>
+        <p class="muted" style="margin-top:8px;">Tip: lower the window to 6–12h to see fresher activity.</p>
       </div>
     </section>
-  </main>
 
-  <footer class="py-8 text-center text-sm text-white/70">
-    Built by <strong>Mouaz Almjarkesh</strong>
-  </footer>
+    <div class="card" style="margin-top:20px; position:relative;">
+      <div id="crosshair" class="hidden"></div>
+      <div id="map"></div>
+    </div>
+  </div>
 
-  <!-- App logic -->
-  <script src="/app.js" type="module"></script>
+  <div id="toastHost"></div>
 
-  <!-- Minimal inline script to render the modern hero phrase and handle language buttons -->
-  <script>
-    const phraseByLang = {
-      en: `The same moon looks down on all of us and knows our hidden feelings.
-On Micromoon those feelings become lights on a shared map,
-glowing for one day before they fade back into the night.`,
-      de: `Der gleiche Mond schaut auf uns alle hinab und kennt unsere verborgenen Gefühle.
-Auf Micromoon werden diese Gefühle zu Lichtern auf einer gemeinsamen Karte,
-sie leuchten einen Tag, bevor sie wieder in die Nacht zurückkehren.`,
-      es: `La misma luna nos mira a todos y conoce nuestros sentimientos ocultos.
-En Micromoon esos sentimientos se vuelven luces en un mapa compartido,
-brillan por un día antes de volver a la noche.`,
-      fr: `La même lune nous regarde et connaît nos sentiments cachés.
-Sur Micromoon ces sentiments deviennent des lumières sur une carte partagée,
-elles brillent une journée avant de retourner à la nuit.`,
-      ar: `القمر نفسه ينظر إلينا جميعًا ويعرف مشاعرنا الخفية.
-على Micromoon تصبح هذه المشاعر أضواءً على خريطة مشتركة،
-تتوهج ليوم واحد ثم تعود إلى الليل.`,
-      ru: `Одна и та же луна смотрит на всех нас и знает наши скрытые чувства.
-На Micromoon эти чувства становятся огнями на общей карте,
-они сияют один день, а затем возвращаются в ночь.`,
-      zh: `同一轮月亮注视着我们并了解我们隐藏的心情。
-在 Micromoon 上，这些感受会化作共享地图上的光点，
-只亮一天，随后回到夜色之中。`
-    };
-
-    function renderHeroPhrase(lang='en'){
-      const el = document.getElementById('deepPhrase');
-      if(!el) return;
-      const raw = phraseByLang[lang] || phraseByLang.en;
-      const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-      const highlighted = esc(raw).replaceAll(/Micromoon/g, '<span class="brand-gradient">Micromoon</span>');
-      const lines = highlighted.split('\n').map((ln,i)=>`<span class="line" style="--i:${i}">${ln.trim()}</span>`);
-      el.innerHTML = lines.join('');
-    }
-
-    // init language UI (non-intrusive: only for hero text)
-    const btns = Array.from(document.querySelectorAll('.lang-btn'));
-    let currentLang = 'en';
-    btns.forEach(b=>{
-      b.addEventListener('click', ()=>{
-        btns.forEach(x=>x.classList.remove('active'));
-        b.classList.add('active');
-        currentLang = b.dataset.lang || 'en';
-        renderHeroPhrase(currentLang);
-      });
-    });
-    // default state
-    document.querySelector('.lang-btn[data-lang="en"]')?.classList.add('active');
-    renderHeroPhrase('en');
-  </script>
+  <!-- App -->
+  <script src="/app.js"></script>
 </body>
 </html>
