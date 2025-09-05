@@ -1,26 +1,23 @@
 /* =========================================================================
-   Micromoon — Front-end Map Logic (FLOATING POPUP EDITION)
-   - Cluster-safe, mobile-safe floating popup (no Leaflet Popup quirks)
-   - Wider tap tolerance, nearest-dot open on map tap
-   - Owner-only delete kept; connections/heatmap unchanged
+   Micromoon — Front-end Map Logic (divIcon + floating popup)
+   - Works on iPhone/Android/desktop, inside clusters
+   - Everyone can open/read dots; only owner sees Delete
+   - Connections/heatmap unchanged
    ======================================================================== */
 
-/* ---------------- helpers ---------------- */
+/* ---------- small helpers ---------- */
 const $  = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => Array.prototype.slice.call(r.querySelectorAll(s));
-const toRad = d => d * Math.PI/180;
-const kmBetween = (A, B) => {
-  const R=6371, dLat=toRad(B.lat-A.lat), dLng=toRad(B.lng-A.lng);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(A.lat))*Math.cos(toRad(B.lat))*Math.sin(dLng/2)**2;
-  return 2*R*Math.asin(Math.sqrt(a));
-};
+const toRad = d => d*Math.PI/180;
+const kmBetween = (A,B)=>{const R=6371,dLat=toRad(B.lat-A.lat),dLng=toRad(B.lng-A.lng);
+  const a=Math.sin(dLat/2)**2+Math.cos(toRad(A.lat))*Math.cos(toRad(B.lat))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));};
 const esc = (s='') => s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
-const debounce = (fn, d=120)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),d); }; };
+const debounce=(fn,d=120)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),d);};};
 const asId = v => String(v ?? '');
-const mVal = v => Number(v);
 
-/* ---------------- DOM refs ---------------- */
+/* ---------- DOM refs you already have ---------- */
 const deepPhrase = $('#deepPhrase');
 const moodPicker = $('#moodPicker');
 const note = $('#note');
@@ -46,38 +43,17 @@ const liveCount = $('#liveCount');
 const spark = $('#spark');
 const mapEl = $('#map');
 
-/* ---------------- toast (auto host) ---------------- */
-function getToastHost(){
-  let host = document.getElementById('toastHost');
-  if (!host){
-    host = document.createElement('div');
-    host.id = 'toastHost';
-    host.style.cssText = `
-      position:fixed; left:50%; bottom:20px; transform:translateX(-50%);
-      z-index:10000; display:flex; gap:8px; flex-direction:column;
-      align-items:center; pointer-events:none;
-    `;
-    document.body.appendChild(host);
-  }
-  return host;
-}
-function toast(txt, ms=2400){
-  const host = getToastHost();
-  const el = document.createElement('div');
-  el.style.cssText = `
-    padding:10px 14px;border:1px solid rgba(255,255,255,.18);
-    background:rgba(14,30,60,.92);backdrop-filter:blur(8px);
-    border-radius:12px;color:#eaf1ff;font-weight:800;
-    box-shadow:0 10px 28px rgba(0,0,0,.45); transform:translateY(6px);
-    transition:.25s ease; max-width:92vw; text-align:center; pointer-events:auto;
-  `;
-  el.textContent = txt;
-  host.appendChild(el);
-  requestAnimationFrame(()=>{ el.style.transform='translateY(0)'; el.style.opacity='1'; });
-  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(-6px)'; setTimeout(()=>el.remove(),250); }, ms);
-}
+/* ---------- toast (auto host) ---------- */
+function toastHost(){ let h=$('#toastHost'); if(!h){ h=document.createElement('div');
+  h.id='toastHost'; h.style.cssText='position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:10000;display:flex;gap:8px;flex-direction:column;align-items:center;pointer-events:none;';
+  document.body.appendChild(h);} return h; }
+function toast(txt,ms=2200){ const el=document.createElement('div');
+  el.style.cssText='padding:10px 14px;border:1px solid rgba(255,255,255,.18);background:rgba(14,30,60,.92);backdrop-filter:blur(8px);border-radius:12px;color:#eaf1ff;font-weight:800;box-shadow:0 10px 28px rgba(0,0,0,.45);transform:translateY(6px);transition:.25s ease;max-width:92vw;text-align:center;pointer-events:auto;';
+  el.textContent=txt; toastHost().appendChild(el);
+  requestAnimationFrame(()=>{el.style.transform='translateY(0)';el.style.opacity='1';});
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(-6px)';setTimeout(()=>el.remove(),240);},ms); }
 
-/* ---------------- i18n ---------------- */
+/* ---------- i18n (same content you already used) ---------- */
 const I18N = {
   en:{ phrase:[
       'The same moon looks down on all of us and knows our hidden feelings.',
@@ -110,8 +86,10 @@ const I18N = {
   es:{ phrase:['La misma luna nos mira a todos y conoce nuestros sentimientos ocultos.',
                'En Micromoon esos sentimientos se vuelven luces en un mapa compartido; brillan un día y vuelven a la noche.'],
       pulseTitle:'Pulsa tu ánimo', howFeel:'¿Cómo te sientes?', happening:'¿Qué pasa?', optional:'(opcional, 280 caracteres)',
-      orClick:'o toca el mapa', allowConnect:'Permitir conectar mi punto', postsInfo:'Las publicaciones son anónimas y visibles por 24 horas.',
-      window:'Ventana', radius:'Radio', veryLow:'muy bajo', low:'bajo', neutral:'neutral', good:'bien', great:'genial',
+      orClick:'o toca el mapa', allowConnect:'Permitir conectar mi punto',
+      postsInfo:'Las publicaciones son anónimas y visibles por 24 horas.',
+      window:'Ventana', radius:'Radio',
+      veryLow:'muy bajo', low:'bajo', neutral:'neutral', good:'bien', great:'genial',
       pulsed:'Enviado ✨', loadFail:'No se pudieron cargar los puntos', postFail:'No se pudo enviar',
       del:'Eliminar', hidden:'Oculto en este dispositivo', delOK:'Punto eliminado',
       tooMany:'Demasiados puntos para conectar con fluidez. Acerca el mapa o reduce la ventana.',
@@ -120,8 +98,10 @@ const I18N = {
   fr:{ phrase:['La même lune nous regarde tous et connaît nos sentiments cachés.',
                'Sur Micromoon ces sentiments deviennent des lumières sur une carte commune, elles brillent un jour puis retournent à la nuit.'],
       pulseTitle:'Pulse ton humeur', howFeel:'Comment te sens-tu ?', happening:'Que se passe-t-il ?', optional:'(optionnel, 280 caractères)',
-      orClick:'ou clique sur la carte', allowConnect:'Autoriser à relier mon point', postsInfo:'Les posts sont anonymes et visibles 24 h.',
-      window:'Fenêtre', radius:'Rayon', veryLow:'très bas', low:'bas', neutral:'neutre', good:'bien', great:'super',
+      orClick:'ou clique sur la carte', allowConnect:'Autoriser à relier mon point',
+      postsInfo:'Les posts sont anonymes et visibles 24 h.',
+      window:'Fenêtre', radius:'Rayon',
+      veryLow:'très bas', low:'bas', neutral:'neutre', good:'bien', great:'super',
       pulsed:'Envoyé ✨', loadFail:'Chargement impossible', postFail:'Envoi impossible',
       del:'Supprimer', hidden:'Masqué sur cet appareil', delOK:'Point supprimé',
       tooMany:'Trop de points pour relier correctement. Zoome ou réduis la fenêtre.',
@@ -132,7 +112,8 @@ const I18N = {
       pulseTitle:'انشر مزاجك', howFeel:'كيف تشعر؟', happening:'ماذا يحدث؟', optional:'(اختياري، 280 حرفًا)',
       orClick:'أو اضغط على الخريطة', allowConnect:'السماح للآخرين بربط نقطتي',
       postsInfo:'المنشورات مجهولة وتبقى 24 ساعة ثم تختفي.',
-      window:'المدة', radius:'نطاق', veryLow:'منخفض جدًا', low:'منخفض', neutral:'محايد', good:'جيد', great:'رائع',
+      window:'المدة', radius:'نطاق',
+      veryLow:'منخفض جدًا', low:'منخفض', neutral:'محايد', good:'جيد', great:'رائع',
       pulsed:'تم النشر ✨', loadFail:'تعذر تحميل النقاط', postFail:'تعذر النشر',
       del:'حذف', hidden:'مخفي على هذا الجهاز', delOK:'تم الحذف',
       tooMany:'نقاط كثيرة جدًا للربط بسلاسة. قرّب الخريطة أو قلّل المدة.',
@@ -142,7 +123,8 @@ const I18N = {
                'На Micromoon эти чувства становятся огнями на общей карте: один день светят и тают в ночи.'],
       pulseTitle:'Отправь настроение', howFeel:'Как ты себя чувствуешь?', happening:'Что происходит?', optional:'(необязательно, 280 символов)',
       orClick:'или нажми на карту', allowConnect:'Разрешить соединять мою точку',
-      postsInfo:'Посты анонимны и видны 24 часа.', window:'Окно', radius:'Радиус',
+      postsInfo:'Посты анонимны и видны 24 часа.',
+      window:'Окно', radius:'Радиус',
       veryLow:'очень плохо', low:'плохо', neutral:'нейтр.', good:'хорошо', great:'отлично',
       pulsed:'Отправлено ✨', loadFail:'Не удалось загрузить точки', postFail:'Не удалось отправить',
       del:'Удалить', hidden:'Скрыто на этом устройстве', delOK:'Точка удалена',
@@ -161,349 +143,272 @@ const I18N = {
       pickSpot:'请选择心情与地点', linkCopied:'已复制链接'
   }
 };
-let LANG = 'en';
+let LANG='en';
 function setLang(code){
-  LANG = I18N[code] ? code : 'en';
+  LANG = I18N[code]?code:'en';
   $$('.lang-btn').forEach(b=>b.classList.toggle('active', b.dataset.lang===LANG));
-  document.documentElement.dir = (LANG==='ar' ? 'rtl' : 'ltr');
-  const t = I18N[LANG];
-  deepPhrase && (deepPhrase.innerHTML = t.phrase.map(s => `<span class="line"><span class="brand-gradient">${esc(s)}</span></span>`).join(' '));
-  $('#ui-pulseTitle') && ($('#ui-pulseTitle').textContent = t.pulseTitle);
-  $('#ui-howFeel') && ($('#ui-howFeel').textContent = t.howFeel);
-  $('#ui-whatsHappening') && ($('#ui-whatsHappening').textContent = t.happening);
-  $('#ui-optional') && ($('#ui-optional').textContent = t.optional);
-  $('#ui-orClickMap') && ($('#ui-orClickMap').textContent = t.orClick);
-  $('#ui-allowConnect') && ($('#ui-allowConnect').textContent = t.allowConnect);
-  $('#ui-postsInfo') && ($('#ui-postsInfo').textContent = t.postsInfo);
-  $('#ui-window') && ($('#ui-window').textContent = t.window);
-  $('#ui-radius') && ($('#ui-radius').textContent = t.radius);
+  document.documentElement.dir = (LANG==='ar'?'rtl':'ltr');
+  const t=I18N[LANG];
+  deepPhrase && (deepPhrase.innerHTML = t.phrase.map(s=>`<span class="line"><span class="brand-gradient">${esc(s)}</span></span>`).join(' '));
+  $('#ui-pulseTitle')&&($('#ui-pulseTitle').textContent=t.pulseTitle);
+  $('#ui-howFeel')&&($('#ui-howFeel').textContent=t.howFeel);
+  $('#ui-whatsHappening')&&($('#ui-whatsHappening').textContent=t.happening);
+  $('#ui-optional')&&($('#ui-optional').textContent=t.optional);
+  $('#ui-orClickMap')&&($('#ui-orClickMap').textContent=t.orClick);
+  $('#ui-allowConnect')&&($('#ui-allowConnect').textContent=t.allowConnect);
+  $('#ui-postsInfo')&&($('#ui-postsInfo').textContent=t.postsInfo);
+  $('#ui-window')&&($('#ui-window').textContent=t.window);
+  $('#ui-radius')&&($('#ui-radius').textContent=t.radius);
 }
-langButtons.forEach(b=>b.addEventListener('click', ()=>setLang(b.dataset.lang)));
+langButtons.forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.lang)));
 setLang('en');
 
-/* ---------------- moon phase + motion toggle ---------------- */
+/* ---------- moon phase + reduce motion ---------- */
 (function(){
-  const now = new Date(), syn = 29.530588853, ref = new Date(Date.UTC(2000,0,6,18,14));
-  const age = ((now-ref)/86400000) % syn; const idx = Math.round(age/syn*8)%8;
-  moonLabel && (moonLabel.textContent = `Moon phase: ${['New','Waxing crescent','First quarter','Waxing gibbous','Full','Waning gibbous','Last quarter','Waning crescent'][idx]}`);
+  const now=new Date(), syn=29.530588853, ref=new Date(Date.UTC(2000,0,6,18,14));
+  const age=((now-ref)/86400000)%syn; const idx=Math.round(age/syn*8)%8;
+  moonLabel && (moonLabel.textContent=`Moon phase: ${['New','Waxing crescent','First quarter','Waxing gibbous','Full','Waning gibbous','Last quarter','Waning crescent'][idx]}`);
 })();
-toggleMotion?.addEventListener('change', ()=>document.body.classList.toggle('reduce-motion', !!toggleMotion.checked));
+toggleMotion?.addEventListener('change',()=>document.body.classList.toggle('reduce-motion', !!toggleMotion.checked));
 
-/* ---------------- mobile + renderers ---------------- */
-const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-const DOT_RADIUS = IS_TOUCH ? 12 : 8;
-const TAP_TOL = IS_TOUCH ? 46 : 26;
-const touchRenderer = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ tolerance: IS_TOUCH ? 14 : 6, padding: 0.25 }) : undefined;
-const lineRenderer  = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ padding: 0.25 }) : undefined;
+/* ---------- environment ---------- */
+const IS_TOUCH=('ontouchstart' in window)||(navigator.maxTouchPoints>0);
+const TAP_TOL=IS_TOUCH?46:28;
 
-/* ---------------- map setup ---------------- */
+/* ---------- map + layers ---------- */
 let map, clusterLayer, heatLayer, lineLayer;
-let pulses = [];
-const markers = new Map();  // id -> marker
-const byId    = new Map();  // id -> pulse
-const hidden  = new Set(JSON.parse(localStorage.getItem('mmHidden')   || '[]').map(asId));
-const owned   = new Set(JSON.parse(localStorage.getItem('mmOwnedIds') || '[]').map(asId));
-let ownerKey  = localStorage.getItem('mmOwnerKey') || (crypto?.randomUUID?.() || String(Math.random()));
+let pulses=[];
+const markers=new Map();     // id -> L.marker
+const byId   =new Map();     // id -> pulse
+const hidden=new Set(JSON.parse(localStorage.getItem('mmHidden')||'[]').map(asId));
+const owned =new Set(JSON.parse(localStorage.getItem('mmOwnedIds')||'[]').map(asId));
+let ownerKey=localStorage.getItem('mmOwnerKey')||(crypto?.randomUUID?.()||String(Math.random()));
 localStorage.setItem('mmOwnerKey', ownerKey);
 
 (function initMap(){
-  map = L.map('map', {
-    zoomControl:true, minZoom:2, worldCopyJump:true, attributionControl:true,
-    preferCanvas:true, tap: IS_TOUCH, tapTolerance: IS_TOUCH ? 28 : 15,
-    touchZoom:true, closePopupOnClick:false
-  });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
-  map.setView([20, 0], 2);
+  map=L.map('map',{zoomControl:true,minZoom:2,worldCopyJump:true,attributionControl:true,tap:IS_TOUCH,tapTolerance:IS_TOUCH?28:15,closePopupOnClick:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+  map.setView([20,0],2);
 
-  clusterLayer = L.markerClusterGroup({
-    showCoverageOnHover:false, chunkedLoading:true, zoomToBoundsOnClick:false,
-    maxClusterRadius: IS_TOUCH ? 70 : 50,
-    spiderfyOnMaxZoom:true, spiderfyOnEveryZoom:true, disableClusteringAtZoom:17
+  clusterLayer=L.markerClusterGroup({
+    showCoverageOnHover:false,chunkedLoading:true,zoomToBoundsOnClick:false,
+    maxClusterRadius:IS_TOUCH?70:50,spiderfyOnMaxZoom:true,spiderfyOnEveryZoom:true,disableClusteringAtZoom:17
   });
-  clusterLayer.on('clusterclick', a=>a.layer.spiderfy());
+  clusterLayer.on('clusterclick',a=>a.layer.spiderfy());
   map.addLayer(clusterLayer);
 
-  lineLayer = L.layerGroup().addTo(map);
+  lineLayer=L.layerGroup().addTo(map);
 
-  map.on('click', e=>{
-    const nm = nearestMarker(e.latlng, TAP_TOL);
-    if (nm){ openMarkerPopup(nm); return; }
-    selectedSpot = { lat: e.latlng.lat, lng: e.latlng.lng };
-    chosenSpot && (chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`);
-    submitMood && (submitMood.disabled = (selectedMood === null));
+  map.on('click',e=>{
+    const nm=nearestMarker(e.latlng,TAP_TOL);
+    if(nm){ openFloat(byId.get(nm.__mm_id), nm.getLatLng()); return; }
+    selectedSpot={lat:e.latlng.lat,lng:e.latlng.lng};
+    chosenSpot && (chosenSpot.textContent=`${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`);
+    submitMood && (submitMood.disabled=(selectedMood===null));
+    hideFloat();
   });
-
-  map.on('movestart', ()=>hideFloatPopup());
-  map.on('zoomstart', ()=>hideFloatPopup());
+  map.on('movestart',hideFloat);
+  map.on('zoomstart',hideFloat);
 })();
 
-/* ---------------- selections & controls ---------------- */
-let selectedMood = null;
-let selectedSpot = null;
-
-moodPicker?.addEventListener('click', e=>{
-  const b = e.target.closest('button[data-mood]'); if(!b) return;
+/* ---------- selection controls ---------- */
+let selectedMood=null, selectedSpot=null;
+moodPicker?.addEventListener('click',e=>{
+  const b=e.target.closest('button[data-mood]'); if(!b) return;
   $$('#moodPicker button').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active'); selectedMood = Number(b.dataset.mood);
-  submitMood && (submitMood.disabled = !selectedSpot);
+  b.classList.add('active'); selectedMood=Number(b.dataset.mood);
+  submitMood && (submitMood.disabled=!selectedSpot);
 });
-useMyLocationBtn?.addEventListener('click', ()=>{
+useMyLocationBtn?.addEventListener('click',()=>{
   if(!navigator.geolocation) return toast('Location not available');
   navigator.geolocation.getCurrentPosition(pos=>{
-    selectedSpot = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    map.setView([selectedSpot.lat, selectedSpot.lng], 10);
-    chosenSpot && (chosenSpot.textContent = `${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`);
-    submitMood && (submitMood.disabled = (selectedMood === null));
-  }, ()=>toast('Could not get location'));
+    selectedSpot={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    map.setView([selectedSpot.lat,selectedSpot.lng],10);
+    chosenSpot && (chosenSpot.textContent=`${selectedSpot.lat.toFixed(4)}, ${selectedSpot.lng.toFixed(4)}`);
+    submitMood && (submitMood.disabled=(selectedMood===null));
+  },()=>toast('Could not get location'));
 });
-toggleCrosshairBtn?.addEventListener('click', ()=>$('#crosshair')?.classList.toggle('hidden'));
+toggleCrosshairBtn?.addEventListener('click',()=>$('#crosshair')?.classList.toggle('hidden'));
 
-radiusInput?.addEventListener('input', ()=>{
-  radiusValue && (radiusValue.textContent = `${radiusInput.value}km`);
-  if (toggleConnections?.checked) buildConnections();
+radiusInput?.addEventListener('input',()=>{
+  radiusValue && (radiusValue.textContent=`${radiusInput.value}km`);
+  if(toggleConnections?.checked) buildConnections();
 });
-windowHoursSel?.addEventListener('change', ()=>refreshPulses());
-toggleConnections?.addEventListener('change', ()=>buildConnections());
-toggleHeat?.addEventListener('change', ()=>updateHeat());
-toggleCluster?.addEventListener('change', ()=>{
-  if (!toggleCluster) return;
-  if (toggleCluster.checked) { if (!map.hasLayer(clusterLayer)) map.addLayer(clusterLayer); }
-  else { if (map.hasLayer(clusterLayer)) map.removeLayer(clusterLayer); }
+windowHoursSel?.addEventListener('change',()=>refreshPulses());
+toggleConnections?.addEventListener('change',()=>buildConnections());
+toggleHeat?.addEventListener('change',()=>updateHeat());
+toggleCluster?.addEventListener('change',()=>{
+  if(toggleCluster.checked){ if(!map.hasLayer(clusterLayer)) map.addLayer(clusterLayer); }
+  else { if(map.hasLayer(clusterLayer)) map.removeLayer(clusterLayer); }
 });
 
-/* ---------------- layout equalize ---------------- */
+/* ---------- equalize cards (keeps layout tidy) ---------- */
 function cardByHeading(startsWith){
-  const hs = $$('h1,h2,h3,.card-title,[role="heading"]');
-  for(const h of hs){
-    if(h.textContent.trim().toLowerCase().startsWith(startsWith)) return h.closest('.card, .panel, section, div');
-  }
+  const hs=$$('h1,h2,h3,.card-title,[role="heading"]');
+  for(const h of hs){ if(h.textContent.trim().toLowerCase().startsWith(startsWith)) return h.closest('.card, .panel, section, div'); }
   return null;
 }
 function equalizeCards(){
-  const left  = cardByHeading('pulse your mood');
-  const right = cardByHeading('map view');
-  if(!left || !right) return;
-  left.style.height = 'auto'; right.style.height = 'auto';
-  const h = Math.max(left.offsetHeight, right.offsetHeight);
-  left.style.height = right.style.height = h + 'px';
-  if(mapEl){ mapEl.style.marginTop = '16px'; mapEl.style.display = 'block'; }
+  const left=cardByHeading('pulse your mood'), right=cardByHeading('map view'); if(!left||!right) return;
+  left.style.height='auto'; right.style.height='auto';
+  const h=Math.max(left.offsetHeight,right.offsetHeight); left.style.height=right.style.height=h+'px';
+  if(mapEl){ mapEl.style.marginTop='16px'; mapEl.style.display='block'; }
 }
-note && (note.style.width = '100%');
-const eqNow = ()=>requestAnimationFrame(equalizeCards);
-window.addEventListener('resize', debounce(eqNow, 120));
-document.addEventListener('DOMContentLoaded', eqNow);
+note && (note.style.width='100%');
+const eqNow=()=>requestAnimationFrame(equalizeCards);
+addEventListener('resize',debounce(eqNow,120));
+document.addEventListener('DOMContentLoaded',eqNow);
 
-/* ---------------- load & render ---------------- */
+/* ---------- load & render ---------- */
 async function refreshPulses(){
   try{
-    const hours = Number(windowHoursSel?.value || 24);
-    const res = await fetch(`/api/pulses?windowHours=${hours}`);
+    const hours=Number(windowHoursSel?.value||24);
+    const res=await fetch(`/api/pulses?windowHours=${hours}`);
     if(!res.ok) throw new Error(`GET /api/pulses ${res.status}`);
-    const arr = await res.json();
-    pulses = (Array.isArray(arr) ? arr : []).filter(p => !hidden.has(asId(p.id)));
+    const arr=await res.json();
+    pulses=(Array.isArray(arr)?arr:[]).filter(p=>!hidden.has(asId(p.id)));
     renderPulses();
   }catch(e){ console.error(e); toast(I18N[LANG].loadFail); }
 }
 
+function moodColor(m){
+  const n=Number(m);
+  if(n===-2) return '#8ebeff';
+  if(n===-1) return '#b5ccff';
+  if(n===0)  return '#dee7ff';
+  if(n===1)  return '#9bffdb';
+  if(n===2)  return '#67ffb0';
+  return '#cfe3ff';
+}
+
+/* make a DIV icon (better touch + cluster behavior) */
+function makeIcon(mood){
+  const c=moodColor(mood);
+  const html=`<div style="--c:${c};width:18px;height:18px;border-radius:50%;
+               background:var(--c);box-shadow:0 0 12px var(--c),0 0 0 1px rgba(255,255,255,.22);
+               transform:translate(-9px,-9px)"></div>`;
+  return L.divIcon({ html, className:'mm-dot', iconSize:[18,18], iconAnchor:[9,9] });
+}
+
 function renderPulses(){
   clusterLayer.clearLayers(); lineLayer.clearLayers();
-  if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+  if(heatLayer){ map.removeLayer(heatLayer); heatLayer=null; }
   markers.clear(); byId.clear();
 
   for(const p of pulses){
-    const pid = asId(p.id);
-    byId.set(pid, p);
+    const id=asId(p.id);
+    byId.set(id,p);
+    const marker=L.marker([p.lat,p.lng],{ icon: makeIcon(p.mood), keyboard:true, title:'' });
+    marker.__mm_id=id;
 
-    const marker = L.circleMarker([p.lat, p.lng], {
-      radius: DOT_RADIUS,
-      color: 'rgba(255,255,255,.22)',
-      weight: 1,
-      fillColor: moodColor(p.mood),
-      fillOpacity: .96,
-      renderer: touchRenderer,
-      bubblingMouseEvents:false,
-      keyboard:true
-    });
+    const open=()=>openFloat(p, marker.getLatLng());
+    marker.on('click',open);
+    marker.on('keypress',e=>{ if(e.originalEvent?.key==='Enter') open(); });
+    marker.on('touchend',ev=>{ ev.originalEvent?.preventDefault?.(); ev.originalEvent?.stopPropagation?.(); open(); },{passive:false});
+    marker.on('pointerup',open);
 
-    const open = ()=>openMarkerPopup(marker, pid);
-    marker.on('click', open);
-    marker.on('dblclick', open);
-    marker.on('keypress', (e)=>{ if (e.originalEvent?.key === 'Enter') open(); });
-    marker.on('touchend', (ev)=>{ ev.originalEvent?.preventDefault?.(); ev.originalEvent?.stopPropagation?.(); open(); }, {passive:false});
-    marker.on('pointerup', open);
-
-    markers.set(pid, marker);
+    markers.set(id,marker);
     clusterLayer.addLayer(marker);
   }
 
-  liveCount && (liveCount.textContent = `Now: ${pulses.length} pulses`);
+  liveCount && (liveCount.textContent=`Now: ${pulses.length} pulses`);
   drawSparkline(); updateHeat();
-  if (toggleConnections?.checked) buildConnections();
+  if(toggleConnections?.checked) buildConnections();
   eqNow();
 }
 
-function moodColor(m){
-  switch(mVal(m)){
-    case -2: return '#8ebeff';
-    case -1: return '#b5ccff';
-    case  0: return '#dee7ff';
-    case  1: return '#9bffdb';
-    case  2: return '#67ffb0';
-    default: return '#cfe3ff';
-  }
-}
-
-/* ---------------- Floating popup (no Leaflet popup) ---------------- */
-let floatEl = null;
-let floatPulseId = null;
-let floatLatLng = null;
-
+/* ---------- floating popup (custom, not Leaflet) ---------- */
+let floatEl=null, floatLatLng=null;
 function ensureFloat(){
-  if (floatEl) return floatEl;
-  floatEl = document.createElement('div');
-  floatEl.id = 'mm-floatpop';
-  floatEl.style.cssText = `
-    position:absolute; z-index:1000; display:none;
-    max-width:260px; padding:10px 12px;
-    background:rgba(15,34,68,.96); color:#eaf1ff;
-    border:1px solid rgba(255,255,255,.18); border-radius:12px;
-    box-shadow:0 12px 28px rgba(0,0,0,.45); pointer-events:auto;
-  `;
-  // close on outside tap (map click already hides)
-  floatEl.addEventListener('click', e=>{
-    const del = e.target.closest('.mm-del');
-    if (del) return; // let delete handler run
-    e.stopPropagation();
-  });
+  if(floatEl) return floatEl;
+  floatEl=document.createElement('div');
+  floatEl.id='mm-float';
+  floatEl.style.cssText='position:absolute;z-index:1000;display:none;max-width:260px;padding:10px 12px;background:rgba(15,34,68,.96);color:#eaf1ff;border:1px solid rgba(255,255,255,.18);border-radius:12px;box-shadow:0 12px 28px rgba(0,0,0,.45);pointer-events:auto;';
   map.getContainer().appendChild(floatEl);
   return floatEl;
 }
-function hideFloatPopup(){
-  if (!floatEl) return;
-  floatEl.style.display='none';
-  floatPulseId = null;
-  floatLatLng = null;
+function popupHTML(p){
+  const T=I18N[LANG];
+  const moodName=({'-2':T.veryLow,'-1':T.low,'0':T.neutral,'1':T.good,'2':T.great})[String(Number(p.mood))]||'mood';
+  const raw=p.note??p.text??p.message??p.content??p.body??'';
+  const noteHtml=raw?`<div style="margin-top:6px;color:#cfe3ff;word-wrap:break-word">${esc(String(raw))}</div>`:'';
+  const del = owned.has(asId(p.id)) ? `<button class="mm-del" data-id="${esc(asId(p.id))}" style="margin-top:10px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:#2a3f66;color:#fff;cursor:pointer;">${esc(T.del)}</button>` : '';
+  return `<div style="font-weight:800">${esc(moodName)}</div>${noteHtml}${del}`;
+}
+function openFloat(p,latlng){
+  const el=ensureFloat();
+  floatLatLng=latlng;
+  el.innerHTML=popupHTML(p);
+  el.style.display='block';
+  positionFloat();
+  const delBtn=el.querySelector('.mm-del');
+  if(delBtn){ delBtn.onclick=()=>deletePulse(delBtn.getAttribute('data-id')); }
 }
 function positionFloat(){
-  if (!floatEl || !floatLatLng) return;
-  const pt = map.latLngToContainerPoint(floatLatLng);
-  // place above and a bit to the right
-  const x = pt.x + 14;
-  const y = pt.y - (floatEl.offsetHeight + 14);
-  floatEl.style.left = Math.round(x) + 'px';
-  floatEl.style.top  = Math.round(y) + 'px';
+  if(!floatEl||!floatLatLng) return;
+  const pt=map.latLngToContainerPoint(floatLatLng);
+  const x=pt.x+14, y=pt.y-(floatEl.offsetHeight+14);
+  floatEl.style.left=Math.round(x)+'px';
+  floatEl.style.top =Math.round(y)+'px';
 }
-function popupHTML(p){
-  const T = I18N[LANG];
-  const moodName = ({'-2':T.veryLow,'-1':T.low,'0':T.neutral,'1':T.good,'2':T.great})[String(mVal(p.mood))] || 'mood';
-  const raw = p.note ?? p.text ?? p.message ?? p.content ?? p.body ?? p.desc ?? '';
-  const noteHtml = raw ? `<div style="margin-top:6px;color:#cfe3ff;word-wrap:break-word">${esc(String(raw))}</div>` : '';
-  const delBtn = (owned.has(asId(p.id)))
-    ? `<button class="mm-del" data-id="${esc(asId(p.id))}"
-         style="margin-top:10px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
-                background:#2a3f66;color:#fff;cursor:pointer;">${esc(T.del)}</button>`
-    : '';
-  return `<div style="font-weight:800">${esc(moodName)}</div>${noteHtml}${delBtn}`;
-}
-function attachFloatHandlers(){
-  if (!floatEl) return;
-  const btn = floatEl.querySelector('.mm-del');
-  if (btn){
-    btn.onclick = ()=>deletePulse(btn.getAttribute('data-id'));
-  }
-}
-function openMarkerPopup(markerOrId, maybeId){
-  let marker = markerOrId, idStr = maybeId;
-  if (typeof markerOrId === 'string'){ idStr = markerOrId; marker = markers.get(idStr); }
-  if (!marker) return;
+function hideFloat(){ if(!floatEl) return; floatEl.style.display='none'; }
+mapEl.addEventListener('click',e=>{
+  // close only if click was not on a dot (divIcon is a child div)
+  if(!e.target.closest('.mm-dot')) hideFloat();
+});
+map.on('move',positionFloat);
+map.on('zoom',positionFloat);
 
-  const p = byId.get(idStr); if (!p) return;
-  const ll = marker.getLatLng();
-
-  clusterLayer.zoomToShowLayer(marker, ()=>{
-    const el = ensureFloat();
-    el.innerHTML = popupHTML(p);
-    floatPulseId = idStr;
-    floatLatLng  = ll;
-    el.style.display = 'block';
-    positionFloat();
-    attachFloatHandlers();
-  });
-}
-mapEl.addEventListener('click', hideFloatPopup); // tap empty map closes
-map.on('move', positionFloat);
-map.on('zoom', positionFloat);
-
-/* ---------------- connections ---------------- */
+/* ---------- connections ---------- */
 function buildConnections(){
   lineLayer.clearLayers();
   if(!toggleConnections?.checked) return;
-
-  const R = Number(radiusInput?.value || 120);
-  const MAX = 1500;
-  const N = Math.min(pulses.length, MAX);
-  const ok = p => !(p.connect === false || p.allow_connect === false || p.connect_consent === false);
-
+  const R=Number(radiusInput?.value||120), MAX=1500, N=Math.min(pulses.length,MAX);
+  const ok=p=>!(p.connect===false||p.allow_connect===false||p.connect_consent===false);
   for(let i=0;i<N;i++){
-    const A = pulses[i]; if(!ok(A)) continue;
-    const aMood = mVal(A.mood);
-    const latKm = 111.32, lonKmA = Math.max(0.1, 111.32*Math.abs(Math.cos(toRad(A.lat))));
+    const A=pulses[i]; if(!ok(A)) continue; const aMood=Number(A.mood);
+    const latKm=111.32, lonKmA=Math.max(0.1,111.32*Math.abs(Math.cos(toRad(A.lat))));
     for(let j=i+1;j<N;j++){
-      const B = pulses[j]; if(!ok(B)) continue;
-      if (aMood !== mVal(B.mood)) continue;
-
-      const dLatKm = Math.abs(A.lat-B.lat)*latKm; if(dLatKm>R) continue;
-      const lonKmB = Math.max(0.1, 111.32*Math.abs(Math.cos(toRad(B.lat))));
-      const dLonKm = Math.abs(A.lng-B.lng)*((lonKmA+lonKmB)/2); if(dLonKm>R) continue;
-
+      const B=pulses[j]; if(!ok(B)||aMood!==Number(B.mood)) continue;
+      const dLatKm=Math.abs(A.lat-B.lat)*latKm; if(dLatKm>R) continue;
+      const lonKmB=Math.max(0.1,111.32*Math.abs(Math.cos(toRad(B.lat))));
+      const dLonKm=Math.abs(A.lng-B.lng)*((lonKmA+lonKmB)/2); if(dLonKm>R) continue;
       if(kmBetween({lat:A.lat,lng:A.lng},{lat:B.lat,lng:B.lng})<=R){
-        L.polyline([[A.lat,A.lng],[B.lat,B.lng]],{
-          color:moodColor(aMood), opacity:.42, weight:2, interactive:false, renderer: lineRenderer
-        }).addTo(lineLayer);
+        L.polyline([[A.lat,A.lng],[B.lat,B.lng]],{color:moodColor(aMood),opacity:.42,weight:2,interactive:false}).addTo(lineLayer);
       }
     }
   }
 }
 
-/* ---------------- heat ---------------- */
+/* ---------- heat ---------- */
 function updateHeat(){
-  if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
-  if (!toggleHeat?.checked) return;
-  const pts = pulses.map(p => [p.lat, p.lng, 0.30 + 0.70*(Math.abs(mVal(p.mood))+1)/3]);
-  if (pts.length){
-    heatLayer = L.heatLayer(pts, { radius:22, blur:18, maxZoom:11, minOpacity:.2 });
-    heatLayer.addTo(map);
-  }
+  if(heatLayer){ map.removeLayer(heatLayer); heatLayer=null; }
+  if(!toggleHeat?.checked) return;
+  const pts=pulses.map(p=>[p.lat,p.lng,0.30+0.70*(Math.abs(Number(p.mood))+1)/3]);
+  if(pts.length){ heatLayer=L.heatLayer(pts,{radius:22,blur:18,maxZoom:11,minOpacity:.2}); heatLayer.addTo(map); }
 }
 
-/* ---------------- create & owner-only delete ---------------- */
-submitMood?.addEventListener('click', postPulse);
-
+/* ---------- create + owner-only delete ---------- */
+submitMood?.addEventListener('click',postPulse);
 async function postPulse(){
-  if (selectedMood===null || !selectedSpot) return toast(I18N[LANG].pickSpot);
-  submitMood.disabled = true;
+  if(selectedMood===null||!selectedSpot) return toast(I18N[LANG].pickSpot);
+  submitMood.disabled=true;
   try{
-    const body = {
-      mood:selectedMood, note:(note?.value||'').slice(0,280),
-      lat:selectedSpot.lat, lng:selectedSpot.lng,
-      connect:!!connectConsent?.checked, ownerKey
-    };
-    const res = await fetch('/api/pulses', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const body={ mood:selectedMood, note:(note?.value||'').slice(0,280), lat:selectedSpot.lat, lng:selectedSpot.lng, connect:!!connectConsent?.checked, ownerKey };
+    const res=await fetch('/api/pulses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!res.ok) throw new Error(`POST /api/pulses ${res.status}`);
-    const created = await res.json();
-    const cid = asId(created?.id);
+    const created=await res.json(); const cid=asId(created?.id);
     owned.add(cid); localStorage.setItem('mmOwnedIds', JSON.stringify([...owned]));
     pulses.unshift(created); renderPulses(); shareLinkBtn && (shareLinkBtn.disabled=false);
     toast(I18N[LANG].pulsed);
   }catch(e){ console.error(e); toast(I18N[LANG].postFail); }
   finally{ submitMood.disabled=false; }
 }
-
 async function deletePulse(idStr){
-  if (!owned.has(idStr)) return;
+  if(!owned.has(idStr)) return;
   try{
-    const res = await fetch(`/api/pulses/${encodeURIComponent(idStr)}`, { method:'DELETE', headers:{ 'X-Owner': ownerKey } });
-    if (res.ok){ removePulse(idStr); toast(I18N[LANG].delOK); return; }
+    const res=await fetch(`/api/pulses/${encodeURIComponent(idStr)}`,{method:'DELETE',headers:{'X-Owner':ownerKey}});
+    if(res.ok){ removePulse(idStr); toast(I18N[LANG].delOK); return; }
     throw new Error(`DELETE ${res.status}`);
   }catch(e){
     hidden.add(idStr); localStorage.setItem('mmHidden', JSON.stringify([...hidden]));
@@ -511,67 +416,62 @@ async function deletePulse(idStr){
   }
 }
 function removePulse(idStr){
-  const m = markers.get(idStr); if (m){ clusterLayer.removeLayer(m); markers.delete(idStr); }
-  pulses = pulses.filter(p=>asId(p.id)!==idStr);
+  const m=markers.get(idStr); if(m){ clusterLayer.removeLayer(m); markers.delete(idStr); }
+  pulses=pulses.filter(p=>asId(p.id)!==idStr);
   buildConnections(); updateHeat();
-  liveCount && (liveCount.textContent = `Now: ${pulses.length} pulses`);
-  hideFloatPopup();
+  liveCount && (liveCount.textContent=`Now: ${pulses.length} pulses`);
+  hideFloat();
 }
 
-/* ---------------- share ---------------- */
-shareLinkBtn?.addEventListener('click', async ()=>{
-  const url = location.origin;
-  try{
-    if (navigator.share) await navigator.share({ title:'Micromoon', text:'Under the same sky.', url });
-    else { await navigator.clipboard.writeText(url); toast(I18N[LANG].linkCopied); }
-  }catch{
-    try{ await navigator.clipboard.writeText(url);}catch{}
-    toast(I18N[LANG].linkCopied);
-  }
+/* ---------- share ---------- */
+shareLinkBtn?.addEventListener('click',async()=>{
+  const url=location.origin;
+  try{ if(navigator.share) await navigator.share({title:'Micromoon',text:'Under the same sky.',url});
+       else { await navigator.clipboard.writeText(url); toast(I18N[LANG].linkCopied);} }
+  catch{ try{ await navigator.clipboard.writeText(url);}catch{} toast(I18N[LANG].linkCopied); }
 });
 
-/* ---------------- sparkline + starfield ---------------- */
+/* ---------- sparkline + starfield ---------- */
 function drawSparkline(){
-  if (!spark?.getContext) return;
-  const ctx = spark.getContext('2d'), W = spark.width, H = spark.height;
+  if(!spark?.getContext) return;
+  const ctx=spark.getContext('2d'), W=spark.width, H=spark.height;
   ctx.clearRect(0,0,W,H);
-  const now = Date.now(), bins = new Array(24).fill(0);
+  const now=Date.now(), bins=new Array(24).fill(0);
   for(const p of pulses){
-    const t = Date.parse(p.created_at || p.createdAt || p.created || ''); if (!isFinite(t)) continue;
-    const diffH = Math.max(0, Math.min(23, Math.floor((now - t)/3600000)));
-    bins[23-diffH]++;
+    const t=Date.parse(p.created_at||p.createdAt||p.created||''); if(!isFinite(t)) continue;
+    const diffH=Math.max(0,Math.min(23,Math.floor((now-t)/3600000))); bins[23-diffH]++;
   }
-  const max = Math.max(1, ...bins), pad = 2, step = (W - pad*2) / (bins.length - 1);
-  ctx.lineWidth = 2; ctx.strokeStyle = '#b6d3ff'; ctx.beginPath();
-  bins.forEach((v,i)=>{ const x = pad + i*step, y = H - (H-2) * (v/max); if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+  const max=Math.max(1,...bins), pad=2, step=(W-pad*2)/(bins.length-1);
+  ctx.lineWidth=2; ctx.strokeStyle='#b6d3ff'; ctx.beginPath();
+  bins.forEach((v,i)=>{ const x=pad+i*step, y=H-(H-2)*(v/max); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
   ctx.stroke();
 }
 (function starfield(){
-  const c = $('#stars'); if(!c) return;
-  const ctx = c.getContext('2d'); let W,H,stars=[];
+  const c=$('#stars'); if(!c) return;
+  const ctx=c.getContext('2d'); let W,H,stars=[];
   function resize(){ W=c.width=innerWidth*devicePixelRatio; H=c.height=innerHeight*devicePixelRatio; make(); }
-  function make(){ const n = Math.floor((innerWidth*innerHeight)/12000);
-    stars = Array.from({length:n},()=>({ x:Math.random()*W, y:Math.random()*H, r:(Math.random()*1.2+0.2)*devicePixelRatio, s:Math.random()*0.6+0.2 })); }
+  function make(){ const n=Math.floor((innerWidth*innerHeight)/12000);
+    stars=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,r:(Math.random()*1.2+0.2)*devicePixelRatio,s:Math.random()*0.6+0.2})); }
   function step(){ ctx.clearRect(0,0,W,H); ctx.fillStyle='white';
-    for(const s of stars){ ctx.globalAlpha=s.s; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill(); s.y += 0.02*devicePixelRatio; if(s.y>H) s.y=-5; }
+    for(const s of stars){ ctx.globalAlpha=s.s; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill(); s.y+=0.02*devicePixelRatio; if(s.y>H) s.y=-5; }
     requestAnimationFrame(step); }
   resize(); addEventListener('resize',resize); step();
 })();
 
-/* ---------------- refresh loop ---------------- */
+/* ---------- refresh loop ---------- */
 async function loopRefresh(){ while(true){ await sleep(60000); await refreshPulses(); } }
 
-/* ---------------- init ---------------- */
-radiusValue && (radiusValue.textContent = `${radiusInput?.value ?? 120}km`);
+/* ---------- init ---------- */
+radiusValue && (radiusValue.textContent=`${radiusInput?.value??120}km`);
 refreshPulses();
 loopRefresh().catch(()=>{});
 
-/* ---------------- utilities ---------------- */
+/* ---------- utilities ---------- */
 function nearestMarker(latlng, pxTol=26){
   let best=null, bestD=Infinity;
-  const p0 = map.latLngToLayerPoint(latlng);
+  const p0=map.latLngToLayerPoint(latlng);
   markers.forEach(m=>{
-    const d = p0.distanceTo(map.latLngToLayerPoint(m.getLatLng()));
+    const d=p0.distanceTo(map.latLngToLayerPoint(m.getLatLng()));
     if(d<bestD){ bestD=d; best=m; }
   });
   return bestD<=pxTol ? best : null;
