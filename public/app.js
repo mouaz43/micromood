@@ -1,8 +1,8 @@
 /* =========================================================================
-   Micromoon — Front-end Map Logic (POPUPS FIXED)
-   - Popups open even when dots are clustered (zoomToShowLayer ➜ root popup)
-   - Wider mobile tap tolerance + nearest-dot open on map tap
-   - Owner-only delete, connections, heatmap, i18n kept intact
+   Micromoon — Front-end Map Logic (FLOATING POPUP EDITION)
+   - Cluster-safe, mobile-safe floating popup (no Leaflet Popup quirks)
+   - Wider tap tolerance, nearest-dot open on map tap
+   - Owner-only delete kept; connections/heatmap unchanged
    ======================================================================== */
 
 /* ---------------- helpers ---------------- */
@@ -189,10 +189,10 @@ setLang('en');
 })();
 toggleMotion?.addEventListener('change', ()=>document.body.classList.toggle('reduce-motion', !!toggleMotion.checked));
 
-/* ---------------- mobile detection & renderers ---------------- */
+/* ---------------- mobile + renderers ---------------- */
 const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 const DOT_RADIUS = IS_TOUCH ? 12 : 8;
-const TAP_TOL = IS_TOUCH ? 46 : 26;            // wider mobile tolerance
+const TAP_TOL = IS_TOUCH ? 46 : 26;
 const touchRenderer = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ tolerance: IS_TOUCH ? 14 : 6, padding: 0.25 }) : undefined;
 const lineRenderer  = (typeof L !== 'undefined' && L.canvas) ? L.canvas({ padding: 0.25 }) : undefined;
 
@@ -225,7 +225,6 @@ localStorage.setItem('mmOwnerKey', ownerKey);
 
   lineLayer = L.layerGroup().addTo(map);
 
-  // Map tap: open nearest visible dot if close enough; otherwise set post spot
   map.on('click', e=>{
     const nm = nearestMarker(e.latlng, TAP_TOL);
     if (nm){ openMarkerPopup(nm); return; }
@@ -234,9 +233,8 @@ localStorage.setItem('mmOwnerKey', ownerKey);
     submitMood && (submitMood.disabled = (selectedMood === null));
   });
 
-  map.on('popupopen', e=>{
-    try { map.panInside(e.popup.getLatLng(), { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); } catch {}
-  });
+  map.on('movestart', ()=>hideFloatPopup());
+  map.on('zoomstart', ()=>hideFloatPopup());
 })();
 
 /* ---------------- selections & controls ---------------- */
@@ -249,7 +247,6 @@ moodPicker?.addEventListener('click', e=>{
   b.classList.add('active'); selectedMood = Number(b.dataset.mood);
   submitMood && (submitMood.disabled = !selectedSpot);
 });
-
 useMyLocationBtn?.addEventListener('click', ()=>{
   if(!navigator.geolocation) return toast('Location not available');
   navigator.geolocation.getCurrentPosition(pos=>{
@@ -259,7 +256,6 @@ useMyLocationBtn?.addEventListener('click', ()=>{
     submitMood && (submitMood.disabled = (selectedMood === null));
   }, ()=>toast('Could not get location'));
 });
-
 toggleCrosshairBtn?.addEventListener('click', ()=>$('#crosshair')?.classList.toggle('hidden'));
 
 radiusInput?.addEventListener('input', ()=>{
@@ -329,13 +325,6 @@ function renderPulses(){
       keyboard:true
     });
 
-    // We still bind one, but we won't rely on it; openMarkerPopup draws a root popup.
-    marker.bindPopup(popupHTML(p), {
-      autoPan: true, autoClose: false, closeButton: true, keepInView: true,
-      maxWidth: 280, autoPanPaddingTopLeft:[30,50], autoPanPaddingBottomRight:[30,50],
-      className: 'mm-popup'
-    });
-
     const open = ()=>openMarkerPopup(marker, pid);
     marker.on('click', open);
     marker.on('dblclick', open);
@@ -350,7 +339,6 @@ function renderPulses(){
   liveCount && (liveCount.textContent = `Now: ${pulses.length} pulses`);
   drawSparkline(); updateHeat();
   if (toggleConnections?.checked) buildConnections();
-
   eqNow();
 }
 
@@ -365,42 +353,88 @@ function moodColor(m){
   }
 }
 
-/* ----- OPEN POPUP (cluster-aware, render on map root) ----- */
+/* ---------------- Floating popup (no Leaflet popup) ---------------- */
+let floatEl = null;
+let floatPulseId = null;
+let floatLatLng = null;
+
+function ensureFloat(){
+  if (floatEl) return floatEl;
+  floatEl = document.createElement('div');
+  floatEl.id = 'mm-floatpop';
+  floatEl.style.cssText = `
+    position:absolute; z-index:1000; display:none;
+    max-width:260px; padding:10px 12px;
+    background:rgba(15,34,68,.96); color:#eaf1ff;
+    border:1px solid rgba(255,255,255,.18); border-radius:12px;
+    box-shadow:0 12px 28px rgba(0,0,0,.45); pointer-events:auto;
+  `;
+  // close on outside tap (map click already hides)
+  floatEl.addEventListener('click', e=>{
+    const del = e.target.closest('.mm-del');
+    if (del) return; // let delete handler run
+    e.stopPropagation();
+  });
+  map.getContainer().appendChild(floatEl);
+  return floatEl;
+}
+function hideFloatPopup(){
+  if (!floatEl) return;
+  floatEl.style.display='none';
+  floatPulseId = null;
+  floatLatLng = null;
+}
+function positionFloat(){
+  if (!floatEl || !floatLatLng) return;
+  const pt = map.latLngToContainerPoint(floatLatLng);
+  // place above and a bit to the right
+  const x = pt.x + 14;
+  const y = pt.y - (floatEl.offsetHeight + 14);
+  floatEl.style.left = Math.round(x) + 'px';
+  floatEl.style.top  = Math.round(y) + 'px';
+}
+function popupHTML(p){
+  const T = I18N[LANG];
+  const moodName = ({'-2':T.veryLow,'-1':T.low,'0':T.neutral,'1':T.good,'2':T.great})[String(mVal(p.mood))] || 'mood';
+  const raw = p.note ?? p.text ?? p.message ?? p.content ?? p.body ?? p.desc ?? '';
+  const noteHtml = raw ? `<div style="margin-top:6px;color:#cfe3ff;word-wrap:break-word">${esc(String(raw))}</div>` : '';
+  const delBtn = (owned.has(asId(p.id)))
+    ? `<button class="mm-del" data-id="${esc(asId(p.id))}"
+         style="margin-top:10px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
+                background:#2a3f66;color:#fff;cursor:pointer;">${esc(T.del)}</button>`
+    : '';
+  return `<div style="font-weight:800">${esc(moodName)}</div>${noteHtml}${delBtn}`;
+}
+function attachFloatHandlers(){
+  if (!floatEl) return;
+  const btn = floatEl.querySelector('.mm-del');
+  if (btn){
+    btn.onclick = ()=>deletePulse(btn.getAttribute('data-id'));
+  }
+}
 function openMarkerPopup(markerOrId, maybeId){
   let marker = markerOrId, idStr = maybeId;
   if (typeof markerOrId === 'string'){ idStr = markerOrId; marker = markers.get(idStr); }
   if (!marker) return;
 
-  const p = byId.get(idStr) || {};
-  const html = popupHTML(p);
+  const p = byId.get(idStr); if (!p) return;
   const ll = marker.getLatLng();
 
-  // Make sure the marker is visible (zoom/spiderfy), then show a ROOT popup.
-  clusterLayer.zoomToShowLayer(marker, function(){
-    try{
-      const popup = L.popup({
-        autoPan:true, autoClose:false, closeButton:true, keepInView:true,
-        maxWidth:280, autoPanPaddingTopLeft:[30,50], autoPanPaddingBottomRight:[30,50],
-        className:'mm-popup'
-      }).setLatLng(ll).setContent(html).openOn(map);
-
-      attachPopupHandlers(popup, asId(p.id));
-      try { map.panInside(ll, { paddingTopLeft:[30,50], paddingBottomRight:[30,50] }); } catch {}
-    }catch{}
+  clusterLayer.zoomToShowLayer(marker, ()=>{
+    const el = ensureFloat();
+    el.innerHTML = popupHTML(p);
+    floatPulseId = idStr;
+    floatLatLng  = ll;
+    el.style.display = 'block';
+    positionFloat();
+    attachFloatHandlers();
   });
 }
+mapEl.addEventListener('click', hideFloatPopup); // tap empty map closes
+map.on('move', positionFloat);
+map.on('zoom', positionFloat);
 
-function nearestMarker(latlng, pxTol=26){
-  let best=null, bestD=Infinity;
-  const p0 = map.latLngToLayerPoint(latlng);
-  markers.forEach(m=>{
-    const d = p0.distanceTo(map.latLngToLayerPoint(m.getLatLng()));
-    if(d<bestD){ bestD=d; best=m; }
-  });
-  return bestD<=pxTol ? best : null;
-}
-
-/* ---------------- connections (numeric mood) ---------------- */
+/* ---------------- connections ---------------- */
 function buildConnections(){
   lineLayer.clearLayers();
   if(!toggleConnections?.checked) return;
@@ -465,33 +499,11 @@ async function postPulse(){
   finally{ submitMood.disabled=false; }
 }
 
-function popupHTML(p){
-  const T = I18N[LANG];
-  const moodName = ({'-2':T.veryLow,'-1':T.low,'0':T.neutral,'1':T.good,'2':T.great})[String(mVal(p.mood))] || 'mood';
-  const raw = p.note ?? p.text ?? p.message ?? p.content ?? p.body ?? p.desc ?? '';
-  const noteHtml = raw ? `<div style="margin-top:6px;color:#cfe3ff">${esc(String(raw))}</div>` : '';
-  const delBtn = (owned.has(asId(p.id)))
-    ? `<button class="mm-del" data-id="${esc(asId(p.id))}"
-         style="padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
-                background:#2a3f66;color:#fff;cursor:pointer;">${esc(T.del)}</button>`
-    : '';
-  return `<div style="min-width:210px">
-            <div style="font-weight:800">${esc(moodName)}</div>
-            ${noteHtml}
-            <div style="display:flex;gap:8px;margin-top:10px;">${delBtn}</div>
-          </div>`;
-}
-function attachPopupHandlers(popup, idStr){
-  const root = popup?.getElement ? popup.getElement() : popup?._container;
-  if (!root) return;
-  const btn = root.querySelector(`.mm-del[data-id="${CSS.escape(idStr)}"]`);
-  if (btn) btn.onclick = ()=>deletePulse(idStr);
-}
 async function deletePulse(idStr){
   if (!owned.has(idStr)) return;
   try{
     const res = await fetch(`/api/pulses/${encodeURIComponent(idStr)}`, { method:'DELETE', headers:{ 'X-Owner': ownerKey } });
-    if (res.ok){ removePulse(idStr); return toast(I18N[LANG].delOK); }
+    if (res.ok){ removePulse(idStr); toast(I18N[LANG].delOK); return; }
     throw new Error(`DELETE ${res.status}`);
   }catch(e){
     hidden.add(idStr); localStorage.setItem('mmHidden', JSON.stringify([...hidden]));
@@ -503,7 +515,7 @@ function removePulse(idStr){
   pulses = pulses.filter(p=>asId(p.id)!==idStr);
   buildConnections(); updateHeat();
   liveCount && (liveCount.textContent = `Now: ${pulses.length} pulses`);
-  map.closePopup();
+  hideFloatPopup();
 }
 
 /* ---------------- share ---------------- */
@@ -553,3 +565,14 @@ async function loopRefresh(){ while(true){ await sleep(60000); await refreshPuls
 radiusValue && (radiusValue.textContent = `${radiusInput?.value ?? 120}km`);
 refreshPulses();
 loopRefresh().catch(()=>{});
+
+/* ---------------- utilities ---------------- */
+function nearestMarker(latlng, pxTol=26){
+  let best=null, bestD=Infinity;
+  const p0 = map.latLngToLayerPoint(latlng);
+  markers.forEach(m=>{
+    const d = p0.distanceTo(map.latLngToLayerPoint(m.getLatLng()));
+    if(d<bestD){ bestD=d; best=m; }
+  });
+  return bestD<=pxTol ? best : null;
+}
