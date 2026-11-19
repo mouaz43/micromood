@@ -11,14 +11,14 @@ const tableSvg = () => {
   const sheet = (x, rot, picks) => `<g transform="rotate(${rot} ${x + 59} 456)"><rect x="${x}" y="412" width="118" height="88" rx="4" fill="#f3eee8" stroke="#262626" stroke-width="2"/>
     <path d="M${x + 10} 426h52" stroke="#262626" stroke-width="3"/>
     ${rep(5, r => `<path d="M${x + 10} ${440 + r * 11}h32" stroke="#262626" stroke-opacity=".45" stroke-width="2"/>${rep(5, j => `<circle cx="${x + 58 + j * 11}" cy="${440 + r * 11}" r="3" fill="${j === picks[r] ? '#7a5238' : 'none'}" stroke="#7a5238" stroke-width="1.2"/>`)}`)}</g>`;
-  const lbl = (y, x0, t) => `<path class="ln" d="M${x0} ${y}H522" stroke-width="1.5"/><circle cx="${x0}" cy="${y}" r="3.5" fill="#262626"/><text x="532" y="${y + 6}" class="ts" style="font-size:19px">${t}</text>`;
-  return `<svg class="dg" viewBox="0 0 712 520" role="img" aria-label="Cupping-Tisch von oben: drei Kaffees mit je drei Schalen, Röstproben, Löffel, Spülgläser und Bewertungsbögen">${defs}
+  const lbl = (y, x0, t) => `<path class="ln" d="M${x0} ${y}H522" stroke-width="1.5"/><circle cx="${x0}" cy="${y}" r="3.5" fill="#262626"/><text x="532" y="${y + 6}" class="ts c7-lb">${t}</text>`;
+  return `<svg class="dg c7-tbl" viewBox="0 0 716 520" role="img" aria-label="Cupping-Tisch von oben: drei Kaffees mit je drei Schalen, Röstproben, Löffel, Spülgläser und Bewertungsbögen">${defs}
   <defs><radialGradient id="c7-puff"><stop offset="0" stop-color="#f3eee8" stop-opacity=".75"/><stop offset="1" stop-color="#f3eee8" stop-opacity="0"/></radialGradient></defs>
   <rect x="8" y="8" width="500" height="504" rx="26" fill="#7a5238" opacity=".2"/>
   ${rep(6, i => `<path d="M30 ${70 + i * 78}q120 ${i % 2 ? 8 : -8} 240 0t226 0" fill="none" stroke="#7a5238" stroke-opacity=".16" stroke-width="2"/>`)}
   ${rep(3, i => `<g class="c7-pop" style="--d:${i}"><rect x="${cx[i] - 48}" y="38" width="96" height="58" rx="10" fill="#f3eee8" stroke="#262626" stroke-width="2"/>
     ${rep(8, k => bean(f1(cx[i] - 33 + (k % 4) * 22 + R() * 5), f1(57 + Math.floor(k / 4) * 21 + R() * 4), 8, Math.round(R() * 180)))}
-    <text x="${cx[i]}" y="121" class="tm mid">Kaffee ${'ABC'[i]}</text></g>`)}
+    <text x="${cx[i]}" y="121" class="tm mid" style="fill:#262626">Kaffee ${'ABC'[i]}</text></g>`)}
   ${rep(3, j => rep(3, i => `<g transform="translate(${cx[i]} ${cy[j]})"><g class="c7-pop" style="--d:${3 + j * 2 + i}">
     <circle r="38" fill="#f3eee8" stroke="#262626" stroke-width="2.5"/><circle r="30" fill="${COF[i]}"/><circle r="30" fill="none" stroke="#c99a6b" stroke-opacity=".55" stroke-width="2"/>
     <circle r="9" fill="none" stroke="#f3eee8" stroke-width="1.2" data-loop="6" data-off="${f1(R() * 6)}" data-k="s<:.4@0 3@4.2;o:0@0 .3@.5 0@4.2"/>
@@ -41,10 +41,11 @@ const CAV = 'M390 246 L424 404 Q430 426 452 426 L588 426 Q610 426 616 404 L650 2
 const ablaufSvg = () => {
   const R = rng(72);
   // one half of the crust: swells, is pushed aside by the spoon, then swept to the middle and lifted out
-  const half = (x0, x1, left) => { const dl = left ? 0 : .14, T = v => f1(v + dl); let top = ''; for (let x = x0; x <= x1; x += 14) top += ` L${x} ${f1(265 - R() * 5)}`;
+  const half = (x0, x1, left) => { const dl = left ? 0 : .14, T = v => f1(v + dl); let top = ''; for (let x = x0; x <= x1; x += 14) top += ` L${x} ${x === 520 ? 262 : f1(265 - R() * 5)}`;
+    const body = left ? `M${x0} 292${top} L${x1} 279 Q${x1} 292 ${x1 - 16} 292 Z` : `M${x0 + 16} 292 Q${x0} 292 ${x0} 279 L${top.slice(2)} L${x1} 292 Z`;
     return `<g style="transform-origin:${left ? '0%' : '100%'} 100%" data-k="o:0@${T(6.2)} 1@${T(8.4)} 1@${T(20.2)} 0@${T(20.8)};x:0@${T(18.9)} ${left ? 110 : -110}@${T(20.3)};sx<:1@${T(14.3)} .68@${T(16.4)} .68@${T(18.9)} .25@${T(20.3)};sy:.3@${T(6.2)} 1@${T(9)} 1.35@${T(12.8)} 1.35@${T(14.2)} .85@${T(16.6)} .85@${T(18.9)} .6@${T(20.6)}">
-      <path d="M${x0} 292${top} L${x1} 292 Z" fill="#8a5a36"/><path d="M${top.slice(2)}" fill="none" stroke="#c99a6b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-      ${rep(16, () => grit(x0 + 8 + R() * (x1 - x0 - 20), 272 + R() * 14, 3 + R() * 2.5, BR[Math.floor(R() * 3)]))}</g>`; };
+      <path d="${body}" fill="#8a5a36"/><path d="M${top.slice(2)}" fill="none" stroke="#c99a6b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+      ${rep(16, () => grit(x0 + (left ? 8 : 14) + R() * (x1 - x0 - 26), 272 + R() * 14, 3 + R() * 2.5, BR[Math.floor(R() * 3)]))}</g>`; };
   return defs + `<defs><clipPath id="c7-cav"><path d="${CAV}"/></clipPath><clipPath id="c7-fun"><path d="M468 96 L572 96 L542 150 L498 150 Z"/></clipPath>
     <filter id="c7-blur" x="-100%" y="-10%" width="300%" height="120%"><feGaussianBlur stdDeviation="2.5"/></filter></defs>
   <ellipse cx="520" cy="449" rx="136" ry="9" fill="#000" opacity=".55" filter="url(#f-soft)"/>
@@ -55,14 +56,14 @@ const ablaufSvg = () => {
   <path d="M390 246H376 L412 412 Q419 444 452 444 L588 444 Q621 444 628 412 L664 246H650" fill="none" stroke="#f3eee8" stroke-opacity=".75" stroke-width="2.5" stroke-linejoin="round"/>
   <path d="M390 246 L424 404 Q430 426 452 426 L588 426 Q610 426 616 404 L650 246" fill="none" stroke="#f3eee8" stroke-opacity=".3" stroke-width="1.5"/>
   <!-- heat above the bowl -->
-  <ellipse cx="520" cy="258" rx="118" ry="20" fill="#e3704f" filter="url(#f-glow)" data-k="o:0@4.5 .4@7 .14@12 .34@15 .14@19 .28@23 .05@27.4"/>
+  <ellipse cx="520" cy="258" rx="118" ry="20" fill="#e3704f" filter="url(#f-glow)" data-k="o:0@4.5 .26@7 .1@12 .26@15 .1@19 .22@23 .04@27.4"/>
   <!-- 2 hot water: the kettle tips in, the stream falls and thins out -->
   <g data-k="o:0@3.5 1@4 1@7.9 0@8.6"><g style="transform-box:view-box;transform-origin:960px 64px" data-k="r:13@3.5 -2@4.2 0@4.45 0@7.6 13@8.5"><path d="M960 64 C870 64 820 150 730 128 C680 116 650 98 606 112" fill="none" stroke="url(#g-steel)" stroke-width="16" stroke-linecap="round"/><path d="M952 58 C872 58 824 142 734 121 C690 110 660 95 622 101" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="2" stroke-linecap="round"/></g>
     <text x="700" y="206" class="t" data-k="o:0@4.3 1@4.8">heißes Wasser</text></g>
   <g data-k="o:0@4.35 1@4.45 1@7.55 0@7.8"><g style="transform-origin:50% 0%" data-k="sy>:0@4.35 1@4.62"><path d="M600 114 Q560 130 548 420" fill="none" stroke="#e3704f" stroke-linecap="round" data-loop=".8" data-k="@stroke-width:6.5@0 4.6@.4 6.5@.8"/></g></g>
   <g clip-path="url(#c7-cav)">
     <!-- the liquid rises, sloshes once and keeps a living surface -->
-    <g fill-opacity=".96" data-k="y<:150@4.6 0@7.8;fill:#c98a6a@4.6 #7a4a28@7.5 #5b3720@11"><g data-k="y:0@7.8 -4@8.15 2@8.5 0@8.9 0@14.4 4@14.7 -2@15.2 0@15.8"><rect x="380" y="276" width="280" height="180" fill="inherit"/>${wave(380, 276, 280, 'inherit', 3, 2.6)}</g></g>
+    <g data-k="y<:150@4.6 0@7.8;fill:#c98a6a@4.6 #7a4a28@7.5 #5b3720@11"><g data-k="y:0@7.8 -4@8.15 2@8.5 0@8.9 0@14.4 4@14.7 -2@15.2 0@15.8"><rect x="380" y="276" width="280" height="180" fill="inherit"/>${wave(380, 276, 280, 'inherit', 3, 2.6)}</g></g>
     <g data-k="y<:150@4.6 0@7.8;o:0@4.6 1@4.8 1@7.5 0@7.8">${splash(548, 277, '#f8cbad')}</g>
     <!-- grounds: bed, floating up, sinking again -->
     <g style="transform-origin:50% 100%" data-k="sy<:0@.9 1@3.5 1@5 .3@8.6 .3@14.2 1@17.4">
@@ -83,8 +84,8 @@ const ablaufSvg = () => {
     <text x="716" y="218" class="tb" data-k="o:0@8.8 1@9.3">CO₂</text><path class="lead-l" d="M708 212 L626 244" data-k="o:0@8.8 1@9.3"/>
     <text x="716" y="250" class="ts" data-k="o:0@9.4 1@9.9">Kaffee quillt auf</text></g>
   <!-- 4 breaking the crust: aromas rise -->
-  <g data-k="o:0@14.3 1@15.1 1@17.6 0@18.6">${[472, 510, 548].map((x, i) => `<g transform="translate(${x} 240)"><path d="${wisp(132, 13)}" class="draw" pathLength="1" fill="none" stroke="#f3eee8" stroke-width="${5 + i}" stroke-linecap="round" filter="url(#c7-blur)" data-loop="${f1(2.6 + i * .3)}" data-off="${f1(i * .9)}" data-k="d<:1@0 0@1.5;y~:0@0 -36@2.6;x:0@0 ${i * 9 - 12}@1.3 ${i * 7 - 2}@2.6;o:0@0 .6@.6 .5@1.6 0@2.6"/></g>`).join('')}
-    <text x="404" y="138" class="t end">Aromen</text><path class="lead-l" d="M412 132 L462 154"/></g>
+  <g data-k="o:0@14.3 1@15.1 1@17.6 0@18.6">${[494, 521, 549].map((x, i) => `<g transform="translate(${x} 240)"><path d="${wisp(132, 13)}" class="draw" pathLength="1" fill="none" stroke="#f3eee8" stroke-width="${5 + i}" stroke-linecap="round" filter="url(#c7-blur)" data-loop="${f1(2.6 + i * .3)}" data-off="${f1(i * .9)}" data-k="d<:1@0 0@1.5;y~:0@0 -36@2.6;x:0@0 ${i * 9 - 12}@1.3 ${i * 7 - 2}@2.6;o:0@0 .6@.6 .5@1.6 0@2.6"/></g>`).join('')}
+    <text x="404" y="138" class="t end">Aromen</text><path class="lead-l" d="M412 132 L480 156"/></g>
   <g transform="translate(520 276)"><g data-k="x:90@13.1 6@13.8 0@14.05 0@14.6 40@15.4 -32@16.2 -26@16.5 70@17.5;y:-210@13.1 -42@13.8 -54@14.08 17@14.45 11@14.8 11@16.2 5@16.5 -210@17.5;r:8@13.1 0@13.8 -3@14.08 4@14.45 0@14.8 -6@15.4 6@16.2 0@16.6;o:0@13.1 1@13.5 1@17.1 0@17.5">${spoon()}</g></g>
   <!-- 5 skimming with two spoons, a beat apart -->
   ${[0, .14].map((dl, k) => { const T = v => f1(v + dl); return `<g transform="translate(520 276)${k ? ' scale(-1 1)' : ''}"><g data-k="x:150@${T(18)} 112@${T(18.75)} 119@${T(18.95)} 14@${T(20.3)} 18@${T(20.6)} 150@${T(21.8)};y:-170@${T(18)} 5@${T(18.75)} 0@${T(18.95)} 2@${T(20.3)} -38@${T(20.9)} -190@${T(21.8)};r:6@${T(18)} 0@${T(18.75)} -5@${T(20.3)} 4@${T(20.9)} 0@${T(21.8)};o:0@${T(18)} 1@${T(18.4)} 1@${T(21.4)} 0@${T(21.8)}">${spoon(`<ellipse cx="0" cy="-10" rx="19" ry="6" fill="#c99a6b" data-k="o:0@${T(19.2)} 1@${T(20.3)}"/>`)}</g></g>`; }).join('')}
@@ -105,11 +106,11 @@ const ablaufSvg = () => {
 /* ---------- breaking the crust, close-up ---------- */
 const crustSvg = () => {
   const R = rng(73);
-  const half = (x0, x1, left) => { let top = '', pops = ''; for (let x = x0; x <= x1; x += 16) { const y = f1(248 - 13 * Math.sin(Math.PI * (x - 222) / 636) - R() * 5); top += ` L${x} ${y}`;
+  const half = (x0, x1, left) => { let top = '', pops = ''; for (let x = x0; x <= x1; x += 16) { const y = x === 540 ? 233 : f1(248 - 13 * Math.sin(Math.PI * (x - 222) / 636) - R() * 5); top += ` L${x} ${y}`;
       if (R() > .4) { const t = f1(3 + R() * 4.6), pop = R() > .35; pops += `<circle cx="${f1(x + R() * 10)}" cy="${f1(y - 3)}" r="${f1(3 + R() * 4)}" fill="rgba(243,238,232,.14)" stroke="#f3eee8" stroke-opacity=".65" stroke-width="1.5"${pop ? ` data-k="s:1@${f1(t - .9)} 1.5@${t} 2.3@${f1(t + .22)};o:1@${t} 0@${f1(t + .22)}"` : ''}/>`; } }
     return `<g style="transform-origin:${left ? '0%' : '100%'} 100%" data-k="sx<:1@${left ? 3.3 : 3.42} .56@${left ? 9.2 : 9.5};sy:1@3.3 1.1@6 .8@13">
-      <path d="M${x0} 284${top} L${x1} 284 Z" fill="url(#c7-crust)"/><path d="M${top.slice(2)}" fill="none" stroke="#c99a6b" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" stroke-opacity=".9"/>
-      ${rep(46, () => grit(x0 + 8 + R() * (x1 - x0 - 22), 254 + R() * 24, 3.5 + R() * 4, ['#4a2c1a', '#3a2114', '#a87648', '#2a170d'][Math.floor(R() * 4)]))}${pops}</g>`; };
+      <path d="${left ? `M${x0} 284${top} L${x1} 266 Q${x1} 284 ${x1 - 26} 284 Z` : `M${x0 + 26} 284 Q${x0} 284 ${x0} 266 L${top.slice(2)} L${x1} 284 Z`}" fill="url(#c7-crust)"/><path d="M${top.slice(2)}" fill="none" stroke="#c99a6b" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" stroke-opacity=".9"/>
+      ${rep(46, () => grit(x0 + (left ? 8 : 22) + R() * (x1 - x0 - 36), 254 + R() * 24, 3.5 + R() * 4, ['#4a2c1a', '#3a2114', '#a87648', '#2a170d'][Math.floor(R() * 4)]))}${pops}</g>`; };
   return defs + `<defs><clipPath id="c7-cav2"><path d="M222 214 L282 560 L798 560 L858 214 Z"/></clipPath><clipPath id="c7-wl"><path d="M196 214 L222 214 L282 560 L256 560 Z"/></clipPath>
     <linearGradient id="c7-liq" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#6b4429"/><stop offset=".5" stop-color="#3a2114"/><stop offset="1" stop-color="#1d110a"/></linearGradient>
     <linearGradient id="c7-crust" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#9a6a44"/><stop offset="1" stop-color="#5b3720"/></linearGradient>
@@ -118,8 +119,8 @@ const crustSvg = () => {
     <filter id="c7-blur2" x="-150%" y="-10%" width="400%" height="120%"><feGaussianBlur stdDeviation="4"/></filter></defs>
   <circle cx="548" cy="176" r="350" fill="url(#c7-glow)"/>
   <!-- bowl walls -->
-  <path d="M196 214 L222 214 L282 560 L256 560 Z" fill="#f3eee8" fill-opacity=".16" stroke="#f3eee8" stroke-opacity=".7" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M884 214 L858 214 L798 560 L824 560 Z" fill="#f3eee8" fill-opacity=".16" stroke="#f3eee8" stroke-opacity=".7" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M196 214 L222 214 L282 560 L256 560 Z" fill="#f3eee8" fill-opacity=".13" stroke="#f3eee8" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M884 214 L858 214 L798 560 L824 560 Z" fill="#f3eee8" fill-opacity=".13" stroke="#f3eee8" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"/>
   <g clip-path="url(#c7-wl)">${glint(190, 214, 100, 346, 6.5)}</g>
   <g clip-path="url(#c7-cav2)">
     <!-- the liquid dips under the spoon, swings back and settles -->
@@ -129,7 +130,7 @@ const crustSvg = () => {
     <!-- grounds tumble down and slow in the liquid -->
     ${rep(38, i => { const x = (i % 3 ? 410 + R() * 260 : 290 + R() * 500), a = f1(3.6 + R() * 4.8), e = f1(Math.min(13.5, a + 4.6 + R() * .8)), D = f1(190 + R() * 110), sw = f1(R() * 34 - 17);
       return `<g data-k="y<:0@${a} ${D}@${e};x:0@${a} ${sw}@${f1(a + (e - a) * .35)} ${-sw}@${f1(a + (e - a) * .7)} ${f1(sw * .5)}@${e};r~:0@${a} ${Math.round(R() * 360 - 180)}@${e};o:0@${f1(a - .2)} 1@${f1(a + .3)} 1@${f1(e - 1.6)} .15@${e}">${grit(x, 270 + R() * 10, 4 + R() * 4.5, ['#7a5238', '#5b3720', '#9a6a44', '#4a2c1a'][Math.floor(R() * 4)])}</g>`; })}
-    ${half(206, 540, true)}${half(540, 874, false)}
+    ${half(204, 540, true)}${half(540, 876, false)}
   </g>
   <!-- warm glow where the crust opens -->
   <ellipse cx="540" cy="252" rx="150" ry="24" fill="#d9a35f" filter="url(#f-glow)" data-k="o:0@3.4 .4@5.2 .3@9 .12@13"/>
@@ -177,6 +178,7 @@ const wheelSvg = () => {
   <circle cx="300" cy="300" r="78" fill="#f3eee8" stroke="#262626" stroke-width="2.5"/><circle cx="300" cy="300" r="64" fill="#2a170d"/><circle cx="300" cy="300" r="64" fill="none" stroke="#c99a6b" stroke-opacity=".6" stroke-width="2"/>
   <text id="c7-wc" x="300" y="302" class="mid" fill="#f3eee8" style="font-size:21px">Aromen</text>
   <text id="c7-wf" x="300" y="326" class="mid" fill="#f8cbad" style="font-size:12px;letter-spacing:.16em;text-transform:uppercase">antippen</text>
+  <circle cx="300" cy="300" r="78" fill="transparent" data-go="0" style="cursor:pointer"><title>Auswahl aufheben</title></circle>
   </svg>`;
 };
 
@@ -187,12 +189,12 @@ const PROF = [
   { n: 'Klassischer Espresso', v: [.7, .4, .6, .96, .72, .88], d: 'Dichter Körper, zurückhaltende Säure, langer Nachgeschmack.' },
   { n: 'Natural', v: [.9, .56, .94, .78, .56, .7], d: 'Häufig fruchtig, süß und körperreich.' }
 ];
-const RC = [354, 214, 150];
+const RC = [365, 236, 175];
 const rpt = (k, r) => [f1(RC[0] + RC[2] * r * Math.cos((k * 60 - 90) * Math.PI / 180)), f1(RC[1] + RC[2] * r * Math.sin((k * 60 - 90) * Math.PI / 180))];
 const hex = r => rep(6, k => rpt(k, r).join(',') + ' ');
 const radarSvg = () => {
-  const LB = [[354, 28, 'mid'], [498, 134, ''], [498, 294, ''], [354, 394, 'mid'], [210, 294, 'end'], [210, 134, 'end']];
-  return `<svg class="dg c7-radar" viewBox="0 0 708 428" role="img" aria-label="Netzdiagramm mit sechs Bewertungskategorien rund um eine Verkostungstasse">
+  const LB = [[365, 24, 'mid'], [532, 144, ''], [532, 330, ''], [365, 441, 'mid'], [198, 330, 'end'], [198, 144, 'end']];
+  return `<svg class="dg c7-radar" viewBox="0 0 730 470" role="img" aria-label="Netzdiagramm mit sechs Bewertungskategorien rund um eine Verkostungstasse">
   <polygon points="${hex(1)}" fill="#f3eee8" fill-opacity=".4" stroke="#262626" stroke-opacity=".55" stroke-width="2" stroke-linejoin="round"/>
   ${[.34, .67].map(r => `<polygon points="${hex(r)}" fill="none" stroke="#262626" stroke-opacity=".22" stroke-width="1.5"/>`).join('')}
   ${rep(6, k => `<path d="M${RC[0]} ${RC[1]}L${rpt(k, 1).join(' ')}" stroke="#262626" stroke-opacity=".22" stroke-width="1.5"/>`)}
@@ -220,8 +222,14 @@ export const css = `
 .c7-an{font-size:clamp(34px,3vw + 10px,64px);font-weight:300;line-height:1;color:var(--strong)}
 .c7-fam{display:flex;align-items:center;gap:10px}
 .c7-sw{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--ink);flex:none}
+.c7-tbl .c7-lb{font-size:19px}
 .c7-ph{display:none}
-@media (max-width:980px),(max-aspect-ratio:1/1){.c7-ph{display:block}.c7-radar .c7-desc{display:none}}
+@media (max-width:980px),(max-aspect-ratio:1/1){
+  .c7-ph{display:block}.c7-radar .c7-desc{display:none}.c7-tbl .c7-lb{font-size:23px}
+  /* phones: the picture sits directly under the control that changes it */
+  .c7-ord>.stack{display:contents}
+  .c7-ord .kicker{order:1}.c7-ord .title{order:2}.c7-ord .c7-o3{order:3}.c7-ord .c7-o4{order:4}.c7-ord .c7-o5{order:5}.c7-ord .c7-o6{order:6}.c7-ord .c7-o7{order:7}
+}
 `;
 
 export const html = chapter(CH) +
@@ -259,35 +267,35 @@ film({ id: 'crust', ch: CH, title: 'Breaking the Crust in Zeitlupe', name: 'Brea
   ], svg: crustSvg() }) +
 
 scene({ id: 'aromarad', ch: CH, title: '7.3 Sensorische Bewertung – Aromarad', light: true, steps: 6 }, inner(`
-  <div class="split">
+  <div class="split c7-ord">
     <div class="stack">
       ${kicker(CH)}
       <h2 class="title rv" style="--d:1">Typische Aromen</h2>
-      <p class="lead wide rv" style="--d:2">Sechs Noten, die dir im Kaffee oft begegnen. Innen steht die Familie, außen die Note.</p>
-      <div class="pane rv" style="--d:3">
+      <p class="lead wide rv c7-o3" style="--d:2">Sechs Noten, die dir im Kaffee oft begegnen. Innen steht die Familie, außen die Note.</p>
+      <div class="pane rv c7-o5" style="--d:3">
         <div data-only="0" class="card stack" style="gap:10px"><span class="label">Aromarad</span><p class="lead wide">Tippe auf ein Segment oder blättere weiter.</p>
           <div class="chips">${ARO.map(a => `<span class="chip"><i class="c7-sw" style="background:${a.c}"></i>${a.n}</span>`).join('')}</div></div>
         ${rep(6, k => `<div data-only="${k + 1}" class="card stack" style="gap:10px"><span class="label c7-fam"><i class="c7-sw" style="background:${ARO[k].c}"></i>Familie: ${FAM[ARO[k].f]}</span>
           <h3 class="c7-an">${ARO[k].n}</h3><p class="lead wide">${ARO[k].d}</p></div>`)}
       </div>
-      <div class="rv" style="--d:4">${why('<b>Wozu ein Aromarad?</b> Es gibt dir Worte für das, was du riechst und schmeckst – erst die Familie, dann die einzelne Note.')}</div>
+      <div class="rv c7-o6" style="--d:4">${why('<b>Wozu ein Aromarad?</b> Es gibt dir Worte für das, was du riechst und schmeckst – erst die Familie, dann die einzelne Note.')}</div>
     </div>
-    <div class="rv-img" style="--d:2;display:grid">${wheelSvg()}</div>
+    <div class="rv-img c7-o4" style="--d:2;display:grid">${wheelSvg()}</div>
   </div>`)) +
 
 scene({ id: 'sensorik', ch: CH, title: '7.3 Sensorische Bewertung', light: true, steps: 2 }, inner(`
-  <div class="split">
+  <div class="split c7-ord">
     <div class="stack">
       ${kicker(CH)}
       <h2 class="title rv" style="--d:1">Sechs Kategorien, eine Tasse</h2>
-      <p class="lead wide rv" style="--d:2">Jede Kategorie beantwortet eine eigene Frage. Zusammen ergeben sie das Profil eines Kaffees.</p>
-      <div class="c7-ph rv" style="--d:2">${tbl(['Kategorie', 'Was wird beurteilt?'], CATS)}</div>
-      <div class="stack rv" style="--d:3;gap:10px"><span class="label">Drei Beispiele</span>
+      <p class="lead wide rv c7-o3" style="--d:2">Jede Kategorie beantwortet eine eigene Frage. Zusammen ergeben sie das Profil eines Kaffees.</p>
+      <div class="c7-ph rv c7-o6" style="--d:2">${tbl(['Kategorie', 'Was wird beurteilt?'], CATS)}</div>
+      <div class="stack rv c7-o4" style="--d:3;gap:10px"><span class="label">Drei Beispiele</span>
         <div class="tabs" role="group" aria-label="Beispielprofil wählen">${rep(3, i => `<button data-go="${i}" aria-pressed="false">${PROF[i].n}</button>`)}</div>
         <div class="pane">${rep(3, i => `<p data-only="${i}" class="lead wide">${PROF[i].d}</p>`)}</div></div>
-      <div class="rv" style="--d:4">${why('<b>Beispiele, rein qualitativ.</b> Je weiter außen, desto ausgeprägter. Jeder Kaffee zeichnet sein eigenes Profil.')}</div>
+      <div class="rv c7-o7" style="--d:4">${why('<b>Beispiele, rein qualitativ.</b> Je weiter außen, desto ausgeprägter. Jeder Kaffee zeichnet sein eigenes Profil.')}</div>
     </div>
-    <div class="rv-img" style="--d:2">${radarSvg()}</div>
+    <div class="rv-img c7-o5" style="--d:2">${radarSvg()}</div>
   </div>`));
 
 export const js = `

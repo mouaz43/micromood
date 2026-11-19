@@ -219,3 +219,6 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
 ::view-transition-old(ba-kicker):only-child{animation:vt-fade-out .3s both}
 ::view-transition-new(ba-kicker):only-child{animation:vt-fade-in .6s .25s both}
 @media (prefers-reduced-motion:reduce){::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}
+.fs-foot{flex-wrap:nowrap}.fs-foot .time{white-space:nowrap}
+@media (max-width:1280px){.fs .speeds button{padding:0 10px;font-size:13px}}
+.stack>.tabs{align-self:flex-start}
