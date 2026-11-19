@@ -282,8 +282,8 @@ function partSvg() {
     <g data-k="o:0@9.8 1@10.5"><text x="${cx - 96}" y="407" class="tl end" style="font-size:13px">gelöst</text><rect x="${cx - 86}" y="397" width="172" height="8" rx="4" fill="#f3eee8" opacity=".16"/><rect x="${cx - 86}" y="397" width="172" height="8" rx="4" fill="#f8cbad" data-k="sx<:0@10 ${bar}@16.4" style="transform-origin:0 50%"/></g>`;
   return DEFS + `
   <!-- water arrives from above and flows past both particles -->
-  <rect x="0" y="0" width="960" height="540" fill="#7fb4dc" data-k="o:0@3.2 .15@4.6;sy>:0@3.2 1@4.5" style="transform-origin:50% 0"/>
-  <g data-k="o:0@3.4 1@4.4">${rep(18, i => { const x = f1(24 + i * 54 + R() * 20), Lp = f1(2.6 + R() * 2.2), h = f1(30 + R() * 50); return `<path d="M${x} -90v${h}" stroke="#cfe3f2" stroke-opacity=".3" stroke-width="2.5" stroke-linecap="round" data-loop="${Lp}" data-off="${f1(R() * 5)}" data-k="y~:0@0 660@${Lp};x:0@0 ${f1(R() * 14 - 7)}@${f1(Lp / 2)} 0@${Lp}"/>`; })}</g>
+  <rect x="0" y="0" width="960" height="540" fill="#7fb4dc" data-k="o:0@3.2 .15@5"/>
+  <g data-k="o:0@3.2 1@4">${rep(18, i => { const x = f1(24 + i * 54 + R() * 20), Lp = f1(2.6 + R() * 2.2), h = f1(30 + R() * 50); return `<path d="M${x} -90v${h}" stroke="#cfe3f2" stroke-opacity=".3" stroke-width="2.5" stroke-linecap="round" data-loop="${Lp}" data-off="${f1(R() * 5)}" data-k="y~:0@0 660@${Lp};x:0@0 ${f1(R() * 14 - 7)}@${f1(Lp / 2)} 0@${Lp}"/>`; })}</g>
   ${part('a', 250, 256, false)}${part('b', 710, 256, true)}
   <g data-k="o:0@6.2 1@6.9;y<:8@6.2 0@6.9"><text x="250" y="116" class="tm mid">Wasser dringt langsam ein</text></g>
   <g data-k="o:0@6.5 1@7.2;y<:8@6.5 0@7.2"><text x="710" y="116" class="tm mid">schnell und tief</text></g>
@@ -459,8 +459,8 @@ export const css = `
 .c3-now [data-l].on{opacity:1;transform:none}
 .c3-chain>div{display:grid;min-width:0}
 .c3-chain .card{position:relative}
-.cmp.c3-chain .card svg.ic{max-height:13vh}
-.cmp.c3-prof .card svg.ic{max-height:17vh}
+.cmp.c3-chain .card svg.ic{max-height:clamp(84px,calc(100vh - 612px),190px)}
+.cmp.c3-prof .card svg.ic{max-height:clamp(100px,calc(100vh - 584px),210px)}
 .c3-no{font-family:var(--mono);font-size:12px;color:var(--brown)}
 .c3-adj{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;font-size:clamp(15px,.6vw + 10px,19px)}
 .c3-adj li{display:flex;align-items:center;gap:12px;transition:transform .6s var(--ease),opacity .5s;transition-delay:calc(var(--i) * 110ms + 120ms)}

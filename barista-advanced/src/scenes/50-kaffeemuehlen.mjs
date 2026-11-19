@@ -8,7 +8,7 @@ const D = defs + `<defs>
   <linearGradient id="c5-body" x1="0" x2="1"><stop offset="0" stop-color="#2b2420"/><stop offset=".3" stop-color="#5a4f47"/><stop offset="1" stop-color="#241e1a"/></linearGradient>
   <linearGradient id="c5-wall" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#8a817a"/><stop offset="1" stop-color="#5a524c"/></linearGradient>
   <linearGradient id="c5-burr" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#e2ddd8"/><stop offset="1" stop-color="#a39a93"/></linearGradient>
-  ${[['p', '#f8cbad'], ['m', '#f3eee8'], ['i', '#262626'], ['b', '#7a5238']].map(([k, c]) => `<marker id="c5-a${k}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${c}"/></marker>`).join('')}
+  ${[['p', '#f8cbad'], ['m', '#f3eee8'], ['i', '#262626'], ['b', '#7a5238']].map(([k, c]) => `<marker id="c5-a${k}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${c}" style="visibility:visible"/></marker>`).join('')}
   <radialGradient id="c5-heat"><stop offset="0" stop-color="#e3704f" stop-opacity=".8"/><stop offset=".45" stop-color="#e3704f" stop-opacity=".32"/><stop offset="1" stop-color="#e3704f" stop-opacity="0"/></radialGradient>
 </defs>`;
 // cut housing parts (hatched) and burrs (bright steel)
@@ -469,7 +469,7 @@ const kalSvg = () => {
   <circle cx="540" cy="130" r="74" fill="#f3eee8" stroke="#262626" stroke-width="2.5"/>
   <path d="${tk(-135, 70, 70).split('L')[0]}A70 70 0 0 1 ${tk(-120, 70, 70).split('L')[1]}" fill="none" stroke="#7a5238" stroke-width="6"/>
   ${rep(21, i => `<path d="${tk(-135 + i * 13.5, i % 5 ? 62 : 56, 70)}" stroke="#262626" stroke-width="${i % 5 ? 1.5 : 2.5}"/>`)}
-  <text x="505" y="172" class="tm mid">0</text>
+  <text x="505" y="172" class="ts mid">0</text>
   <text x="476" y="226" class="ts">fein</text><text x="604" y="226" class="ts end">grob</text>
   <g id="c5-kal-ptr" transform="rotate(-40.5 540 130)"><path d="M540 78l-7 15h14z" fill="#7a5238"/><circle cx="540" cy="130" r="36" fill="#cfc9c3" stroke="#262626" stroke-width="2.5"/>${rep(18, i => `<path d="${tk(i * 20, 30, 36)}" stroke="#262626" stroke-opacity=".5" stroke-width="1.5"/>`)}<path d="M540 100v18" stroke="#7a5238" stroke-width="4" stroke-linecap="round"/></g>
   <path d="M518 108A30 30 0 0 1 548 99" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/>
@@ -575,7 +575,7 @@ scene({ id: 'mahlscheiben-faktoren', ch: CH, title: 'Mahlscheiben: Faktoren und 
   <div class="split">
     <div class="stack">
       ${kicker(CH)}
-      <h2 class="title rv" style="--d:1">Auf die Geometrie kommt es an</h2>
+      <h2 class="title sm rv" style="--d:1">Auf die Geometrie kommt es an</h2>
       <div class="stack rv" style="--d:2;gap:8px"><span class="label acc">Entscheidende Faktoren</span>
         <ol class="c5-num">${['Durchmesser.', 'Schneidengeometrie.', 'Winkel und Ausrichtung.', 'Abstand der Mahlscheiben.', 'Drehzahl.'].map((t, i) => `<li data-s="${i + 1}"><span class="n">${i + 1}</span><span>${t}</span></li>`).join('')}</ol></div>
       <div class="stack rv" style="--d:3;gap:8px"><span class="label">Einfluss auf</span><div class="chips">${['Partikelverteilung', 'Fines-Anteil', 'Mahlgeschwindigkeit', 'Klarheit und Körper'].map(c => `<span class="chip">${c}</span>`).join('')}</div></div>
@@ -645,7 +645,7 @@ export const css = `
 .c5-drift.b{animation-duration:19s;animation-direction:alternate-reverse}
 @keyframes c5-drift{from{transform:translate(-5px,3px)}to{transform:translate(5px,-4px)}}
 .spin.c5-slow{animation-duration:40s}
-.c5-num{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.3em;font-size:clamp(16px,.8vw + 10px,22px)}
+.c5-num{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.2em;font-size:clamp(15px,.75vw + 9px,21px)}
 .c5-num li{display:flex;gap:.8em;align-items:baseline}
 .c5-num .n{font-family:var(--mono);font-size:.72em;color:var(--brown);min-width:1ch}
 .c5-h3{font-size:clamp(20px,1.3vw + 10px,34px);font-weight:400;line-height:1.05}

@@ -222,3 +222,5 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
 .fs-foot{flex-wrap:nowrap}.fs-foot .time{white-space:nowrap}
 @media (max-width:1280px){.fs .speeds button{padding:0 10px;font-size:13px}}
 .stack>.tabs{align-self:flex-start}
+@media (max-height:760px) and (min-width:981px){.fs-extra .chip{min-height:30px;font-size:13px;padding:3px 10px}.fs .phases button{padding:6px 0;min-height:36px}#s-widerstand .dg{max-height:36vh}}
+@media (max-width:760px){.tbl{table-layout:fixed}.tbl td,.tbl th{overflow-wrap:anywhere;padding-right:8px;font-size:14px}.tbl td.num,.tbl th.num{white-space:normal}}
