@@ -459,7 +459,7 @@ export const css = `
 .c3-now [data-l].on{opacity:1;transform:none}
 .c3-chain>div{display:grid;min-width:0}
 .c3-chain .card{position:relative}
-.cmp.c3-chain .card svg.ic{max-height:15vh}
+.cmp.c3-chain .card svg.ic{max-height:13vh}
 .cmp.c3-prof .card svg.ic{max-height:17vh}
 .c3-no{font-family:var(--mono);font-size:12px;color:var(--brown)}
 .c3-adj{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;font-size:clamp(15px,.6vw + 10px,19px)}
