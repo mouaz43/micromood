@@ -1,6 +1,6 @@
 // Builds index.html from src/. Run: node build.mjs
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
-import { CHAPTERS } from './src/lib.mjs';
+import { CHAPTERS, defs } from './src/lib.mjs';
 
 const dir = new URL('./src/', import.meta.url);
 const read = f => readFileSync(new URL(f, dir), 'utf8');
@@ -44,6 +44,7 @@ const out = `<!doctype html>
 ${read('base.css')}${read('extra.css')}${css}</style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">${defs}</svg>
 <div id="stage">${html}
 </div>
 <div id="leak" aria-hidden="true"></div><div id="grain" aria-hidden="true"></div><div class="vignette" aria-hidden="true"></div>

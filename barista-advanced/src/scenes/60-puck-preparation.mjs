@@ -26,8 +26,9 @@ const grains = (R, n, top, { y0 = 0, y1 = 124, x0 = -150, x1 = 150, free = false
   return y > t + r && (free || inCav(x, y)) && !(skip && skip(x, y)) ? `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(r)}" fill="${c}" opacity="${o}"/>` : '';
 });
 const clump = (R, x, y, r) => `<polygon points="${rep(11, i => { const a = i / 11 * 6.283, q = r * (.72 + R() * .42); return `${f1(x + Math.cos(a) * q * 1.15)},${f1(y + Math.sin(a) * q * .9)} `; })}" fill="#22120a" stroke="#9a6a44" stroke-opacity=".55" stroke-width=".9" stroke-linejoin="round"/>${rep(5, () => `<circle cx="${f1(x + (R() - .5) * r)}" cy="${f1(y + (R() - .5) * r * .8)}" r="${f1(.8 + R())}" fill="#7a5238" opacity=".7"/>`)}`;
-// arrow heads with fixed colours (peach, brown, ink)
-const MK = `<defs>${[['p', '#f8cbad'], ['b', '#7a5238'], ['i', '#262626']].map(([n, c]) => `<marker id="c6-a${n}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${c}"/></marker>`).join('')}</defs>`;
+// arrow heads with fixed colours (peach, brown, ink). A marker inherits `visibility` from where it is defined, and the first
+// definition in the document usually sits in a hidden scene, so the head is forced visible.
+const MK = `<defs>${[['p', '#f8cbad'], ['b', '#7a5238'], ['i', '#262626']].map(([n, c]) => `<marker id="c6-a${n}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${c}" style="visibility:visible"/></marker>`).join('')}</defs>`;
 // a drop that forms at a hole, lets go, accelerates and stretches (clock-driven)
 const drops = (n, x0, dx, y, fall, col = '#c99a6b') => rep(n, i => { const L = f1(.95 + ((i * 7) % 5) * .08), a = f1(L * .32);
   return `<ellipse cx="${f1(x0 + i * dx)}" cy="${y}" rx="2.3" ry="3.4" fill="${col}" style="transform-origin:50% 0" data-loop="${L}" data-off="${f1((i * .37) % 1)}" data-k="y>:0@0 0@${a} ${fall}@${L};sy:.3@0 1@${a} 1.7@${L};sx:1.35@0 1@${a} .8@${L};o:0@0 1@${f1(L * .1)} 1@${f1(L * .82)} 0@${L}"/>`; });
@@ -127,14 +128,14 @@ const wdtPic = after => { const R = rng(33), RC = rng(5);
   const VO = [[-70, 64, 14, 6], [32, 78, 16, 6], [78, 112, 12, 5], [-14, 38, 10, 5]];
   const inVoid = (x, y) => !after && VO.some(([vx, vy, a, b]) => ((x - vx) / a) ** 2 + ((y - vy) / b) ** 2 < 1.15);
   return `<svg class="mg${after ? '' : ' top'}" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${defs}<rect width="800" height="500" fill="#17120f"/>
-  <g transform="translate(400 215) scale(1.86)">
+  <g transform="translate(400 224) scale(1.86)">
     <path d="${bedProf(top)}" fill="url(#g-puck)"/>${grains(R, 620, top, { skip: inVoid })}
-    ${after ? needles(84, -44, 116) + wdtHead(84, -56)
+    ${after ? needles(84, -40, 116) + wdtHead(84, -52)
     : VO.map(([x, y, a, b], i) => `<ellipse cx="${x}" cy="${y}" rx="${a}" ry="${b}" fill="#120f0d" opacity=".82" transform="rotate(${[-12, 8, -6, 14][i]} ${x} ${y})"/>`).join('') + CL.map(([x, y, r]) => clump(RC, x, y, r)).join('')}
     ${basket()}
   </g>
-  ${after ? `<text x="640" y="150" class="t">gleichmäßig</text><text x="640" y="178" class="t">verteilt</text><path class="lead-l" d="M668 190 L654 286"/>`
-    : `<text x="58" y="150" class="t">Klumpen</text><path class="lead-l" d="M104 160 L212 286"/><text x="232" y="150" class="t">Hohlräume</text><path class="lead-l" d="M290 160 L274 322"/>`}
+  ${after ? `<text x="640" y="160" class="t">gleichmäßig</text><text x="640" y="188" class="t">verteilt</text><path class="lead-l" d="M668 200 L654 296"/>`
+    : `<text x="58" y="160" class="t">Klumpen</text><path class="lead-l" d="M104 170 L212 295"/><text x="232" y="160" class="t">Hohlräume</text><path class="lead-l" d="M290 170 L274 331"/>`}
   </svg>`; };
 
 /* ---------- 6.4 leveler: only the top layer moves ---------- */
@@ -214,9 +215,9 @@ const profSvg = () => { const RT = rng(88);
 /* ---------- 6.7 group head cutaway ---------- */
 const screenSvg = () => { const R = rng(67);
   const hl = (x, y, w, h, k) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="none" stroke="#f8cbad" stroke-width="1.8" data-k="o:${k}"/>`;
-  const lab = (y, txt, x2, y2, a, k) => `<g data-k="o:0@${a} 1@${f1(a + .4)} ${k};x<:16@${a} 0@${f1(a + .5)}"><path class="lead-l" d="M684 ${y - 8} L${x2} ${y2}"/><text x="692" y="${y}" class="t" style="font-size:26px">${txt}</text></g>`;
+  const lab = (y, txt, x2, y2, a, k) => `<g data-k="o:0@${a} 1@${f1(a + .4)} ${k};x<:16@${a} 0@${f1(a + .5)}"><path class="lead-l" d="M692 ${y - 8} L${x2} ${y2}"/><text x="700" y="${y}" class="t" style="font-size:26px">${txt}</text></g>`;
   return defs + MK + `<clipPath id="c6-cv2"><path d="${bedD(25)}"/></clipPath>
-  <g transform="translate(400 196) scale(1.3)">
+  <g transform="translate(385 206) scale(1.45)">
     <rect x="-15" y="-152" width="30" height="80" fill="url(#g-steel)"/>
     <path d="M-190 -76 H190 V-12 H140 V14 H-140 V-12 H-190 Z" fill="url(#g-steel-v)" stroke="#5a544f" stroke-width="1"/>
     <path d="M-188 -74 H188" stroke="#f3eee8" stroke-opacity=".5" stroke-width="1.2"/>${glint(-190, -76, 380, 64, 6)}
@@ -239,14 +240,14 @@ const screenSvg = () => { const R = rng(67);
     ${basket()}
     ${hl(-144, 8, 288, 21, '0@1.1 1@1.4 0@2.1 0@4.3 1@4.7 1@8.6 0@9 0@18 1@18.4')}
     ${hl(-149, 47, 298, 15, '0@2.3 1@2.6 0@3.3 0@8.8 1@9.2 1@13.2 0@13.6 0@18.15 1@18.55')}
-    ${rep(9, i => `<g data-k="o:0@${f1(16 + (i * 5 % 9) * .08)} 1@${f1(16.2 + (i * 5 % 9) * .08)}">${drops(1, -112 + i * 28, 0, 136, 58).replace('data-off="0"', `data-off="${f1((i * .37) % 1)}"`)}</g>`)}
+    ${rep(9, i => `<g data-k="o:0@${f1(16 + (i * 5 % 9) * .08)} 1@${f1(16.2 + (i * 5 % 9) * .08)}">${drops(1, -112 + i * 28, 0, 136, 50).replace('data-off="0"', `data-off="${f1((i * .37) % 1)}"`)}</g>`)}
   </g>
-  ${lab(147, 'Brühgruppe', 650, 139, .5, '1@4.4 .4@4.8 .4@17.8 1@18.2')}
-  ${lab(216, 'IMS Duschsieb', 584, 225, 1.1, '1@8.8 .4@9.2 .4@13.3 1@13.7')}
-  ${lab(286, 'Puck Screen', 592, 267, 1.8, '1@4.4 .4@4.8 .4@8.8 1@9.2')}
-  ${lab(352, 'Kaffeepuck', 592, 318, 2.5, '1@4.4 .4@4.8 .4@13.3 1@13.7')}
-  ${lab(412, 'Sieb', 598, 362, 3.1, '1@4.4 .4@4.8 .4@13.3 1@13.7')}
-  <text x="692" y="242" class="tm" data-k="o:0@18.2 1@18.7;x<:12@18.2 0@18.8">in der Brühgruppe</text><text x="692" y="312" class="tm" data-k="o:0@18.4 1@18.9;x<:12@18.4 0@19">auf dem Kaffee</text>`; };
+  ${lab(150, 'Brühgruppe', 664, 142, .5, '1@4.4 .4@4.8 .4@17.8 1@18.2')}
+  ${lab(226, 'IMS Duschsieb', 592, 235, 1.1, '1@8.8 .4@9.2 .4@13.3 1@13.7')}
+  ${lab(300, 'Puck Screen', 598, 286, 1.8, '1@4.4 .4@4.8 .4@8.8 1@9.2')}
+  ${lab(368, 'Kaffeepuck', 596, 342, 2.5, '1@4.4 .4@4.8 .4@13.3 1@13.7')}
+  ${lab(430, 'Sieb', 602, 392, 3.1, '1@4.4 .4@4.8 .4@13.3 1@13.7')}
+  <text x="700" y="252" class="tm" data-k="o:0@18.2 1@18.7;x<:12@18.2 0@18.8">in der Brühgruppe</text><text x="700" y="326" class="tm" data-k="o:0@18.4 1@18.9;x<:12@18.4 0@19">auf dem Kaffee</text>`; };
 
 /* ---------- 6.8 precision basket ---------- */
 const siebSvg = () => { let holes = ''; const sp = 10.5, r = 2.1;

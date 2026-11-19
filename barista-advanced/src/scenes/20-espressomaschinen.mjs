@@ -198,7 +198,7 @@ const pidSvg = () => { const node = a => `data-k="o:.35@${a} 1@${f1(a + .4)};s^:
 const e61Svg = () => { const N = 12, L = 7, a = 2.66, b = 3.5, c = 6.16;
   return defs + `<defs><clipPath id="c2-e-puck"><rect x="582" y="392" width="156" height="36" rx="3"/></clipPath><clipPath id="c2-e-boil"><rect x="60" y="140" width="190" height="290" rx="30"/></clipPath></defs>
   <!-- boiler -->
-  <g clip-path="url(#c2-e-boil)"><rect x="60" y="140" width="190" height="290" fill="${MILK}" opacity=".06"/><g opacity=".36"><rect x="60" y="168" width="190" height="262" fill="${HOT}"/>${wave(60, 168, 190, HOT, 3, 3.2)}</g>${steam(155, 170, 2)}</g>
+  <g clip-path="url(#c2-e-boil)"><rect x="60" y="140" width="190" height="290" fill="${MILK}" opacity=".06"/><g opacity=".5"><rect x="60" y="168" width="190" height="262" fill="${HOT}"/>${wave(60, 168, 190, HOT, 3, 3.2)}</g>${steam(155, 170, 2)}</g>
   <rect x="60" y="140" width="190" height="290" rx="30" fill="none" stroke="${STEEL}" stroke-width="2.5"/>${glint(64, 144, 182, 282, 7)}
   <path d="M250 320 H200 V190 H250" fill="none" stroke="${MILK}" stroke-opacity=".16" stroke-width="14" stroke-linejoin="round"/>
   <text x="130" y="404" class="t mid">Kessel</text>
@@ -311,7 +311,7 @@ const pumpSvg = () => { let bumps = 'M70 440'; for (let i = 0; i < 11; i++) bump
     <g data-loop=".6" data-k="x:-20@0 20@.3 -20@.6"><rect x="196" y="241" width="72" height="38" rx="5" fill="url(#g-steel)"/><rect x="204" y="245" width="56" height="5" rx="2.5" fill="#fff" opacity=".35"/></g>
     <path d="M342 238 V248 M342 272 V282" stroke="#a39a93" stroke-width="6"/>
     <g data-loop=".6" data-k="x^:0@.08 9@.3 0@.5"><circle cx="353" cy="260" r="9" fill="${MILK}"/></g>
-    <g clip-path="url(#c2-u-out)">${rep(2, i => `<rect x="352" y="244" width="30" height="32" rx="12" fill="${COLD}" data-loop="1.2" data-off="${i * .6}" data-k="x<:0@.1 44@.36 44@.7 98@.96 98@1.2;o:0@.1 1@.16 1@1.2"/>`)}</g>
+    <g clip-path="url(#c2-u-out)">${rep(2, i => `<rect x="352" y="244" width="30" height="32" rx="12" fill="${COLD}" data-loop="1.2" data-off="${i * .6}" data-k="x<:0@.1 44@.36 44@.7 98@.96 98@1.2;o:0@.1 1@.16 1@.9 0@1.1"/>`)}</g>
     <g clip-path="url(#c2-u-tr1)"><g data-loop=".6" data-k="x~:0@0 -46@.6"><path d="${bumps}" fill="none" stroke="${COLD}" stroke-width="3.5" stroke-linejoin="round"/></g></g>
     <path d="M70 440 H440" stroke="${MILK}" stroke-opacity=".35" stroke-width="1.5"/><text x="255" y="468" class="ts mid">Förderstrom: pulsierend</text>
   </g>
@@ -341,7 +341,7 @@ const pidChart = `<svg class="dg c2-pid" viewBox="0 0 620 392" role="img" aria-l
   <circle id="c2-pid-dot" cx="560" cy="150" r="7" style="fill:var(--hot)" stroke="${MILK}" stroke-width="2.5"/>
   <text x="60" y="296" class="tl">Heizleistung</text><path d="M60 364 H560" class="ln"/><text x="560" y="386" class="tl end">Zeit</text>
   <text x="570" y="316" class="ts">ein</text><text x="570" y="364" class="ts">aus</text>
-  <text id="c2-pid-sw" x="570" y="116" class="ts"></text></svg>`;
+  <text id="c2-pid-sw" x="552" y="50" class="t end"></text></svg>`;
 
 const dkSvg = () => { const R = rng(4); return `<svg class="dg c2-dk" id="c2-dk" viewBox="0 0 600 322" role="img" aria-label="Dampfkessel mit Manometer und Pressostat">
   <defs><clipPath id="c2-dkc"><rect x="40" y="120" width="340" height="190" rx="44"/></clipPath></defs>
@@ -353,7 +353,7 @@ const dkSvg = () => { const R = rng(4); return `<svg class="dg c2-dk" id="c2-dk"
   <path class="glow" d="M380 284 H112 Q98 284 98 272 Q98 260 112 260 H330" fill="none" stroke="${PEACH}" stroke-width="15" stroke-linecap="round" style="filter:blur(5px)"/>
   <path d="M380 284 H112 Q98 284 98 272 Q98 260 112 260 H330" fill="none" stroke="${INK}" stroke-width="7" stroke-linecap="round"/><path class="glow" d="M380 284 H112 Q98 284 98 272 Q98 260 112 260 H330" fill="none" stroke="${PEACH}" stroke-width="3" stroke-linecap="round"/>
   <rect x="40" y="120" width="340" height="190" rx="44" fill="none" stroke="${INK}" stroke-width="3"/>
-  <text x="210" y="172" class="ts mid">Dampf</text><text x="210" y="238" class="ts mid" style="fill:${MILK}">Wasser</text>
+  <text x="210" y="172" class="ts mid">Dampf</text>
   <!-- manometer: shows gauge pressure -->
   <circle cx="100" cy="60" r="48" fill="${MILK}" stroke="${INK}" stroke-width="3"/>
   ${rep(9, i => `<path d="M100 ${i % 4 ? 20 : 18}v${i % 4 ? 6 : 11}" stroke="${INK}" stroke-width="${i % 4 ? 1.5 : 2.5}" transform="rotate(${-120 + i * 30} 100 60)"/>`)}
@@ -384,7 +384,7 @@ const hebelSvg = `<svg class="dg" viewBox="0 0 560 226" role="img" aria-label="V
 const vibIcon = `<svg class="ic dg" viewBox="0 0 240 92" aria-hidden="true"><rect x="40" y="14" width="160" height="64" rx="10" fill="${MILK}" stroke="${INK}" stroke-width="2.5"/><rect x="8" y="34" width="224" height="24" style="fill:var(--cold)" stroke="${INK}" stroke-width="2.5"/>
   ${rep(2, k => `<rect x="76" y="${k ? 60 : 18}" width="88" height="14" rx="3" style="fill:var(--brown)"/>`)}<g class="c2-osc"><rect x="92" y="36" width="52" height="20" rx="3" fill="#cfc9c3" stroke="${INK}" stroke-width="2.5"/></g></svg>`;
 const rotIcon = `<svg class="ic dg" viewBox="0 0 240 92" aria-hidden="true"><path d="M8 34 H232" style="stroke:var(--cold)" stroke-width="20"/><path d="M8 24 H232 M8 44 H232" stroke="${INK}" stroke-width="2.5"/><circle cx="120" cy="46" r="40" style="fill:var(--cold)" stroke="${INK}" stroke-width="2.5"/>
-  <g class="spin" style="transform-box:view-box;transform-origin:120px 41px">${rep(3, i => `<path d="M120 5 V77" stroke="${INK}" stroke-width="4" transform="rotate(${i * 60} 120 41)"/>`)}<circle cx="120" cy="41" r="28" fill="#cfc9c3" stroke="${INK}" stroke-width="2.5"/><circle cx="120" cy="34" r="3" fill="${INK}"/></g></svg>`;
+  <g class="spin" style="transform-box:view-box;transform-origin:120px 41px">${rep(3, i => `<path d="M120 6 V76" stroke="${INK}" stroke-width="4.5" transform="rotate(${i * 60} 120 41)"/>`)}<circle cx="120" cy="41" r="23" fill="#cfc9c3" stroke="${INK}" stroke-width="2.5"/><circle cx="120" cy="34" r="3" fill="${INK}"/></g></svg>`;
 
 export const css = `
 .c2-leg{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:13px;color:var(--mute)}
@@ -424,7 +424,8 @@ export const css = `
 .c2-press{animation:c2-press 3.6s cubic-bezier(.5,0,.3,1) infinite}
 @keyframes c2-press{0%,12%{transform:translateY(-22px)}50%,62%{transform:translateY(12px)}100%{transform:translateY(-22px)}}
 .c2-two .ic{max-height:13vh}
-.c2-two{align-items:end}
+.c2-two{align-items:end;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:760px){.c2-two{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .c2-two p{font-size:14px;color:var(--mute);text-align:center}
 @media (max-width:980px),(max-aspect-ratio:1/1){.c2-kreis,.c2-pid,.c2-dk{max-height:none}}
 `;
@@ -542,15 +543,16 @@ scene({ id: 'dampfkessel', ch: CH, title: '2.6 Dampfkessel und Pressostat', ligh
         <div><span class="big-num" id="c2-dk-g">1,0</span><span class="u">bar Überdruck am Manometer</span></div>
         <div><span class="big-num" id="c2-dk-t">120</span><span class="u">°C Siedetemperatur</span></div>
       </div>
+      <p class="cap" style="margin:0">Zwischen den Tabellenwerten: interpolierte Richtwerte.</p>
     </div>
   </div>`)) +
 
 film({ id: 'pumpen', ch: CH, title: '2.7 Pumpenarten: Vibrations- und Rotationspumpe', name: 'Kolben oder Rotor', dur: 20, rate: .5, still: 18,
   marks: [
     ['Vibrationspumpe', 0, '<b>Elektromagnetischer Kolben:</b> Eine Spule zieht den Kolben an, eine Feder drückt ihn zurück.'],
-    ['Pulsierender Förderstrom', 4, 'Jeder Hub schiebt eine kleine Portion Wasser weiter. Das macht die Vibrationspumpe lauter.'],
+    ['Pulsierender Förderstrom', 4, 'Jeder Hub schiebt eine kleine Portion Wasser weiter: Der Förderstrom pulsiert. Vibrationspumpen arbeiten lauter.'],
     ['Rotationspumpe', 8, '<b>Rotierender Verdrängungsmechanismus:</b> Ein Rotor mit Flügeln schiebt das Wasser im Kreis.'],
-    ['Gleichmäßiger Förderstrom', 12, 'Das Wasser fließt gleichmäßig. Die Rotationspumpe läuft leiser.'],
+    ['Gleichmäßiger Förderstrom', 12, 'Das Wasser fließt gleichmäßig. Rotationspumpen laufen leiser.'],
     ['Beide im Vergleich', 16, 'Beide Systeme erzeugen den notwendigen Druck für die Espressoextraktion.']
   ], svg: pumpSvg() }) +
 
@@ -590,7 +592,7 @@ export const js = `
     elT.setAttribute('d', a); elU.setAttribute('d', b + 'L' + X1 + ' 364L' + (X1 - (n - 1 + acc) * DX).toFixed(1) + ' 364Z');
     const h1 = hist[n - 1], h0 = hist[n - 2] || h1, cy = lerp(yT(h1[0]), yT(h0[0]), acc); dot.setAttribute('cy', cy.toFixed(1));
     const tl = yT(mx) - 3, th = yT(mn) + 3; lo += (tl - lo) * .08; hi += (th - hi) * .08; band.setAttribute('y', lo.toFixed(1)); band.setAttribute('height', Math.max(4, hi - lo).toFixed(1));
-    sw.textContent = hi - lo > 22 ? 'schwingt' : 'konstant'; sw.setAttribute('y', (lo - 8).toFixed(1)); };
+    const w = hi - lo > 24 ? 'Temperatur schwingt' : 'Temperatur konstant'; if (sw.textContent !== w) sw.textContent = w; };
   const loop = now => { if (!live) return; const dt = Math.min(.05, (now - last) / 1000); last = now; acc -= dt * RATE; while (acc < 0) { sim(); acc += 1; } draw(); raf = requestAnimationFrame(loop); };
   const fill = () => { init(); for (let i = 0; i < N * 3; i++) sim(); lo = yT(Math.max(...hist.slice(-70).map(h => h[0]))) - 3; hi = yT(Math.min(...hist.slice(-70).map(h => h[0]))) + 3; acc = 0; draw(); };
   hooks['pid-nutzen'] = {

@@ -70,7 +70,7 @@ export const defs = `<defs>
   <filter id="f-soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
   <filter id="f-glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="12"/></filter>
   <linearGradient id="g-glint" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke" style="visibility:visible"/></marker>
 </defs>`;
 // a glass (tumbler): outline only, the liquid is drawn by the caller between y0 (top) and y1 (bottom)
 export const glass = (x, y, w, h, o = '') => `<path d="M${x} ${y} L${x + w * .08} ${y + h} Q${x + w * .1} ${y + h + 8} ${x + w * .2} ${y + h + 8} L${x + w * .8} ${y + h + 8} Q${x + w * .9} ${y + h + 8} ${x + w * .92} ${y + h} L${x + w} ${y}" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" ${o}/>`;

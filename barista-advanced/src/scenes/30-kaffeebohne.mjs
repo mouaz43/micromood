@@ -133,20 +133,20 @@ const topBasket = mixed => { const R = rng(mixed ? 9 : 4), pos = [[0, 0]].concat
 
 /* ---------- 3.3 processing film ---------- */
 const halves = R => { const h = R * .5, w = R * .4, g = R * .075; return [-1, 1].map(s => `M${f1(s * g)} ${f1(-h)}C${f1(s * (g + w * 1.3))} ${f1(-h)} ${f1(s * (g + w * 1.3))} ${f1(h)} ${f1(s * g)} ${f1(h)}Z`).join(''); };
-const grooves = R => { const h = R * .5, w = R * .4, g = R * .075; return [-1, 1].map(s => `M${f1(s * g)} 0h${f1(s * w * .34)}q${f1(s * w * .22)} 0 ${f1(s * w * .2)} ${f1(-s * h * .24)}`).join(''); };
+const grooves = R => { const h = R * .5, w = R * .4, g = R * .075; return [-1, 1].map(s => `M${f1(s * g)} ${f1(s * h * .04)}q${f1(s * w * .5)} ${f1(s * h * .03)} ${f1(s * w * .46)} ${f1(-s * h * .2)}`).join(''); };
 const cutParts = (R, big) => ({
   pulp: `<circle r="${R}" fill="url(#c3-ripe)"/><circle r="${f1(R * .975)}" fill="none" stroke="#8f3420" stroke-width="${f1(R * .05)}"/>${big ? `<circle r="${f1(R * .82)}" fill="none" stroke="#e3704f" stroke-opacity=".3" stroke-width="${f1(R * .05)}"/>${rep(40, i => { const a = i * Math.PI / 20; return `<path d="M${f1(Math.cos(a) * R * .72)} ${f1(Math.sin(a) * R * .72)}L${f1(Math.cos(a) * R * .92)} ${f1(Math.sin(a) * R * .92)}" stroke="#8f3420" stroke-opacity=".18" stroke-width="1.2"/>`; })}<path d="M2 ${-R + 3}q6 -16 -4 -30" fill="none" stroke="#6b4429" stroke-width="8" stroke-linecap="round"/>` : ''}`,
   half: s => `<path d="M0 ${-R}A${R} ${R} 0 0 ${s > 0 ? 1 : 0} 0 ${R}Z" fill="url(#c3-ripe)"/>`,
   muc: `<circle r="${f1(R * .67)}" fill="#d9a35f"/><circle r="${f1(R * .67)}" fill="url(#c3-hi)"/>${big ? `<circle r="${f1(R * .61)}" fill="none" stroke="#f3eee8" stroke-opacity=".3" stroke-width="2" stroke-dasharray="26 40 60 34"/>` : ''}`,
   res: o => `<path d="${halves(R)}" fill="none" stroke="#d9a35f" stroke-width="${f1(R * .3)}" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="${f1(R * .5)} ${f1(R * .34)} ${f1(R * .22)} ${f1(R * .4)}" ${o}/>`,
   parch: `<path d="${halves(R)}" fill="#f3eee8" stroke="#f3eee8" stroke-width="${f1(R * .1)}" stroke-linejoin="round"/>`,
-  beans: `<path d="${halves(R)}" fill="url(#c3-raw)" stroke="#b98a4c" stroke-width="${big ? 1.5 : .8}"/><path d="${grooves(R)}" fill="none" stroke="#8a5f3c" stroke-width="${f1(Math.max(1.2, R * .035))}" stroke-linecap="round"/>`
+  beans: `<path d="${halves(R)}" fill="url(#c3-raw)" stroke="#b98a4c" stroke-width="${big ? 1.5 : .8}"/><path d="${grooves(R)}" fill="none" stroke="#b98a4c" stroke-width="${f1(Math.max(1, R * .026))}" stroke-linecap="round"/>`
 });
 const LANES = [{ n: 'Natural', y: 188, pulp: 0, wash: 0 }, { n: 'Washed', y: 302, pulp: 1, wash: 1 }, { n: 'Honey', y: 416, pulp: 1, wash: 0 }];
 const PX = [172, 345, 520, 695, 880], TR = 32;
 function procSvg() {
   const R = rng(17), A = cutParts(138, true), ax = 300, ay = 296;
-  const lab = (i, txt, y, tx, ty) => { const t = f2(1.7 + i * .7); return `<g data-k="o:0@${t} 1@${f2(t + .35)}"><path class="lead-l draw" pathLength="1" d="M508 ${y - 7}L${tx} ${ty}" style="stroke-dasharray:1" data-k="d:1@${t} 0@${f2(t + .5)}"/><circle cx="${tx}" cy="${ty}" r="4.5" fill="#f8cbad" data-k="s^:0@${f2(t + .3)} 1@${f2(t + .7)}"/><g data-k="x<:14@${t} 0@${f2(t + .5)}"><text x="518" y="${y}" class="t">${txt}</text></g></g>`; };
+  const lab = (i, txt, y, tx, ty) => { const t = f2(1.5 + i * .55); return `<g data-k="o:0@${t} 1@${f2(t + .35)}"><path class="lead-l draw" pathLength="1" d="M508 ${y - 7}L${tx} ${ty}" style="stroke-dasharray:1" data-k="d:1@${t} 0@${f2(t + .5)}"/><circle cx="${tx}" cy="${ty}" r="4.5" fill="#f8cbad" data-k="s^:0@${f2(t + .3)} 1@${f2(t + .7)}"/><g data-k="x<:14@${t} 0@${f2(t + .5)}"><text x="518" y="${y}" class="t">${txt}</text></g></g>`; };
   const tile = (x, y, t0, t1) => `<rect x="${x - 68}" y="${y - 52}" width="136" height="104" rx="15" fill="rgba(243,238,232,.045)" stroke="#f3eee8" stroke-opacity=".2"/><rect x="${x - 68}" y="${y - 52}" width="136" height="104" rx="15" fill="none" stroke="#f8cbad" stroke-width="1.5" data-k="o:0@${t0} .9@${f2(t0 + .4)} .9@${t1} 0@${f2(t1 + .5)}"/>`;
   const lane = (Ln, li) => {
     const d = li * .13, T = t => f2(t + d), y = Ln.y, P = cutParts(TR, false), X = i => PX[i] - PX[0];
@@ -155,7 +155,7 @@ function procSvg() {
     const burst = `data-k="s<:1@${T(17.6)} 1.7@${T(18.05)};o:1@${T(17.6)} 0@${T(18.05)}"`;
     let st = '', tok = '';
     if (Ln.pulp) { // pulper: two rollers squeeze the beans out of the fruit
-      st += tile(PX[1], y, T(6.6), T(8.1)) + [-1, 1].map(s => `<g data-loop="1.6" data-k="r~:0@0 ${s * 360}@1.6"><circle cx="${PX[1]}" cy="${y + s * 42}" r="8" fill="#2b2420" stroke="url(#g-steel)" stroke-width="3.5" stroke-dasharray="3.6 2.68"/></g>`).join('');
+      st += tile(PX[1], y, T(6.6), T(8.1)) + [-1, 1].map(s => `<g data-loop="1.6" data-k="r~:0@0 ${s * 360}@1.6"><circle cx="${PX[1]}" cy="${y + s * 42}" r="8.5" fill="url(#g-steel-v)" stroke="#2b2420" stroke-width="1.5"/><path d="M${PX[1] - 8.5} ${y + s * 42}h17M${PX[1]} ${y + s * 42 - 8.5}v17" stroke="#2b2420" stroke-width="1.6"/><circle cx="${PX[1]}" cy="${y + s * 42}" r="2.4" fill="#2b2420"/></g>`).join('');
       tok += [-1, 1].map(s => `<g data-k="x<:0@${T(7)} ${s * 38}@${T(7.6)};y>:0@${T(7.05)} 74@${T(7.75)};r~:0@${T(7)} ${s * 110}@${T(7.75)};o:1@${T(7.45)} 0@${T(7.78)}">${P.half(s)}</g>`).join('')
         + rep(4, i => `<circle cx="${[-14, 10, -4, 18][i]}" cy="26" r="${2 + i % 2}" fill="#b8452a" data-k="y>:0@${T(7.05 + i * .07)} ${46 + i * 5}@${T(7.6 + i * .07)};o:0@${T(7 + i * .07)} 1@${T(7.08 + i * .07)} 1@${T(7.45 + i * .07)} 0@${T(7.6 + i * .07)}"/>`);
     } else tok += `<g ${burst}>${P.pulp}<circle r="${TR}" fill="#3a2114" data-k="o:0@${T(13.2)} .8@${T(16.2)}"/><path d="M-19 -12q9 6 3 17M12 -19q-8 10 3 18M-5 13q10 3 15 12" fill="none" stroke="#1d110a" stroke-width="1.8" stroke-linecap="round" data-k="o:0@${T(14.4)} .8@${T(16.2)}"/></g>`;
@@ -172,19 +172,19 @@ function procSvg() {
       <path d="M${PX[3] - 54} ${y + 40}H${PX[3] + 54}" stroke="#c99a6b" stroke-width="3" stroke-linecap="round"/><path d="M${PX[3] - 50} ${y + 40}H${PX[3] + 50}" stroke="#2a170d" stroke-width="3" stroke-dasharray="2 5"/><path d="M${PX[3] - 46} ${y + 42}v7M${PX[3] + 46} ${y + 42}v7" stroke="#c99a6b" stroke-width="3" stroke-linecap="round"/>`;
     return `<path d="M${PX[0]} ${y}H${PX[4] - 50}" stroke="#f3eee8" stroke-opacity=".22" stroke-width="1.5" stroke-dasharray="2 8" stroke-linecap="round"/>${st}
       <text x="30" y="${y + 8}" class="t">${Ln.n}</text>
-      <g transform="translate(${PX[0]} ${y})"><g data-k="x:${move};y:0@${T(9.9)} ${Ln.wash ? 10 : 0}@${T(10.25)} ${Ln.wash ? 10 : 0}@${T(11.5)} 0@${T(11.85)}"><ellipse cx="0" cy="${TR + 5}" rx="${TR - 4}" ry="4.5" fill="#000" opacity=".4" filter="url(#f-soft)"/><g data-k="r:${roll};s^:0@${T(4.9)} 1@${T(5.4)}"><g data-k="s:1@${T(13.2)} .9@${T(16.2)}">
+      <g transform="translate(${PX[0]} ${y})"><g data-k="x:${move};y:0@${T(9.9)} ${Ln.wash ? 10 : 0}@${T(10.25)} ${Ln.wash ? 10 : 0}@${T(11.5)} 0@${T(11.85)}"><ellipse cx="0" cy="${TR + 5}" rx="${TR - 4}" ry="4.5" fill="#000" opacity=".4" filter="url(#f-soft)"/><g data-k="r:${roll};s^:0@${T(5)} 1@${T(5.45)}"><g data-k="s:1@${T(13.2)} .9@${T(16.2)}">
         ${tok}<g ${burst}>${P.parch}</g><g data-k="s^:1@${T(17.6)} 1.4@${T(18.2)}">${P.beans}</g></g></g></g></g>
       <g transform="scale(.55)" style="transform-box:view-box;transform-origin:${PX[3]}px ${y - 30}px">${steam(PX[3], y - 30, 2, `data-k="o:0@${T(13.1)} 1@${T(13.8)} 1@${T(16)} 0@${T(16.5)}"`)}</g>`;
   };
   return DEFS + `
-  <g data-k="o:0@.4 1@.9 1@4.3 0@4.9;s:1@4.2 .55@4.9">
+  <g data-k="o:0@.4 1@.9 1@4.6 0@5.1;s:1@4.5 .6@5.1">
     <ellipse cx="${ax + 6}" cy="${ay + 142}" rx="120" ry="12" fill="#000" opacity=".5" filter="url(#f-soft)"/>
     <g transform="translate(${ax} ${ay})"><g data-k="s^:.86@.4 1@1.2">${A.pulp}<g data-k="o:0@.9 1@1.5">${A.muc}${A.parch}${A.beans}</g>
       <g data-k="o:1@.9 0@1.5"><circle r="138" fill="url(#c3-ripe)"/><ellipse cx="-52" cy="-60" rx="34" ry="18" fill="#f3eee8" opacity=".4" transform="rotate(-34 -52 -60)"/></g></g></g>
     ${lab(0, 'Schale und Fruchtfleisch', 200, 401, 225)}${lab(1, 'Schleimschicht', 266, 383, 276)}${lab(2, 'Pergamenthaut', 332, 369, 304)}${lab(3, 'Bohne', 398, 336, 330)}
     <text x="${ax}" y="472" class="tl mid">Kaffeekirsche im Querschnitt</text>
   </g>
-  <g data-k="o:0@4.6 1@5.2">
+  <g data-k="o:0@4.9 1@5.4">
     ${['Kirsche', 'Entpulpen', '', 'Trocknen', 'Rohkaffee'].map((h, i) => h ? `<text x="${PX[i]}" y="120" class="ts mid">${h}</text>` : `<text x="${PX[i]}" y="99" class="ts mid">Fermentieren,</text><text x="${PX[i]}" y="120" class="ts mid">waschen</text>`).join('')}
     ${LANES.map(lane).join('')}
   </g>`;
@@ -278,17 +278,33 @@ function partSvg() {
     </g>
     <g data-k="o:0@10 1@11">${out}</g>`;
   };
-  const cap = (cx, t1, t2, bar) => `<text x="${cx}" y="440" class="t mid">${t1}</text><text x="${cx}" y="466" class="ts mid">${t2}</text>
-    <g data-k="o:0@9.8 1@10.5"><text x="${cx - 96}" y="411" class="tl end" style="font-size:13px">gelöst</text><rect x="${cx - 86}" y="401" width="172" height="8" rx="4" fill="#f3eee8" opacity=".16"/><rect x="${cx - 86}" y="401" width="172" height="8" rx="4" fill="#f8cbad" data-k="sx<:0@10 ${bar}@16.4" style="transform-origin:0 50%"/></g>`;
+  const cap = (cx, t1, t2, bar) => `<text x="${cx}" y="436" class="t mid">${t1}</text><text x="${cx}" y="461" class="ts mid">${t2}</text>
+    <g data-k="o:0@9.8 1@10.5"><text x="${cx - 96}" y="407" class="tl end" style="font-size:13px">gelöst</text><rect x="${cx - 86}" y="397" width="172" height="8" rx="4" fill="#f3eee8" opacity=".16"/><rect x="${cx - 86}" y="397" width="172" height="8" rx="4" fill="#f8cbad" data-k="sx<:0@10 ${bar}@16.4" style="transform-origin:0 50%"/></g>`;
   return DEFS + `
   <!-- water arrives from above and flows past both particles -->
   <rect x="0" y="0" width="960" height="540" fill="#7fb4dc" data-k="o:0@3.2 .15@4.6;sy>:0@3.2 1@4.5" style="transform-origin:50% 0"/>
   <g data-k="o:0@3.4 1@4.4">${rep(18, i => { const x = f1(24 + i * 54 + R() * 20), Lp = f1(2.6 + R() * 2.2), h = f1(30 + R() * 50); return `<path d="M${x} -90v${h}" stroke="#cfe3f2" stroke-opacity=".3" stroke-width="2.5" stroke-linecap="round" data-loop="${Lp}" data-off="${f1(R() * 5)}" data-k="y~:0@0 660@${Lp};x:0@0 ${f1(R() * 14 - 7)}@${f1(Lp / 2)} 0@${Lp}"/>`; })}</g>
-  ${part('a', 250, 262, false)}${part('b', 710, 262, true)}
-  <g data-k="o:0@6.2 1@6.9;y<:8@6.2 0@6.9"><text x="250" y="124" class="tm mid">Wasser dringt langsam ein</text></g>
-  <g data-k="o:0@6.5 1@7.2;y<:8@6.5 0@7.2"><text x="710" y="124" class="tm mid">schnell und tief</text></g>
+  ${part('a', 250, 256, false)}${part('b', 710, 256, true)}
+  <g data-k="o:0@6.2 1@6.9;y<:8@6.2 0@6.9"><text x="250" y="116" class="tm mid">Wasser dringt langsam ein</text></g>
+  <g data-k="o:0@6.5 1@7.2;y<:8@6.5 0@7.2"><text x="710" y="116" class="tm mid">schnell und tief</text></g>
   ${cap(250, 'Helle Röstung', 'dicht, wenige kleine Poren', .3)}${cap(710, 'Dunkle Röstung', 'porös und rissig', .92)}`;
 }
+// small living pictures for the three cards of 3.5: the beans, the problem, the answer
+const adjSvg = k => {
+  const R = rng(60 + k), dur = 6 + k;
+  const streaks = n => rep(n, i => { const x = f1(14 + i * (212 / (n - 1)) + R() * 8 - 4), Lp = f1(2.2 + R() * 1.6); return `<path d="M${x} -34v${f1(14 + R() * 18)}" stroke="#2f6f9f" stroke-opacity=".45" stroke-width="2" stroke-linecap="round" data-loop="${Lp}" data-off="${f1(R() * 3)}" data-k="y~:0@0 196@${Lp}"/>`; });
+  const part = (id, cx, cy, r, depth) => { const P = Array.from({ length: 9 }, (_, i) => { const a = (i + (R() - .5) * .5) / 9 * 6.283, q = r * (.84 + R() * .2); return [f1(cx + Math.cos(a) * q), f1(cy + Math.sin(a) * q * .95)]; }), d = 'M' + P.map(p => p.join(' ')).join('L') + 'Z';
+    return `<clipPath id="c3-j${id}"><path d="${d}"/></clipPath><path d="${d}" fill="#b5855a"/><path d="${d}" fill="url(#c3-hex)" opacity=".4"/><g clip-path="url(#c3-j${id})"><path d="${d}" fill="none" stroke="#2f6f9f" stroke-opacity=".62" stroke-linejoin="round" data-k="@stroke-width:${f1(depth * 1.3)}@0 ${depth * 2}@${dur / 2} ${f1(depth * 1.3)}@${dur}"/></g><path d="${d}" fill="none" stroke="#262626" stroke-width="2" stroke-linejoin="round"/>`; };
+  const dots = (cx, cy, r, n) => rep(n, () => { const a = R() * 6.283, Lp = f1(2 + R() * 1.4); return `<circle cx="${f1(cx + Math.cos(a) * r)}" cy="${f1(cy + Math.sin(a) * r)}" r="${f1(1.8 + R() * 1.2)}" fill="#7a5238" data-loop="${Lp}" data-off="${f1(R() * 3)}" data-k="x<:0@0 ${f1(Math.cos(a) * 15)}@${Lp};y~:0@0 ${f1(Math.sin(a) * 15 + 16)}@${Lp};o:0@0 1@${f1(Lp * .25)} 0@${Lp}"/>`; });
+  const fine = [[58, 40, 22], [118, 82, 24], [176, 38, 21], [62, 98, 14], [188, 94, 16]];
+  const body = k === 0
+    ? `<ellipse cx="88" cy="114" rx="40" ry="6" fill="url(#c3-drop)"/><ellipse cx="162" cy="112" rx="34" ry="5" fill="url(#c3-drop)"/>
+      <g data-k="y:0@0 -3@${dur / 2} 0@${dur}"><g transform="translate(160 72) rotate(22)">${beanTop(24, 37, 's', { base: '#3a2114', skin: 0, outline: 'stroke="#262626" stroke-width="1.4"' })}</g></g>
+      <g data-k="y:-3@0 0@${dur / 2} -3@${dur}"><g transform="translate(86 70) rotate(-18)">${beanTop(27, 42, 's', { base: '#b5855a', outline: 'stroke="#262626" stroke-width="1.4"' })}</g></g>
+      <text x="80" y="12" class="tm mid" style="font-size:12px">hell</text><text x="170" y="12" class="tm mid" style="font-size:12px">dunkel</text>`
+    : `<rect width="240" height="124" rx="12" fill="#2f6f9f" opacity=".07"/>${streaks(8)}` + (k === 1 ? part('a', 120, 62, 46, 5) + dots(120, 62, 46, 3) : fine.map(([x, y, r], i) => part('b' + i, x, y, r, 8)).join('') + fine.map(([x, y, r]) => dots(x, y, r, 3)).join(''));
+  return `<div data-film data-bare data-dur="${dur}"><svg class="ic dg" viewBox="0 0 240 124" role="img" aria-label="${['Helle und dunkle Bohne', 'Wasser dringt kaum in das dichte Partikel ein', 'Feiner gemahlen dringt Wasser weiter ein'][k]}"${k ? ' style="overflow:hidden;border-radius:12px"' : ''}>${D3}${body}</svg></div>`;
+};
 const adjIco = ['<path d="M9 3v11.5a4 4 0 104 0V3a2 2 0 00-4 0zM11 9v8" /><path d="M19 9V3m-3 3l3-3l3 3" />', '<circle cx="5" cy="7" r="1.6"/><circle cx="11" cy="5" r="1.6"/><circle cx="17" cy="8" r="1.6"/><circle cx="7" cy="13" r="1.6"/><circle cx="14" cy="13" r="1.6"/><circle cx="20" cy="14" r="1.6"/><circle cx="5" cy="19" r="1.6"/><circle cx="12" cy="19" r="1.6"/><circle cx="18" cy="20" r="1.6"/>', '<path d="M4 20V11h5v9zM14 20V4h5v16z"/><path d="M2 20h20"/>'];
 
 /* ======================= scenes ======================= */
@@ -325,7 +341,7 @@ scene({ id: 'pflueckmethoden-vergleich', ch: CH, title: 'Pflückmethoden im Verg
       <div class="c3-legend rv" style="--d:3"><span><i style="background:#b8452a"></i>reif</span><span><i style="background:#d9a35f"></i>unreif</span></div>
       <div class="rv" style="--d:4">${why('<b>Der Zielkonflikt:</b> Auswahl kostet Arbeit, Tempo kostet Gleichmäßigkeit.')}</div>
     </div>
-    <div class="cmp" style="--n:2">
+    <div class="cmp c3-pick" style="--n:2">
       <div class="card rv" style="--d:2">${topBasket(false)}<h3>Hand Picking</h3>${notes(['Manuelle Auswahl reifer Kaffeekirschen.', 'Gleichmäßigere Reifegrade.', 'Höherer Arbeitsaufwand.'], 'sm')}</div>
       <div class="card rv" style="--d:4">${topBasket(true)}<h3>Strip Picking</h3>${notes(['Abstreifen aller Kirschen eines Astabschnitts.', 'Schnelle und kostengünstige Ernte.', 'Unterschiedliche Reifegrade.'], 'sm')}</div>
     </div>
@@ -344,7 +360,7 @@ scene({ id: 'aufbereitung-profile', ch: CH, title: 'Aufbereitung: Geschmacksprof
   <div class="stack">
     ${kicker(CH)}
     <h2 class="title rv" style="--d:1">Was mittrocknet, prägt die Tasse</h2>
-    <div class="cmp" style="--n:3">
+    <div class="cmp c3-prof" style="--n:3">
       ${[[['Ganze Kaffeekirsche wird getrocknet.', 'Fruchtfleisch bleibt während der Trocknung erhalten.'], 'Häufig fruchtig, süß und körperreich.', [1, 1, 1, 1]],
         [['Fruchtfleisch wird entfernt.', 'Schleimschicht wird entfernt.'], 'Häufig klar, sauber und säurebetont.', [0, 0, 1, 1]],
         [['Fruchtfleisch wird entfernt.', 'Schleimschicht bleibt teilweise erhalten.'], 'Häufig süßlich und fruchtig.', [0, .5, 1, 1]]].map(([n, fl, keep], k) => `<div class="card rv" style="--d:${2 + k * 2}">
@@ -394,12 +410,12 @@ scene({ id: 'helle-roestung-anpassen', ch: CH, title: 'Helle Röstungen: versteh
     ${kicker(CH)}
     <h2 class="title rv" style="--d:1">Helle Röstung: erst verstehen, dann anpassen</h2>
     <div class="cmp c3-chain" style="--n:3">
-      <div class="card rv" style="--d:2"><span class="c3-no">01</span><h3>Warum schmecken sie anders?</h3>${notes(['Mehr ursprüngliche Herkunftsaromen.', 'Häufig stärker wahrnehmbare Säure.', 'Weniger ausgeprägte Röstaromen.', 'Höhere strukturelle Dichte.'], 'sm')}</div>
-      <div class="card rv" style="--d:4" data-s="1"><span class="c3-no">02</span><h3>Herausforderungen bei der Extraktion</h3>${notes(['Häufig geringere Löslichkeit.', 'Höhere Anforderungen an die Puck Prep.', 'Mahlgrad und Temperatur besonders wichtig.'], 'sm')}</div>
-      <div class="card rv" style="--d:6" data-s="2"><span class="c3-no">03</span><h3>Mögliche Anpassungen</h3>
-        <ul class="c3-adj">${['Höhere Brühtemperatur.', 'Feinere Mahlung.', 'Angepasstes Brew Ratio.'].map((t, i) => `<li style="--i:${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${adjIco[i]}</svg><span>${t}</span></li>`).join('')}</ul></div>
+      <div class="rv" style="--d:2"><div class="card">${adjSvg(0)}<span class="c3-no">01</span><h3>Warum schmecken sie anders?</h3>${notes(['Mehr ursprüngliche Herkunftsaromen.', 'Häufig stärker wahrnehmbare Säure.', 'Weniger ausgeprägte Röstaromen.', 'Höhere strukturelle Dichte.'], 'sm')}</div></div>
+      <div class="rv" style="--d:4"><div class="card" data-s="1">${adjSvg(1)}<span class="c3-no">02</span><h3>Herausforderungen bei der Extraktion</h3>${notes(['Häufig geringere Löslichkeit.', 'Höhere Anforderungen an die Puck Prep.', 'Mahlgrad und Temperatur besonders wichtig.'], 'sm')}</div></div>
+      <div class="rv" style="--d:6"><div class="card" data-s="2">${adjSvg(2)}<span class="c3-no">03</span><h3>Mögliche Anpassungen</h3>
+        <ul class="c3-adj">${['Höhere Brühtemperatur.', 'Feinere Mahlung.', 'Angepasstes Brew Ratio.'].map((t, i) => `<li style="--i:${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${adjIco[i]}</svg><span>${t}</span></li>`).join('')}</ul></div></div>
     </div>
-    <div class="rv" style="--d:7" data-s="2">${why('<b>Das Ziel:</b> trotz dichter Struktur genug aus dem Kaffee lösen.')}</div>
+    <div class="rv" style="--d:7"><div data-s="2">${why('<b>Das Ziel:</b> trotz dichter Struktur genug aus dem Kaffee lösen.')}</div></div>
   </div>`));
 
 export const css = `
@@ -443,13 +459,14 @@ export const css = `
 .c3-now [data-l].on{opacity:1;transform:none}
 .c3-chain>div{display:grid;min-width:0}
 .c3-chain .card{position:relative}
-.c3-chain svg.ic{max-height:19vh}
+.cmp.c3-chain .card svg.ic{max-height:15vh}
+.cmp.c3-prof .card svg.ic{max-height:17vh}
 .c3-no{font-family:var(--mono);font-size:12px;color:var(--brown)}
 .c3-adj{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;font-size:clamp(15px,.6vw + 10px,19px)}
 .c3-adj li{display:flex;align-items:center;gap:12px;transition:transform .6s var(--ease),opacity .5s;transition-delay:calc(var(--i) * 110ms + 120ms)}
 .c3-adj svg{width:34px;height:34px;flex:none;padding:6px;border-radius:50%;background:var(--brown);color:var(--milk)}
 [data-s]:not(.on) .c3-adj li{transform:translateX(-10px)}
-@media (max-width:760px){.c3-rows li{grid-template-columns:minmax(0,1fr);gap:2px}.c3-layers span{font-size:9.5px}.c3-rt{font-size:13.5px}.c3-rt tbody th{width:auto}.c3-rt .bar{max-width:60px}}
+@media (max-width:760px){.c3-rows li{grid-template-columns:minmax(0,1fr);gap:2px}.c3-layers span{font-size:9.5px}.cmp.c3-chain .card svg.ic,.cmp.c3-prof .card svg.ic,.cmp.c3-pick .card svg.ic{max-height:150px}.c3-rt{font-size:13.5px}.c3-rt tbody th{width:auto}.c3-rt .bar{max-width:60px}}
 @media (prefers-reduced-motion:reduce){.c3-caf,.c3-ch{transform:none;opacity:1}}
 `;
 
