@@ -1,0 +1,1557 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Barista Advanced</title>
+<meta name="author" content="Cengiz · BUNCA.ACADEMY">
+<meta name="description" content="BUNCA.ACADEMY · Barista Advanced: vertiefendes Wissen rund um Kaffee, Espresso und Technik, mit Motion Graphics in Zeitlupe, interaktiven Grafiken und Quiz.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a full-screen cinema stage. One scene at a time; dark "Kino" scenes for film,
+   greige "Studio" scenes (the deck's own colour) for explanations. HUD on top, dock at the bottom. */
+:root{
+  --night:#120f0d;      /* espresso black, cinema ground */
+  --roast:#1d1814;      /* raised dark surface */
+  --greige:#b0a7a1;     /* BUNCA.ACADEMY slide colour */
+  --ink:#262626;        /* deck text */
+  --milk:#f3eee8;       /* foam white */
+  --peach:#f8cbad;      /* deck accent */
+  --brown:#7a5238;      /* deck brown */
+  --crema:#c99a6b;      /* crema */
+  --steel:#a39a93;      /* muted on dark */
+  --display:"Jost","Century Gothic","Futura","Avenir Next",system-ui,sans-serif;
+  --serif:"Instrument Serif","Iowan Old Style","Times New Roman",serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --hud-h:58px; --dock-h:64px;
+  --ease:cubic-bezier(.2,.7,.1,1);
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--night);color:var(--milk);font-family:var(--display);font-size:clamp(15px,1.05vw + 6px,20px);line-height:1.45;overflow:hidden;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--peach);outline-offset:3px;border-radius:6px}
+img,video{max-width:100%;display:block}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{text-wrap:balance;font-weight:400}
+
+/* ---------- scene tones ---------- */
+.scene{--bg:var(--night);--fg:var(--milk);--mute:#b3aaa3;--acc:var(--peach);--card:rgba(243,238,232,.06);--line:rgba(243,238,232,.16);--strong:var(--milk)}
+.scene.light{--bg:var(--greige);--fg:var(--ink);--mute:#45403b;--acc:var(--brown);--card:rgba(38,38,38,.075);--line:rgba(38,38,38,.2);--strong:#1a1715}
+body{--hud-fg:var(--milk);--hud-mute:#b3aaa3;--hud-line:rgba(243,238,232,.18);--hud-bg:18,15,13}
+body[data-tone="light"]{--hud-fg:var(--ink);--hud-mute:#45403b;--hud-line:rgba(38,38,38,.22);--hud-bg:176,167,161}
+
+/* ---------- stage & transitions ---------- */
+#stage{position:fixed;inset:0;overflow:hidden;background:var(--night)}
+.scene{position:absolute;inset:0;background:var(--bg);color:var(--fg);visibility:hidden;opacity:0;z-index:0}
+.scene.is-active{visibility:visible;opacity:1;z-index:2;animation:sceneIn .95s var(--ease) both}
+.scene.is-active.back{animation-name:sceneInBack}
+.scene.is-leaving{visibility:visible;opacity:1;z-index:1;animation:sceneOut .75s ease both}
+@keyframes sceneIn{from{opacity:0;transform:scale(1.03) translateX(1.5%)}to{opacity:1;transform:none}}
+@keyframes sceneInBack{from{opacity:0;transform:scale(1.03) translateX(-1.5%)}to{opacity:1;transform:none}}
+@keyframes sceneOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.985)}}
+.inner{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+  padding-top:calc(var(--hud-h) + env(safe-area-inset-top,0px) + 14px);
+  padding-bottom:calc(var(--dock-h) + env(safe-area-inset-bottom,0px) + 14px);
+  padding-left:max(clamp(16px,5vw,80px),env(safe-area-inset-left,0px));
+  padding-right:max(clamp(16px,5vw,80px),env(safe-area-inset-right,0px));
+  display:grid;align-content:center}
+.rv{opacity:0}
+.is-active .rv{animation:rv 1s var(--ease) both;animation-delay:calc(var(--d,0) * 90ms + 260ms)}
+@keyframes rv{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+.is-active .rv-img{animation:rvImg 1.4s var(--ease) both;animation-delay:calc(var(--d,0) * 90ms + 200ms)}
+@keyframes rvImg{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
+
+/* light leak for chapter cuts */
+#leak{position:fixed;inset:-20%;z-index:40;pointer-events:none;opacity:0;
+  background:radial-gradient(40% 60% at 30% 50%,rgba(248,203,173,.55),transparent 70%),radial-gradient(35% 50% at 70% 40%,rgba(201,154,107,.45),transparent 70%)}
+#leak.go{animation:leak 1.3s ease-out}
+@keyframes leak{0%{opacity:0;transform:translateX(-30%)}25%{opacity:.9}100%{opacity:0;transform:translateX(30%)}}
+body[data-video="1"] #grain{display:none}
+#grain{position:fixed;inset:-50%;z-index:39;pointer-events:none;opacity:.045;animation:grain .8s steps(5) infinite;will-change:transform}
+@keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
+.vignette{position:fixed;inset:0;z-index:38;pointer-events:none;background:radial-gradient(120% 90% at 50% 50%,transparent 60%,rgba(0,0,0,.35))}
+body[data-tone="light"] .vignette{opacity:.35}
+
+/* ---------- HUD ---------- */
+.hud{position:fixed;top:0;left:0;right:0;z-index:30;height:calc(var(--hud-h) + env(safe-area-inset-top,0px));
+  padding-top:env(safe-area-inset-top,0px);padding-left:max(clamp(16px,3vw,40px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,3vw,40px),env(safe-area-inset-right,0px));
+  display:flex;align-items:center;gap:16px;color:var(--hud-fg);transition:color .6s;background:linear-gradient(to bottom,rgba(var(--hud-bg),.85) 40%,rgba(var(--hud-bg),0))}
+.mark{font-size:15px;letter-spacing:.02em;white-space:nowrap}
+.mark b{font-weight:600}.mark span{font-weight:300}
+.hud-where{flex:1;min-width:0;font-size:13px;color:var(--hud-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .6s}
+.hud-where em{font-style:normal;color:var(--hud-fg)}
+.hud-btns{display:flex;gap:4px}
+.hbtn{height:38px;min-width:38px;padding:0 12px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--hud-fg);border:1px solid var(--hud-line);transition:background .2s,border-color .2s}
+.hbtn:hover{background:rgba(127,127,127,.14)}
+.hbtn svg{width:16px;height:16px;flex:none}
+.hbtn[aria-pressed="true"]{border-color:var(--peach);color:var(--hud-fg)}
+.hbtn .lbl{display:inline}
+@media (max-width:720px){.hbtn .lbl{display:none}.hbtn{padding:0 10px}.hud-where{display:none}}
+
+/* ---------- dock ---------- */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;height:calc(var(--dock-h) + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:max(clamp(16px,3vw,40px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,3vw,40px),env(safe-area-inset-right,0px));
+  display:flex;align-items:center;gap:14px;color:var(--hud-fg);background:linear-gradient(to top,rgba(var(--hud-bg),.98) 62%,rgba(var(--hud-bg),0))}
+.nav{width:44px;height:44px;border-radius:50%;border:1px solid var(--hud-line);display:grid;place-items:center;flex:none;transition:background .2s}
+.nav:hover{background:rgba(127,127,127,.16)}
+.nav svg{width:18px;height:18px}
+.nav.next{background:var(--peach);color:var(--ink);border-color:var(--peach)}
+.nav.next:hover{background:#fbd9c3}
+.prog{flex:1;display:flex;gap:3px;align-items:center;height:44px;min-width:0}
+.prog button{flex:1;height:44px;position:relative;min-width:0}
+.prog button::after{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:var(--hud-line);transition:background .3s,height .3s}
+.prog button.done::after{background:var(--hud-mute)}
+.prog button.cur::after{background:var(--peach);height:5px;margin-top:-2.5px}
+.prog button.ch1::before,.prog button.ch2::before{content:"";position:absolute;left:0;top:12px;width:1px;height:20px;background:var(--hud-line)}
+.count{font-family:var(--mono);font-size:12px;color:var(--hud-mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- typography ---------- */
+.kicker{display:flex;align-items:baseline;gap:.5em;font-size:clamp(20px,1.6vw + 8px,34px);font-weight:300;color:var(--fg)}
+.kicker .n{color:var(--peach);font-weight:300}
+.scene.light .kicker .n{color:#fbe3d3;text-shadow:0 1px 0 rgba(0,0,0,.08)}
+.title{font-size:clamp(28px,2.6vw + 12px,60px);font-weight:500;line-height:1.08;letter-spacing:-.01em;color:var(--strong)}
+.lead{font-size:clamp(17px,.9vw + 10px,24px);max-width:36ch;color:var(--fg)}
+.label{font-size:11px;letter-spacing:.24em;text-transform:uppercase;font-weight:500;color:var(--mute)}
+.mute{color:var(--mute)}
+.serif{font-family:var(--serif);font-style:italic;font-weight:400}
+.big-num{font-weight:300;color:var(--acc);font-size:clamp(34px,3vw + 10px,64px);line-height:1;font-variant-numeric:tabular-nums}
+.scene.light .big-num{color:var(--brown)}
+.stack{display:flex;flex-direction:column;gap:clamp(12px,1.6vw,22px);min-width:0}
+.card{background:var(--card);border-radius:16px;padding:clamp(14px,1.4vw,22px) clamp(16px,1.6vw,26px);min-width:0}
+.notes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.55em;font-size:clamp(16px,.8vw + 10px,22px)}
+.notes li{display:flex;gap:.7em}
+.notes li::before{content:"";flex:none;width:.9em;height:1px;background:var(--acc);margin-top:.75em}
+.why{border-left:2px solid var(--acc);padding:2px 0 2px 16px;font-size:clamp(14px,.5vw + 10px,18px);color:var(--mute);max-width:52ch}
+.why b{color:var(--fg);font-weight:500}
+.split{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(20px,4vw,72px);align-items:center}
+.split.rev{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}
+.frame{border-radius:18px;overflow:hidden;background:#000;position:relative}
+.frame img{width:100%;height:100%;object-fit:cover}
+.media-h{max-height:calc(100dvh - var(--hud-h) - var(--dock-h) - 70px)}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:14px;min-height:36px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 22px;border-radius:999px;font-size:16px;font-weight:500;border:1px solid var(--line);transition:transform .2s var(--ease),background .2s}
+.btn:hover{transform:translateY(-1px)}
+.btn.pri{background:var(--peach);color:var(--ink);border-color:var(--peach)}
+.btn svg{width:18px;height:18px}
+@media (max-width:860px),(max-aspect-ratio:1/1){
+  .split,.split.rev{grid-template-columns:minmax(0,1fr)}
+  .inner{align-content:start}
+  .media-h{max-height:62vh}
+}
+
+/* ---------- start ---------- */
+#s-start .inner{grid-template-columns:minmax(0,1fr) auto;gap:clamp(20px,5vw,90px);align-items:center}
+.start-bg{position:absolute;inset:0;overflow:hidden}
+.start-bg img{width:100%;height:100%;object-fit:cover;transform:scale(1.15)}
+.hero-title{font-size:clamp(64px,10vw,190px);font-weight:300;line-height:.9;letter-spacing:-.02em}
+.hero-title span{display:inline-block}
+.is-active .hero-title span{animation:letter 1.2s var(--ease) both;animation-delay:calc(var(--i) * 55ms + 300ms)}
+@keyframes letter{from{opacity:0;transform:translateY(.35em) rotate(4deg)}to{opacity:1;transform:none}}
+.agenda-mini{display:flex;flex-direction:column;gap:6px;font-size:clamp(20px,1.6vw + 8px,32px);font-weight:300}
+.agenda-mini .n{color:var(--peach);margin-right:.4em}
+.start-actions{display:flex;flex-wrap:wrap;gap:12px}
+.tagline{font-family:var(--serif);font-style:italic;font-size:clamp(20px,1.4vw + 10px,30px);color:var(--peach)}
+.hero-video{height:min(74vh,760px);aspect-ratio:9/16;border-radius:22px;overflow:hidden;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.hero-video video,.hero-video img{width:100%;height:100%;object-fit:cover}
+.tc{position:absolute;left:12px;bottom:12px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--milk);background:rgba(0,0,0,.45);padding:4px 8px;border-radius:6px}
+@media (max-width:860px),(max-aspect-ratio:1/1){#s-start .inner{grid-template-columns:minmax(0,1fr)}.hero-video{height:auto;width:min(100%,360px);justify-self:start}}
+
+/* ---------- agenda ---------- */
+.agenda{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(14px,2vw,28px)}
+.ag{position:relative;border-radius:22px;overflow:hidden;min-height:clamp(260px,52vh,560px);text-align:left;display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(18px,2.4vw,36px);isolation:isolate}
+.ag video,.ag img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;transition:transform 1.2s var(--ease)}
+.ag::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(18,15,13,.05) 30%,rgba(18,15,13,.9))}
+.ag:hover video,.ag:hover img{transform:scale(1.05)}
+.ag .n{font-size:clamp(56px,6vw,110px);font-weight:300;color:var(--peach);line-height:.9}
+.ag h3{font-size:clamp(30px,3vw,56px);font-weight:400;line-height:1}
+.ag p{color:#d8d0c9;margin-top:10px;font-size:15px;max-width:40ch}
+@media (max-width:860px){.agenda{grid-template-columns:minmax(0,1fr)}.ag{min-height:240px}}
+
+/* ---------- chapter cards ---------- */
+.tri{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr)}
+.tri video,.tri img{width:100%;height:100%;object-fit:cover}
+.chap-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(18,15,13,.92) 0%,rgba(18,15,13,.6) 45%,rgba(18,15,13,.25))}
+.chap .inner{align-content:center}
+.chap-n{font-size:clamp(120px,22vw,380px);font-weight:300;line-height:.8;color:transparent;-webkit-text-stroke:1.5px var(--peach);letter-spacing:-.04em}
+.chap-t{font-size:clamp(56px,8vw,150px);font-weight:300;line-height:.95;margin-top:-.3em}
+.chap-sub{font-family:var(--serif);font-style:italic;font-size:clamp(22px,1.8vw + 8px,38px);color:var(--peach);margin-top:18px}
+.is-active .chap-n{animation:chapN 1.6s var(--ease) both .15s}
+@keyframes chapN{from{opacity:0;letter-spacing:.2em}to{opacity:1;letter-spacing:-.04em}}
+
+/* ---------- diagrams (svg) ---------- */
+.diagram{width:100%;height:auto;overflow:visible}
+.d-stroke{fill:none;stroke:currentColor;stroke-width:2}
+.dash{stroke-dasharray:5 6}
+.duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,1.6vw,22px)}
+.duo .card{display:flex;flex-direction:column;gap:10px}
+.duo .card svg{width:56px;height:56px}
+.goal{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:clamp(18px,1vw + 10px,26px)}
+.goal .label{color:var(--fg)}
+@media (max-width:520px){.duo{grid-template-columns:minmax(0,1fr)}}
+
+/* pitcher fill */
+.pitchers{display:flex;align-items:flex-end;gap:clamp(18px,3vw,48px);justify-content:center}
+.pitcher svg{display:block}
+.milkfill{transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(0);transition:transform 2.2s var(--ease) .5s}
+.is-active .milkfill{transform:scaleY(1)}
+.notch-l{opacity:0;transition:opacity .6s 2.3s}
+.is-active .notch-l{opacity:1}
+
+/* three states */
+.zoomer{position:relative;overflow:hidden;border-radius:18px;aspect-ratio:4/3;background:#000;width:min(100%,calc((100dvh - var(--hud-h) - var(--dock-h) - 190px) * 1.333))}
+.zoomer img{width:100%;height:100%;object-fit:cover;transform-origin:var(--ox,50%) var(--oy,50%);transform:scale(var(--z,1));transition:transform 1.6s var(--ease),transform-origin 1.6s var(--ease)}
+.subs{min-height:4.2em;display:grid}
+.subs p{grid-area:1/1;opacity:0;transform:translateY(10px);transition:opacity .6s,transform .6s var(--ease);font-size:clamp(18px,1vw + 10px,28px);max-width:44ch}
+.subs p.on{opacity:1;transform:none;transition-delay:.35s}
+.subs p b{color:var(--peach);font-weight:500}
+.dots{display:flex;gap:8px}
+.dots button{width:44px;height:28px;position:relative}
+.dots button::after{content:"";position:absolute;left:6px;right:6px;top:12px;height:4px;border-radius:2px;background:var(--line)}
+.dots button.on::after{background:var(--peach)}
+
+/* phase 1 */
+.p1{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(20px,4vw,64px);align-items:center}
+.p1-rows{display:flex;flex-direction:column;gap:12px}
+.p1-row{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:start;padding:14px 0;border-top:1px solid var(--line)}
+.p1-row:first-child{border-top:0}
+.zz{display:flex;align-items:center;gap:3px;height:34px}
+.zz i{width:4px;border-radius:2px;background:var(--brown);height:100%;transform:scaleY(.15);animation:zz .9s ease-in-out infinite;animation-delay:calc(var(--k) * -70ms)}
+@keyframes zz{0%,100%{transform:scaleY(.15)}50%{transform:scaleY(1)}}
+/* scenes that are not on screen do no animation work */
+.scene:not(.is-active):not(.is-leaving) *{animation-play-state:paused!important}
+.timer{position:relative;height:34px;margin-top:6px}
+.timer .bar{position:absolute;left:0;right:0;top:14px;height:6px;border-radius:3px;background:var(--line)}
+.timer .rng{position:absolute;top:14px;height:6px;border-radius:3px;background:rgba(122,82,56,.45);left:20%;right:0}
+.timer .run{position:absolute;top:14px;height:6px;border-radius:3px;background:var(--brown);left:0;width:0}
+.is-active .timer .run{animation:run 3s linear infinite 1s}
+@keyframes run{0%{width:0}60%{width:60%}100%{width:60%}}
+.timer .tick{position:absolute;top:24px;font-family:var(--mono);font-size:11px;color:var(--mute);transform:translateX(-50%)}
+.lance-ring{transform-box:fill-box;transform-origin:center;animation:ring 1.6s ease-out infinite}
+@keyframes ring{from{transform:scale(1);opacity:.9}to{transform:scale(2.6);opacity:0}}
+.bub{animation:bub 2.4s ease-in infinite;opacity:0}
+@keyframes bub{0%{opacity:0;transform:translate(0,0) scale(.4)}20%{opacity:.9}100%{opacity:0;transform:translate(var(--bx),var(--by)) scale(1)}}
+.lance-path{stroke-dasharray:4 6;animation:march 1.2s linear infinite}
+@keyframes march{to{stroke-dashoffset:-20}}
+@media (max-width:860px),(max-aspect-ratio:1/1){.p1{grid-template-columns:minmax(0,1fr)}.p1-row{grid-template-columns:minmax(0,1fr);gap:6px}}
+
+/* before/after */
+.ba{position:relative;aspect-ratio:1/1;border-radius:18px;overflow:hidden;--x:50%;width:min(100%,calc(100vh - var(--hud-h) - var(--dock-h) - 80px));width:min(100%,calc(100dvh - var(--hud-h) - var(--dock-h) - 80px));touch-action:pan-y}
+.ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ba .top{clip-path:inset(0 calc(100% - var(--x)) 0 0)}
+.ba input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0}
+.ba .handle{position:absolute;top:0;bottom:0;left:var(--x);width:2px;margin-left:-1px;background:var(--milk);pointer-events:none}
+.ba .handle::after{content:"";position:absolute;top:50%;left:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:var(--milk);box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.ba .handle svg{position:absolute;top:50%;left:50%;width:22px;height:22px;margin:-11px 0 0 -11px;z-index:1;color:var(--ink)}
+.ba .tag{position:absolute;top:14px;padding:6px 12px;border-radius:999px;background:rgba(18,15,13,.7);font-size:13px;pointer-events:none}
+.ba .tag.l{left:14px}.ba .tag.r{right:14px}
+.warn{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}
+.warn svg{width:28px;height:28px;color:var(--peach)}
+
+/* phase 2 */
+.p2{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(20px,4vw,64px);align-items:center}
+.p2.wide{grid-template-columns:minmax(0,6fr) minmax(0,5fr)}
+.p2-visual{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,1.6vw,24px);align-items:end}
+@media (max-height:650px) and (min-width:861px){#s-phase-2 .gauge{display:none}}
+.p2-visual figure{margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
+.p2-visual .label{color:var(--mute)}
+.p2-photo{aspect-ratio:851/1280;width:100%;max-height:calc(100vh - var(--hud-h) - var(--dock-h) - 120px);max-height:calc(100dvh - var(--hud-h) - var(--dock-h) - 120px);border-radius:18px}
+.p2-visual .vortex-wrap{width:100%}
+.p2.pt{grid-template-columns:minmax(0,4fr) minmax(0,7fr)}
+.pt-right{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(16px,2.4vw,40px);align-items:center}
+.pt-right .big-num{font-size:clamp(30px,2vw + 12px,54px)}
+.pt-video{justify-self:end}
+.vortex-wrap{position:relative;aspect-ratio:1/1;width:min(100%,calc(100dvh - var(--hud-h) - var(--dock-h) - 110px))}
+.vortex-wrap canvas{width:100%;height:100%;display:block}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.stat{display:flex;flex-direction:column;gap:6px}
+.stat .v{font-size:clamp(20px,1.2vw + 10px,34px);hyphens:manual;font-weight:400;color:var(--strong);line-height:1.05;font-variant-numeric:tabular-nums}
+.stat .d{font-size:14px;color:var(--mute)}
+.gauge{position:relative;height:56px;margin-top:4px}
+.gauge .bar{position:absolute;left:0;right:0;top:20px;height:8px;border-radius:4px;background:linear-gradient(90deg,#d9d2cc,#c99a6b 70%,#b85c3e)}
+.gauge .band{position:absolute;top:14px;height:20px;border:2px solid var(--ink);border-radius:6px;left:80%;width:10%}
+.gauge .needle{position:absolute;top:8px;width:2px;height:32px;background:var(--ink);left:0;transition:left 2.6s var(--ease) .6s}
+.is-active .gauge .needle{left:84%}
+.gauge .t{position:absolute;top:40px;font-family:var(--mono);font-size:11px;color:var(--mute);transform:translateX(-50%)}
+@media (max-width:860px),(max-aspect-ratio:1/1){.p2,.p2.wide,.p2.pt,.pt-right{grid-template-columns:minmax(0,1fr)}.stats{grid-template-columns:minmax(0,1fr)}.pt-video{justify-self:center}.pt-right .cine-frame{--fw:min(calc(100vw - 40px),360px,calc((100vh - 250px) * 9 / 16));width:var(--fw);height:calc(var(--fw) * 16 / 9);max-height:none}}
+
+/* cine player */
+.cine{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,.8fr);gap:clamp(18px,3vw,56px);align-items:center}
+.cine-bg{position:absolute;inset:0;overflow:hidden}
+.cine-bg img{width:100%;height:100%;object-fit:cover;transform:scale(1.15)}
+.cine-frame{position:relative;height:calc(100vh - var(--hud-h) - var(--dock-h) - 60px);height:calc(100dvh - var(--hud-h) - var(--dock-h) - 60px);max-height:900px;aspect-ratio:9/16;border-radius:20px;overflow:hidden;background:#000;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.cine-frame video{width:100%;height:100%;object-fit:cover}
+.cine-badge{position:absolute;top:12px;left:12px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;padding:5px 9px;border-radius:6px;background:rgba(0,0,0,.55);color:var(--milk);text-transform:uppercase}
+.cine-badge.slow{background:var(--peach);color:var(--ink)}
+.cine-hit{position:absolute;inset:0;width:100%;height:100%}
+.cine-big{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:0;transition:opacity .3s}
+.cine-big.show{opacity:1}
+.cine-big span{width:76px;height:76px;border-radius:50%;background:rgba(18,15,13,.6);display:grid;place-items:center}
+.cine-big svg{width:30px;height:30px}
+.cine-scrub{position:absolute;left:12px;right:12px;bottom:12px;height:28px}
+.cine-scrub .tr{position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:rgba(255,255,255,.3)}
+.cine-scrub .fi{position:absolute;left:0;top:12px;height:4px;border-radius:2px;background:var(--peach);width:0}
+.cine-scrub .mk{position:absolute;top:8px;width:2px;height:12px;background:var(--milk);opacity:.8}
+.cine-scrub .seg{position:absolute;top:10px;height:8px;border-radius:4px;border:1px solid var(--peach);opacity:.9}
+.cine-scrub input{position:absolute;inset:0;width:100%;opacity:0;margin:0;cursor:pointer}
+.cine-side{display:flex;flex-direction:column;gap:clamp(14px,2vh,26px);min-width:0}
+.cine-name{font-size:clamp(54px,6vw,128px);font-weight:300;line-height:.9;letter-spacing:-.02em}
+.phases{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.phases button{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;padding:10px 0;border-top:1px solid var(--line);min-height:44px;color:var(--mute);transition:color .3s}
+.phases li:last-child button{border-bottom:1px solid var(--line)}
+.phases .pn{font-family:var(--mono);font-size:12px}
+.phases .pt{font-size:clamp(16px,.6vw + 11px,21px)}
+.phases .pc{font-family:var(--mono);font-size:12px;opacity:.7}
+.phases button.on{color:var(--fg)}
+.phases button.on .pn{color:var(--peach)}
+.phases button .pt{position:relative}
+.speeds{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+.speeds button{min-height:38px;padding:0 14px;border-radius:999px;font-size:14px;color:var(--mute);white-space:nowrap}
+.speeds button[aria-pressed="true"]{background:var(--milk);color:var(--ink)}
+.cine-note{font-size:12px;color:var(--mute);max-width:34ch}
+.goalpic{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.goalpic .ring{width:clamp(150px,15vw,260px);aspect-ratio:1/1;border-radius:50%;overflow:hidden;border:1px solid var(--line);transition:transform .8s var(--ease),box-shadow .8s}
+.goalpic .ring img{width:100%;height:100%;object-fit:cover}
+.goalpic.hit .ring{transform:scale(1.06);box-shadow:0 0 0 6px rgba(248,203,173,.35)}
+.time{font-family:var(--mono);font-size:13px;color:var(--mute);font-variant-numeric:tabular-nums}
+@media (max-width:980px),(max-aspect-ratio:1/1){
+  .cine{grid-template-columns:minmax(0,1fr);align-items:start;gap:16px}
+  .cine .cine-side{display:contents}
+  .cine .kicker{order:1}
+  .cine .cine-name{order:2}
+  .cine > [data-slot="frame"]{order:3;justify-self:center;min-width:0}
+  .cine [data-slot="speeds"]{order:4}
+  .cine [data-slot="phases"]{order:5}
+  .cine .cine-frame{height:auto;width:min(100%,420px)}
+  .cine .goalpic{order:6;flex-direction:row;align-items:center}
+  .cine .goalpic .ring{width:120px}
+}
+
+/* video + notes scenes */
+.vn{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(20px,4vw,72px);align-items:center}
+@media (max-width:980px),(max-aspect-ratio:1/1){.vn{grid-template-columns:minmax(0,1fr)}.vn .cine-frame{height:auto;width:min(100%,420px)}}
+
+/* milk alternatives */
+.milkq{position:relative;border-radius:20px;overflow:hidden;aspect-ratio:1800/1012;width:min(100%,calc((100dvh - var(--hud-h) - var(--dock-h) - 200px) * 1.78))}
+.milkq img{width:100%;height:100%;object-fit:cover}
+.hot{position:absolute;top:3%;height:72%;width:17%;transform:translateX(-50%);border-radius:14px;border:2px solid transparent;transition:border-color .2s,background .2s}
+.hot:hover{border-color:rgba(243,238,232,.6);background:rgba(243,238,232,.06)}
+.hot.pick{border-color:var(--peach);background:rgba(248,203,173,.12)}
+.hot.ok{border-color:#9fd3a6}
+.hot .nm{position:absolute;left:50%;bottom:-2px;transform:translate(-50%,100%);font-size:12px;white-space:nowrap;background:rgba(18,15,13,.75);padding:3px 8px;border-radius:6px;opacity:0;transition:opacity .3s}
+.milkq.revealed .hot .nm{opacity:1}
+.axis{position:absolute;left:5%;right:5%;bottom:7%;height:40px;opacity:0;transition:opacity .5s}
+.milkq.revealed .axis{opacity:1}
+.axis svg{width:100%;height:14px;color:var(--milk)}
+.axis .ln{stroke-dasharray:1000;stroke-dashoffset:1000}
+.milkq.revealed .axis .ln{animation:draw 1.6s var(--ease) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.axis .al,.axis .ar{position:absolute;top:18px;font-size:clamp(12px,1vw,16px);font-weight:500;text-shadow:0 1px 8px rgba(0,0,0,.8)}
+.axis .al{left:0}.axis .ar{right:0}
+.qbox{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.qbox .q{font-size:clamp(18px,1.2vw + 10px,30px);font-weight:500;flex:1;min-width:min(100%,280px)}
+.qmark{font-size:clamp(40px,4vw,72px);color:var(--peach);font-weight:300;line-height:1}
+.feedback{min-height:1.6em;font-size:clamp(16px,.6vw + 11px,22px);color:var(--peach)}
+
+/* fragen */
+.fullbg{position:absolute;inset:0}
+.fullbg video,.fullbg img{width:100%;height:100%;object-fit:cover}
+.fullbg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(18,15,13,.94),rgba(18,15,13,.55) 60%,rgba(18,15,13,.35))}
+.giant{font-size:clamp(80px,13vw,240px);font-weight:300;line-height:.9;letter-spacing:-.03em;color:var(--peach)}
+.cheat{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border-radius:16px;overflow:hidden;max-width:1100px}
+.cheat div{background:rgba(18,15,13,.82);padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.cheat .v{font-size:clamp(20px,1.4vw + 8px,32px);font-weight:400}
+.cheat .k{font-size:13px;color:var(--mute)}
+@media (max-width:860px){.cheat{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* pen */
+.pen{position:relative;border-radius:20px;overflow:hidden;aspect-ratio:16/9;background:#6b4429}
+.pen canvas{width:100%;height:100%;display:block}
+.pen .lab{position:absolute;left:18px;bottom:16px;font-size:clamp(14px,.8vw + 8px,20px);color:var(--milk);text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.slider{display:flex;flex-direction:column;gap:6px}
+.slider .ends{display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
+.slider input[type=range]{width:100%;accent-color:var(--brown);height:32px}
+.slider .zones{position:relative;height:22px;font-size:13px;font-weight:500}
+.slider .zones span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.compare2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.compare2 .card{display:flex;flex-direction:column;gap:8px}
+.compare2 svg{width:100%;height:36px;color:var(--strong)}
+
+/* pour diagram */
+.pour{width:100%;max-height:calc(100dvh - var(--hud-h) - var(--dock-h) - 120px)}
+.pour .pitcher-g{transition:transform 1.4s var(--ease)}
+.stream-move{animation:wander 3.2s ease-in-out infinite}
+@keyframes wander{0%,100%{transform:translateX(-10px)}50%{transform:translateX(12px)}}
+.split-media{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:14px;align-items:end}
+.split-media .frame{aspect-ratio:9/16}
+
+/* leinwand */
+.lw{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:14px;align-items:stretch}
+.lw .frame{aspect-ratio:536/640}
+.lw .cine-frame{height:auto;aspect-ratio:9/16;width:clamp(180px,18vw,320px)}
+.cap{font-size:13px;color:var(--mute);margin-top:8px}
+@media (max-width:860px){.lw{grid-template-columns:repeat(2,minmax(0,1fr))}.lw .cine-frame{grid-column:1/-1;width:min(100%,320px)}}
+
+/* four steps */
+.steps4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,1.4vw,20px)}
+.st{display:flex;flex-direction:column;gap:12px;opacity:.28;transition:opacity .6s,transform .8s var(--ease);transform:translateY(10px)}
+.st.on{opacity:1;transform:none}
+.st .frame{aspect-ratio:1/1}
+.st .no{width:32px;height:32px;border-radius:50%;background:var(--peach);color:var(--ink);display:grid;place-items:center;font-weight:500;font-size:15px}
+.st h3{font-size:clamp(16px,.8vw + 10px,24px);font-weight:500}
+@media (max-width:860px){.steps4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* quiz */
+.quiz{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;max-width:900px;width:100%;justify-self:center}
+.qhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.qprog{display:flex;gap:4px}
+.qprog i{width:22px;height:4px;border-radius:2px;background:var(--line)}
+.qprog i.ok{background:#9fd3a6}.qprog i.no{background:#e38b6d}.qprog i.cur{background:var(--peach)}
+.qtext{font-size:clamp(24px,1.8vw + 12px,44px);font-weight:400;line-height:1.15}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{text-align:left;padding:16px 20px;border-radius:14px;border:1px solid var(--line);min-height:56px;font-size:clamp(16px,.6vw + 11px,21px);display:flex;gap:14px;align-items:center;transition:background .2s,border-color .2s}
+.opt:hover:not([disabled]){background:var(--card)}
+.opt .k{font-family:var(--mono);font-size:12px;color:var(--mute);width:22px;flex:none}
+.opt.ok{border-color:#9fd3a6;background:rgba(159,211,166,.12)}
+.opt.no{border-color:#e38b6d;background:rgba(227,139,109,.12)}
+.opt[disabled]{cursor:default}
+.explain{font-size:clamp(15px,.5vw + 11px,19px);color:var(--mute);min-height:1.5em}
+.explain b{color:var(--fg);font-weight:500}
+.qfoot{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.score{font-size:clamp(70px,9vw,160px);font-weight:300;color:var(--peach);line-height:1;font-variant-numeric:tabular-nums}
+
+/* finale */
+.gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,2vw,32px)}
+.gallery figure{margin:0;display:flex;flex-direction:column;gap:12px;align-items:center}
+.gallery .ring{width:100%;aspect-ratio:1/1;border-radius:50%;overflow:hidden}
+.gallery img{width:100%;height:100%;object-fit:cover}
+.gallery figcaption{font-size:clamp(18px,1vw + 10px,28px);font-weight:300}
+@media (max-width:640px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ---------- overview ---------- */
+#overview{position:fixed;inset:0;z-index:50;background:rgba(18,15,13,.96);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);overflow-y:auto;
+  padding:calc(env(safe-area-inset-top,0px) + 70px) max(clamp(16px,5vw,80px),env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(clamp(16px,5vw,80px),env(safe-area-inset-left,0px))}
+#overview .close{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:max(16px,env(safe-area-inset-right,0px));z-index:2}
+.ov-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:28px 48px}
+.ov-cols h3{font-size:28px;font-weight:300;margin-bottom:8px}
+.ov-cols h3 .n{color:var(--peach);margin-right:.35em}
+.ov-cols ol{list-style:none;margin:0;padding:0}
+.ov-cols button{width:100%;text-align:left;display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;padding:10px 0;border-top:1px solid rgba(243,238,232,.12);min-height:44px;color:#d8d0c9}
+.ov-cols button:hover,.ov-cols button.cur{color:var(--milk)}
+.ov-cols button.cur .i{color:var(--peach)}
+.ov-cols .i{font-family:var(--mono);font-size:12px;color:var(--steel);padding-top:3px}
+.keys{margin-top:40px;color:var(--steel);font-size:14px;display:flex;flex-wrap:wrap;gap:8px 24px}
+.keys kbd{font-family:var(--mono);font-size:12px;border:1px solid rgba(243,238,232,.25);border-radius:5px;padding:1px 6px;margin-right:6px;color:var(--milk)}
+
+/* ---------- trailer ---------- */
+#trailer{position:fixed;inset:0;z-index:60;background:#000;overflow:hidden}
+#trailer .shot{position:absolute;inset:0;opacity:0;transition:opacity .5s ease}
+#trailer .shot.on{opacity:1}
+#trailer .shot.single .bgv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(36px) brightness(.4);transform:scale(1.2)}
+#trailer .shot.single .fg{position:absolute;top:0;bottom:0;left:50%;height:100%;aspect-ratio:9/16;transform:translateX(-50%);object-fit:cover}
+#trailer .shot.on.single .fg{animation:push 6s linear both}
+@keyframes push{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.08)}}
+#trailer .shot.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+#trailer .shot.tri video{width:100%;height:100%;object-fit:cover}
+#trailer .shot.tri.on video{animation:triIn .9s var(--ease) both}
+#trailer .shot.tri.on video:nth-child(2){animation-delay:.15s}
+#trailer .shot.tri.on video:nth-child(3){animation-delay:.3s}
+@keyframes triIn{from{clip-path:inset(50% 0 50% 0)}to{clip-path:inset(0 0 0 0)}}
+.bars::before,.bars::after{content:"";position:fixed;left:0;right:0;height:11vh;background:#000;z-index:3;transition:transform 1.2s var(--ease)}
+.bars::before{top:0;transform:translateY(-100%)}.bars::after{bottom:0;transform:translateY(100%)}
+.bars.in::before,.bars.in::after{transform:none}
+.ttl{position:absolute;inset:0;display:grid;place-items:center;text-align:center;z-index:4;pointer-events:none;padding:0 20px}
+.ttl > div{opacity:0;text-shadow:0 2px 28px rgba(0,0,0,.65),0 0 2px rgba(0,0,0,.4)}
+.ttl .show{animation:ttl 2s var(--ease) both}
+@keyframes ttl{0%{opacity:0;letter-spacing:.3em}30%{opacity:1;letter-spacing:.02em}80%{opacity:1}100%{opacity:0}}
+.ttl .hold{animation:ttlHold 2.4s var(--ease) both}
+@keyframes ttlHold{0%{opacity:0;letter-spacing:.3em}40%{opacity:1;letter-spacing:-.01em}100%{opacity:1}}
+.ttl .line{font-family:var(--serif);font-style:italic;font-size:clamp(40px,6vw,110px);color:var(--milk)}
+.ttl .big{font-size:clamp(70px,12vw,230px);font-weight:300;color:var(--milk);line-height:.9}
+.ttl .sm{font-size:clamp(14px,1.2vw,20px);letter-spacing:.3em;text-transform:uppercase;color:var(--peach);margin-top:18px}
+.ttl .tg{font-family:var(--serif);font-style:italic;font-size:clamp(22px,2vw,36px);color:var(--peach);margin-top:14px}
+.tr-ui{position:absolute;z-index:6;right:max(16px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 14px);display:flex;gap:8px}
+.tr-ui .hbtn{color:var(--milk);border-color:rgba(255,255,255,.3);background:rgba(0,0,0,.35)}
+.tr-load{position:absolute;inset:0;display:grid;place-items:center;z-index:5;font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--steel);text-transform:uppercase}
+
+/* ---------- robust media boxes (Safari) ---------- */
+.frame,.hero-video,.cine-frame,.zoomer,.milkq,.pen,.vortex-wrap,.ring{position:relative}
+.frame>img,.frame>video,.hero-video>video,.hero-video>img,.cine-frame>video,.zoomer>img,.milkq>img,.pen>canvas,.vortex-wrap>canvas,.ring>img{position:absolute;inset:0;width:100%;height:100%}
+.prog{min-width:0;overflow:hidden}
+@media (max-width:860px),(max-aspect-ratio:1/1){
+  .split,.split.rev,.p1,.p2,.vn,.cine,#s-start .inner{align-items:start}
+  .hero-video{width:min(calc(100vw - 40px),340px);height:calc(min(calc(100vw - 40px),340px) * 16 / 9);justify-self:start}
+  .cine .cine-frame,.vn .cine-frame{--fw:min(calc(100vw - 40px),400px,calc((100vh - 250px) * 9 / 16));width:var(--fw);height:calc(var(--fw) * 16 / 9);max-height:none}
+  .lw .cine-frame{width:min(calc(100vw - 40px),320px);height:calc(min(calc(100vw - 40px),320px) * 16 / 9)}
+  .ba,.zoomer,.milkq,.vortex-wrap{width:100%!important}
+}
+@media (max-width:520px){.prog{gap:1px}.dock{gap:10px}.count{font-size:11px}}
+
+.tap-hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dock-h) + env(safe-area-inset-bottom,0px) + 14px);z-index:35;
+  display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 22px;border-radius:999px;background:var(--peach);color:var(--ink);font-size:16px;font-weight:500;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);white-space:nowrap}
+.tap-hint svg{width:18px;height:18px}
+@media (max-width:640px){.tri{grid-template-columns:1fr}.tri video:not(:nth-child(2)){display:none}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .rv{opacity:1}
+  #grain{display:none}
+}
+
+/* ================= Barista Advanced: additions to the shared layout ================= */
+:root{--cold:#7fb4dc;--hot:#e3704f;--warm:#e9a26f;--coffee:#6b4429;--bean:#4a2c1a;--gold:#d9a35f;--ok:#9fd3a6;--bad:#e38b6d;--frame:#17120f}
+.scene{--cold:#7fb4dc;--hot:#e3704f}
+.scene.light{--cold:#2f6f9f;--hot:#b8452a}
+.title.sm{font-size:clamp(24px,1.9vw + 11px,46px)}
+.lead.wide{max-width:52ch}
+.notes.sm{font-size:clamp(15px,.6vw + 10px,19px);gap:.4em}
+.label.acc{color:var(--acc)}
+.scene.light .label.acc{color:var(--brown)}
+.hero-title.long{font-size:clamp(52px,8.2vw,160px)}
+.hero-title .br{display:block;height:0}
+.hero-video canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero-video .cine-badge{z-index:2}
+
+/* ambient backdrops */
+.amb{position:absolute;inset:0;overflow:hidden;background:radial-gradient(80% 70% at 70% 30%,rgba(122,82,56,.35),transparent 70%),var(--night)}
+.amb canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.amb.soft{opacity:.55}
+#trailer .amb{z-index:0}
+
+/* agenda with seven chapters */
+.agenda.seven{grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,1.2vw,18px)}
+.agenda.seven .ag{min-height:clamp(150px,29vh,290px);padding:clamp(14px,1.5vw,24px);background:var(--card);border:1px solid var(--line);transition:transform .5s var(--ease),border-color .3s,background .3s}
+.agenda.seven .ag::before{display:none}
+.agenda.seven .ag:hover{transform:translateY(-4px);border-color:var(--peach);background:rgba(248,203,173,.08)}
+.agenda.seven .ag .n{font-size:clamp(38px,3.6vw,72px)}
+.agenda.seven .ag h3{font-size:clamp(19px,1.5vw,30px);overflow-wrap:anywhere;hyphens:auto}
+.agenda.seven .ag p{font-size:13px;margin-top:6px;color:#b3aaa3}
+.agenda.seven .ag .ico{position:absolute;right:14px;top:14px;width:clamp(44px,4.4vw,76px);height:auto;color:var(--peach);opacity:.75;transition:transform 1.2s var(--ease)}
+.agenda.seven .ag:hover .ico{transform:scale(1.08) rotate(-4deg)}
+.agenda.seven .ag.fin{background:var(--peach);color:var(--ink);border-color:var(--peach)}
+.agenda.seven .ag.fin .n,.agenda.seven .ag.fin p{color:var(--ink)}
+@media (max-width:980px){.agenda.seven{grid-template-columns:repeat(2,minmax(0,1fr))}.agenda.seven .ag{min-height:130px}}
+
+/* chapter cards */
+.chap-t{font-size:clamp(34px,7.4vw,140px);overflow-wrap:anywhere;hyphens:manual}
+.chap-n{font-size:clamp(110px,20vw,340px)}
+.chap-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(20px,4vw,72px);align-items:end}
+.chap-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;min-width:min(100%,300px);max-width:420px}
+.chap-list li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;padding:9px 0;border-top:1px solid rgba(243,238,232,.16);font-size:clamp(14px,.5vw + 10px,18px);color:#d8d0c9}
+.chap-list li:last-child{border-bottom:1px solid rgba(243,238,232,.16)}
+.chap-list .i{font-family:var(--mono);font-size:12px;color:var(--peach);padding-top:3px}
+@media (max-width:980px),(max-aspect-ratio:1/1){.chap-grid{grid-template-columns:minmax(0,1fr);align-items:start}.chap .inner{align-content:start}}
+
+/* film scenes */
+.fs{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:clamp(18px,3vw,56px);align-items:center}
+.fs-side{display:flex;flex-direction:column;gap:clamp(10px,1.7vh,20px);min-width:0}
+.fs-name{font-size:clamp(32px,3.1vw,66px);font-weight:300;line-height:.98;letter-spacing:-.02em;overflow-wrap:anywhere}
+.fs-main{min-width:0;display:flex;flex-direction:column;gap:12px;align-items:center}
+.film{width:100%;display:grid;justify-items:center}
+.film-frame{position:relative;border-radius:20px;overflow:hidden;background:var(--frame);box-shadow:0 20px 50px rgba(0,0,0,.45);aspect-ratio:16/9;
+  width:min(100%,calc((100vh - var(--hud-h) - var(--dock-h) - 150px) * 16 / 9));width:min(100%,calc((100dvh - var(--hud-h) - var(--dock-h) - 150px) * 16 / 9))}
+.film-frame>svg,.film-frame>canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.film-frame .cine-scrub{z-index:3}.film-frame .cine-hit{z-index:2}.film-frame .cine-badge,.film-frame .cine-big{z-index:3}
+.fs .subs{width:100%;min-height:3.2em;justify-items:center;text-align:center}
+.fs .subs p{font-size:clamp(15px,.7vw + 10px,22px);max-width:60ch}
+.fs .phases .pt{font-size:clamp(15px,.45vw + 11px,19px)}
+.fs .phases button{padding:8px 0}
+.fs-foot{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+@media (max-width:980px),(max-aspect-ratio:1/1){
+  .fs{grid-template-columns:minmax(0,1fr);align-items:start;gap:14px}
+  .fs .fs-side{display:contents}
+  .fs .kicker{order:1}.fs .fs-name{order:2}.fs .fs-main{order:3}.fs .fs-foot{order:4}.fs [data-slot="phases"]{order:5}.fs .fs-extra{order:6}
+  .film-frame{width:100%}
+}
+
+/* motion graphics (svg) */
+.mg{font-family:var(--display)}
+.mg [data-k]{transform-box:fill-box;transform-origin:center}
+.mg .t{fill:var(--milk);font-size:24px;font-weight:400}
+.mg .tb{fill:var(--milk);font-size:30px;font-weight:300}
+.mg .ts{fill:#b3aaa3;font-size:19px}
+.mg .tm{fill:var(--peach);font-family:var(--mono);font-size:19px}
+.mg .tl{fill:#b3aaa3;font-size:15px;letter-spacing:.2em;text-transform:uppercase;font-weight:500}
+.mg .ln{fill:none;stroke:var(--milk);stroke-width:2}
+.mg .lead-l{fill:none;stroke:var(--peach);stroke-width:1.5;stroke-dasharray:4 5}
+.mg .draw{stroke-dasharray:1;stroke-dashoffset:1}
+.mg .mid{text-anchor:middle}.mg .end{text-anchor:end}
+.dg{width:100%;height:auto;overflow:visible;font-family:var(--display)}
+.dg .t{fill:var(--ink);font-size:22px}
+.dg .ts{fill:#45403b;font-size:17px}
+.dg .tm{fill:var(--brown);font-family:var(--mono);font-size:16px}
+.dg .tl{fill:#45403b;font-size:14px;letter-spacing:.2em;text-transform:uppercase;font-weight:500}
+.dg .ln{fill:none;stroke:var(--ink);stroke-width:2}
+.dg [data-k]{transform-box:fill-box;transform-origin:center}
+.dg .draw{stroke-dasharray:1;stroke-dashoffset:1}
+.dg .mid{text-anchor:middle}.dg .end{text-anchor:end}
+.flow{stroke-dasharray:10 12;animation:flow 1.1s linear infinite}
+.flow.slow{animation-duration:2.6s}
+@keyframes flow{to{stroke-dashoffset:-22}}
+.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.75}}
+.spin{transform-box:fill-box;transform-origin:center;animation:spin 3s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* tables from the deck */
+.tbl{width:100%;border-collapse:collapse;font-size:clamp(15px,.6vw + 10px,21px)}
+.tbl th{font-size:11px;letter-spacing:.24em;text-transform:uppercase;font-weight:500;color:var(--mute);text-align:left;padding:0 14px 10px 0}
+.tbl td{padding:11px 14px 11px 0;border-top:1px solid var(--line);vertical-align:top}
+.tbl td:first-child{color:var(--strong);font-weight:500}
+.tbl.even td:first-child{font-weight:400}
+.tbl td.num,.tbl th.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl tr.hl td{color:var(--acc)}
+.scene.light .tbl tr.hl td{color:var(--brown)}
+
+/* comparison columns */
+.cmp{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:clamp(10px,1.4vw,22px)}
+.cmp .card{display:flex;flex-direction:column;gap:10px}
+.cmp h3{font-size:clamp(20px,1.3vw + 10px,34px);font-weight:400;line-height:1.05}
+.cmp .card svg.ic{width:100%;height:auto;max-height:22vh}
+@media (max-width:760px){.cmp{grid-template-columns:minmax(0,1fr)}}
+.stats.n4{grid-template-columns:repeat(4,minmax(0,1fr))}.stats.n5{grid-template-columns:repeat(5,minmax(0,1fr))}.stats.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.stat{border-top:1px solid var(--line);padding-top:10px}
+@media (max-width:860px),(max-aspect-ratio:1/1){.stats.n4,.stats.n5{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,1.6vw,24px)}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,1.6vw,24px)}
+@media (max-width:760px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+.formula{font-family:var(--mono);font-size:clamp(14px,.7vw + 9px,20px);background:var(--card);border-radius:12px;padding:12px 16px;overflow-wrap:anywhere}
+.formula b{color:var(--acc);font-weight:500}
+.scene.light .formula b{color:var(--brown)}
+
+/* step-driven parts */
+[data-s]{opacity:.22;transition:opacity .6s,transform .8s var(--ease)}
+[data-s].on{opacity:1}
+[data-only]{opacity:0;visibility:hidden;transition:opacity .5s,visibility 0s .5s}
+[data-only].on{opacity:1;visibility:visible;transition:opacity .6s .15s,visibility 0s}
+.pane{display:grid}.pane>[data-only]{grid-area:1/1;min-width:0}
+.tabs{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+.tabs button{min-height:40px;padding:0 16px;border-radius:999px;font-size:15px;color:var(--mute);white-space:nowrap;transition:background .3s,color .3s}
+.tabs button.on{background:var(--strong);color:var(--bg)}
+.scene:not(.light) .tabs button.on{background:var(--milk);color:var(--ink)}
+.steps6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:clamp(8px,1vw,16px)}
+.steps6 .st .frame{aspect-ratio:1/1;background:var(--card);display:grid;place-items:center}
+.steps6 .st svg{width:78%;height:78%}
+.steps6 .st h3{font-size:clamp(15px,.6vw + 10px,21px)}
+.steps6 .st p{font-size:13px;color:var(--mute)}
+@media (max-width:980px){.steps6{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:520px){.steps6{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* interactive bits */
+.slider input[type=range]{width:100%;accent-color:var(--brown);height:36px;touch-action:pan-y}
+.scene:not(.light) .slider input[type=range]{accent-color:var(--peach)}
+.readout{display:flex;gap:clamp(16px,3vw,44px);flex-wrap:wrap;align-items:flex-end}
+.readout .big-num{min-width:3.2ch}
+.readout .u{font-size:13px;color:var(--mute);display:block;margin-top:4px}
+.sim{position:relative;border-radius:18px;overflow:hidden;background:var(--frame);aspect-ratio:16/9;width:100%}
+.sim canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ba.wide{aspect-ratio:16/10;width:min(100%,calc((100dvh - var(--hud-h) - var(--dock-h) - 150px) * 1.6))}
+.ba svg{position:absolute;inset:0;width:100%;height:100%}
+.wheel{width:min(100%,calc(100dvh - var(--hud-h) - var(--dock-h) - 90px));aspect-ratio:1/1;justify-self:center}
+.wheel path{cursor:pointer;transition:opacity .3s,transform .5s var(--ease);transform-box:view-box;transform-origin:50% 50%}
+.wheel.sel path:not(.on){opacity:.35}
+.wheel path.on{transform:scale(1.04)}
+.chain{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;position:relative}
+.chain .lk{display:flex;flex-direction:column;gap:8px;padding:14px clamp(8px,1vw,18px);border-left:1px solid var(--line)}
+.chain .lk .no{font-family:var(--mono);font-size:12px;color:var(--acc)}
+.chain .lk h3{font-size:clamp(18px,1.2vw + 8px,30px);font-weight:400;overflow-wrap:anywhere;hyphens:auto}
+.chain .lk p{font-size:clamp(13px,.4vw + 10px,17px);color:var(--mute)}
+.chain .lk svg{width:clamp(40px,4vw,68px);height:auto;color:var(--acc)}
+@media (max-width:980px){.chain{grid-template-columns:repeat(2,minmax(0,1fr))}.chain .lk{border-left:0;border-top:1px solid var(--line)}}
+.finale-list{display:flex;flex-wrap:wrap;gap:10px 28px;font-size:clamp(22px,2vw + 8px,44px);font-weight:300}
+.finale-list span{opacity:0}
+.is-active .finale-list span{animation:rv 1.1s var(--ease) both;animation-delay:calc(var(--i) * 260ms + 900ms)}
+.finale-list span::after{content:".";color:var(--peach)}
+@media (prefers-reduced-motion:reduce){.finale-list span{opacity:1}[data-s]{opacity:1}}
+/* phones: the scrub bar sits under the film instead of on top of it */
+@media (max-width:980px),(max-aspect-ratio:1/1){
+  .film-frame{overflow:visible;margin-bottom:30px}
+  .film-frame>svg,.film-frame>canvas{border-radius:20px}
+  .film-frame .cine-scrub{bottom:-32px;left:2px;right:2px}
+  .film-frame .cine-scrub .tr{background:var(--line)}
+  .film-frame .cine-badge{top:8px;left:8px;font-size:9px;padding:3px 6px}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+<section class="scene" id="s-start" data-id="start" data-ch="0" data-title="Start">
+  <div class="amb soft" data-amb="crema"></div>
+  <div class="inner">
+    <div class="stack">
+      <span class="label rv" style="--d:0">BUNCA.ACADEMY · Workshop</span>
+      <h1 class="hero-title long" aria-label="Barista Advanced"><span style="--i:0">B</span><span style="--i:1">a</span><span style="--i:2">r</span><span style="--i:3">i</span><span style="--i:4">s</span><span style="--i:5">t</span><span style="--i:6">a</span><span class="br"></span><span style="--i:7">A</span><span style="--i:8">d</span><span style="--i:9">v</span><span style="--i:10">a</span><span style="--i:11">n</span><span style="--i:12">c</span><span style="--i:13">e</span><span style="--i:14">d</span></h1>
+      <p class="tagline rv" style="--d:8">Good coffee is no accident.</p>
+      <p class="lead wide rv" style="--d:9">Vertiefendes Wissen rund um Kaffee, Espresso und Technik. Sieben Kapitel, in Zeitlupe erklärt.</p>
+      <div class="start-actions rv" style="--d:11">
+        <button class="btn pri" data-action="trailer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>Intro abspielen</button>
+        <button class="btn" data-action="next">Direkt starten</button>
+      </div>
+    </div>
+    <div class="hero-video rv-img" style="--d:3">
+      <div data-film data-bare data-dur="27" data-draw="pour" data-rate="1" data-still="14">
+        <canvas aria-label="Espressobezug in Zeitlupe" role="img"></canvas>
+        <span class="cine-badge slow">Zeitlupe</span>
+        <span class="tc">BEZUG <span data-num="0@3 28@24" data-fmt="mm:ss"></span> · <span data-num="0@4.2 36@23" data-fmt="{} g" data-dec="1"></span></span>
+      </div>
+    </div></div>
+</section>
+<section class="scene" id="s-agenda" data-id="agenda" data-ch="0" data-title="Die sieben Kapitel"><div class="inner">
+  <div class="stack">
+    <div class="kicker rv" style="--d:0">Agenda</div>
+    <div class="agenda seven">
+      <button class="ag rv" style="--d:1" data-goto="kapitel-1">
+        <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14h44L38 40H26z"/><path d="M26 40v6h12v-6"/><path d="M20 50h24v6a6 6 0 01-6 6H26a6 6 0 01-6-6z"/><path d="M32 4v6"/></svg>
+        <span class="n">01</span><h3>Kaffeezubereitung</h3><p>3 Themen · Vom Filter bis zum Espresso.</p></button><button class="ag rv" style="--d:2" data-goto="kapitel-2">
+        <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="48" height="16" rx="3"/><path d="M14 24v32h36V24"/><path d="M26 24v8h12v-8"/><path d="M24 36h16l-2 6H26z"/><path d="M26 50h12v6H26z"/><circle cx="46" cy="16" r="3"/></svg>
+        <span class="n">02</span><h3>Espressomaschinen</h3><p>7 Themen · Wasser, Druck und Temperatur.</p></button><button class="ag rv" style="--d:3" data-goto="kapitel-3">
+        <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="32" cy="32" rx="16" ry="24" transform="rotate(28 32 32)"/><path d="M22 14c12 8 4 26 20 36"/></svg>
+        <span class="n">03</span><h3>Die Kaffeebohne</h3><p>5 Themen · Von der Kirsche bis zur Röstung.</p></button><button class="ag rv" style="--d:4" data-goto="kapitel-4">
+        <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 20h34v8a12 12 0 01-12 12H20A12 12 0 018 28z"/><path d="M42 23h16"/><path d="M25 46v6M25 58v2"/></svg>
+        <span class="n">04</span><h3>Espresso­extraktion</h3><p>8 Themen · Was im Puck wirklich passiert.</p></button><button class="ag rv" style="--d:5" data-goto="kapitel-5">
+        <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="32" cy="32" r="22"/><circle cx="32" cy="32" r="8"/><path d="M32 10v8M32 46v8M10 32h8M46 32h8M16.5 16.5l5.5 5.5M42 42l5.5 5.5M47.5 16.5L42 22M22 42l-5.5 5.5"/></svg>
+        <span class="n">05</span><h3>Kaffeemühlen</h3><p>8 Themen · Jedes Partikel zählt.</p></button><button class="ag rv" style="--d:6" data-goto="kapitel-6">
+        <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 6h16a4 4 0 014 4v6a8 8 0 01-8 8h-8a8 8 0 01-8-8v-6a4 4 0 014-4z"/><path d="M28 24v14h8V24"/><path d="M14 38h36v10H14z"/><path d="M8 56h48"/></svg>
+        <span class="n">06</span><h3>Puck Preparation</h3><p>10 Themen · Gleichmäßig schlägt kräftig.</p></button><button class="ag rv" style="--d:7" data-goto="kapitel-7">
+        <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 30h36a18 18 0 01-36 0z"/><path d="M40 12c6 4 14 10 18 20"/><ellipse cx="38" cy="11" rx="5" ry="3" transform="rotate(30 38 11)"/><path d="M18 20c0-4 4-4 4-8M28 20c0-4 4-4 4-8"/></svg>
+        <span class="n">07</span><h3>Cupping</h3><p>3 Themen · Schmecken mit System.</p></button>
+      <button class="ag fin rv" style="--d:8" data-goto="zusammenspiel"><span class="n">→</span><h3>Abschluss &amp; Quiz</h3><p>Die wichtigsten Zusammenhänge. Good coffee is no accident.</p></button>
+    </div>
+  </div></div>
+</section>
+<section class="scene chap" id="s-kapitel-1" data-id="kapitel-1" data-ch="1" data-title="Kapitel 1: Kaffeezubereitung" data-cut="leak">
+  <div class="amb" data-amb="drops"></div><div class="chap-shade"></div>
+  <div class="inner"><div class="chap-grid">
+    <div><div class="chap-n" aria-hidden="true">01</div><h2 class="chap-t rv" style="--d:2">Kaffeezubereitung</h2><p class="chap-sub rv" style="--d:4">Vom Filter bis zum Espresso.</p></div>
+    <ol class="chap-list rv" style="--d:6"><li><span class="i">1.1</span><span>Arten der Kaffeezubereitung</span></li><li><span class="i">1.2</span><span>Handbrew – manuelle Filterzubereitung</span></li><li><span class="i">1.3</span><span>Cold Brew – kalte Kaffeeextraktion</span></li></ol>
+  </div></div>
+</section>
+<section class="scene" id="s-arten" data-id="arten" data-ch="1" data-title="1.1 Arten der Kaffeezubereitung"><div class="inner">
+  <div class="fs">
+    <div class="fs-side">
+      <div class="kicker rv" style="--d:0"><span class="n">01</span>Kaffeezubereitung</div>
+      <h2 class="fs-name rv" style="--d:1">Sechs Wege, ein Glas</h2>
+      
+      <div class="rv" style="--d:2" data-slot="phases"></div>
+      <div class="fs-foot rv" style="--d:3"><div data-slot="speeds"></div><span class="time" data-slot="time">0,0 s</span></div>
+      
+    </div>
+    <div class="fs-main rv-img" style="--d:1">
+      <div class="film" data-film data-dur="18" data-rate="1" data-still="17.5" data-marks='[["Filterkaffee",0.2,"<b>Filterkaffee</b> – klar, aromatisch"],["Handbrew",3,"<b>Handbrew</b> – manuell aufgebrühter Filterkaffee"],["Cold Brew",5.8,"<b>Cold Brew</b> – kalt extrahierter Kaffee"],["French Press",8.6,"<b>French Press</b> – vollmundig, körperreich"],["Mokka",11.4,"<b>Mokka</b> – vollmundig, schwer, dicht"],["Espresso",14.2,"<b>Espresso</b> – konzentriert, intensiv, hoher Körper"]]'>
+        <svg class="mg" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid meet" role="img" aria-label="1.1 Arten der Kaffeezubereitung"><defs>
+  <linearGradient id="g-steel" x1="0" x2="1"><stop offset="0" stop-color="#6f6862"/><stop offset=".45" stop-color="#e2ddd8"/><stop offset="1" stop-color="#7a736d"/></linearGradient>
+  <linearGradient id="g-steel-v" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#cfc9c3"/><stop offset="1" stop-color="#6f6862"/></linearGradient>
+  <linearGradient id="g-espresso" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c99a6b"/><stop offset=".22" stop-color="#7a4a28"/><stop offset="1" stop-color="#2a170d"/></linearGradient>
+  <linearGradient id="g-puck" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5b3720"/><stop offset="1" stop-color="#3a2114"/></linearGradient>
+  <radialGradient id="g-bean" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#8a5a36"/><stop offset="1" stop-color="#3a2114"/></radialGradient>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker>
+</defs><g data-k="o:.3@0.2 1@0.6">
+    <line x1="105" y1="70" x2="105" y2="300" stroke="#8a4a22" stroke-width="5" stroke-linecap="round" data-k="o:0@0.6 .9@0.8 .9@2.3 0@2.6"/>
+    <g data-k="sy:0@0.6 1@2.5" style="transform-origin:50% 100%">
+      <path d="M62.3 168.8 L147.7 168.8 L142 305 L68 305 Z" fill="#8a4a22" fill-opacity="0.78"/>
+      <rect x="64.3" y="168.8" width="81.5" height="3" fill="#f3eee8" opacity=".35"/>
+      
+      
+    </g>
+    <path d="M61 140 L68.04 300 Q69.8 308 78.6 308 L131.4 308 Q140.2 308 141.96 300 L149 140" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" />
+    <text x="105" y="352" class="t mid">Filterkaffee</text>
+    <g data-k="o:0@2.1 1@2.8"><circle cx="73" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="89" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="105" cy="384" r="5.5" fill="none" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="121" cy="384" r="5.5" fill="none" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="137" cy="384" r="5.5" fill="none" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="73" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="89" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="105" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="121" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="137" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="73" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="89" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="105" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="121" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="137" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/></g>
+  </g><g data-k="o:.3@3 1@3.4">
+    <line x1="255" y1="70" x2="255" y2="300" stroke="#9c5527" stroke-width="5" stroke-linecap="round" data-k="o:0@3.4 .9@3.6 .9@5.1 0@5.4"/>
+    <g data-k="sy:0@3.4 1@5.3" style="transform-origin:50% 100%">
+      <path d="M212.3 168.8 L297.7 168.8 L292 305 L218 305 Z" fill="#9c5527" fill-opacity="0.66"/>
+      <rect x="214.3" y="168.8" width="81.5" height="3" fill="#f3eee8" opacity=".35"/>
+      
+      
+    </g>
+    <path d="M211 140 L218.04 300 Q219.8 308 228.6 308 L281.4 308 Q290.2 308 291.96000000000004 300 L299 140" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" />
+    <text x="255" y="352" class="t mid">Handbrew</text>
+    <g data-k="o:0@4.9 1@5.6"><circle cx="223" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="239" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="255" cy="384" r="5.5" fill="none" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="271" cy="384" r="5.5" fill="none" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="287" cy="384" r="5.5" fill="none" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="223" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="239" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="255" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="271" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="287" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="223" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="239" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="255" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="271" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="287" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/></g>
+  </g><g data-k="o:.3@5.8 1@6.2">
+    <line x1="405" y1="70" x2="405" y2="300" stroke="#4a2a18" stroke-width="5" stroke-linecap="round" data-k="o:0@6.2 .9@6.4 .9@7.9 0@8.2"/>
+    <g data-k="sy:0@6.2 1@8.1" style="transform-origin:50% 100%">
+      <path d="M362.3 168.8 L447.7 168.8 L442 305 L368 305 Z" fill="#4a2a18" fill-opacity="0.9"/>
+      <rect x="364.3" y="168.8" width="81.5" height="3" fill="#f3eee8" opacity=".35"/>
+      
+      <rect x="379" y="158.8" width="26" height="26" rx="5" fill="#f3eee8" opacity=".35" transform="rotate(-12 392 168.8)"/><rect x="407" y="170.8" width="24" height="24" rx="5" fill="#f3eee8" opacity=".28" transform="rotate(14 419 182.8)"/>
+    </g>
+    <path d="M361 140 L368.04 300 Q369.8 308 378.6 308 L431.4 308 Q440.2 308 441.96000000000004 300 L449 140" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" />
+    <text x="405" y="352" class="t mid">Cold Brew</text>
+    <g data-k="o:0@7.7 1@8.4"><circle cx="373" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="389" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="405" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="421" cy="384" r="5.5" fill="none" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="437" cy="384" r="5.5" fill="none" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="373" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="389" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="405" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="421" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="437" cy="408" r="5.5" fill="none" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="373" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="389" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="405" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="421" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="437" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/></g>
+  </g><g data-k="o:.3@8.6 1@9">
+    <line x1="555" y1="70" x2="555" y2="300" stroke="#5b3720" stroke-width="5" stroke-linecap="round" data-k="o:0@9 .9@9.2 .9@10.7 0@11"/>
+    <g data-k="sy:0@9 1@10.9" style="transform-origin:50% 100%">
+      <path d="M512.3 168.8 L597.7 168.8 L592 305 L518 305 Z" fill="#5b3720" fill-opacity="1"/>
+      <rect x="514.3" y="168.8" width="81.5" height="3" fill="#f3eee8" opacity=".35"/>
+      <circle cx="539.3" cy="283.9" r="2" fill="#1d110a" opacity=".8"/><circle cx="580.6" cy="182.6" r="2.4" fill="#1d110a" opacity=".8"/><circle cx="546.7" cy="183" r="1.1" fill="#1d110a" opacity=".8"/><circle cx="584" cy="290.8" r="1.9" fill="#1d110a" opacity=".8"/><circle cx="552.1" cy="241" r="2" fill="#1d110a" opacity=".8"/><circle cx="571.6" cy="268.2" r="1.7" fill="#1d110a" opacity=".8"/><circle cx="553.4" cy="276.7" r="1.6" fill="#1d110a" opacity=".8"/><circle cx="553.9" cy="187.6" r="2.2" fill="#1d110a" opacity=".8"/><circle cx="575.1" cy="218.8" r="1.3" fill="#1d110a" opacity=".8"/><circle cx="583.9" cy="191.1" r="1.7" fill="#1d110a" opacity=".8"/><circle cx="552.4" cy="189.5" r="1.2" fill="#1d110a" opacity=".8"/><circle cx="562.3" cy="267.4" r="1.1" fill="#1d110a" opacity=".8"/><circle cx="561.3" cy="285.4" r="1.4" fill="#1d110a" opacity=".8"/><circle cx="560.4" cy="218.1" r="1.5" fill="#1d110a" opacity=".8"/><circle cx="555.7" cy="260.2" r="1.5" fill="#1d110a" opacity=".8"/><circle cx="534.5" cy="279.2" r="2" fill="#1d110a" opacity=".8"/>
+      
+    </g>
+    <path d="M511 140 L518.04 300 Q519.8 308 528.6 308 L581.4 308 Q590.2 308 591.96 300 L599 140" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" />
+    <text x="555" y="352" class="t mid">French Press</text>
+    <g data-k="o:0@10.5 1@11.2"><circle cx="523" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="539" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="555" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="571" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="587" cy="384" r="5.5" fill="none" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="523" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="539" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="555" cy="408" r="5.5" fill="none" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="571" cy="408" r="5.5" fill="none" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="587" cy="408" r="5.5" fill="none" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="523" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="539" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="555" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="571" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="587" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/></g>
+  </g><g data-k="o:.3@11.4 1@11.8">
+    <line x1="705" y1="70" x2="705" y2="300" stroke="#2a170d" stroke-width="5" stroke-linecap="round" data-k="o:0@11.8 .9@12 .9@13.5 0@13.8"/>
+    <g data-k="sy:0@11.8 1@13.7" style="transform-origin:50% 100%">
+      <path d="M664.5 220 L745.5 220 L742 305 L668 305 Z" fill="#2a170d" fill-opacity="1"/>
+      <rect x="666.5" y="220" width="77" height="3" fill="#f3eee8" opacity=".35"/>
+      <circle cx="697.8" cy="293.8" r="1.8" fill="#1d110a" opacity=".8"/><circle cx="685.7" cy="244.7" r="2.5" fill="#1d110a" opacity=".8"/><circle cx="710.3" cy="260.5" r="1.3" fill="#1d110a" opacity=".8"/><circle cx="701" cy="239.8" r="1" fill="#1d110a" opacity=".8"/><circle cx="716.5" cy="278.2" r="1.2" fill="#1d110a" opacity=".8"/><circle cx="707.6" cy="277" r="2.4" fill="#1d110a" opacity=".8"/><circle cx="697.3" cy="254.8" r="2" fill="#1d110a" opacity=".8"/><circle cx="724.7" cy="261.2" r="1.8" fill="#1d110a" opacity=".8"/><circle cx="722.1" cy="291.2" r="1.5" fill="#1d110a" opacity=".8"/><circle cx="728.1" cy="241.7" r="1.4" fill="#1d110a" opacity=".8"/><circle cx="732" cy="275.2" r="1.3" fill="#1d110a" opacity=".8"/><circle cx="678.1" cy="247.4" r="2.3" fill="#1d110a" opacity=".8"/><circle cx="720.6" cy="241.9" r="1.8" fill="#1d110a" opacity=".8"/><circle cx="720.4" cy="255.5" r="1.5" fill="#1d110a" opacity=".8"/><circle cx="696.1" cy="241.6" r="2.4" fill="#1d110a" opacity=".8"/><circle cx="687.3" cy="272.8" r="2.1" fill="#1d110a" opacity=".8"/>
+      
+    </g>
+    <path d="M661 140 L668.04 300 Q669.8 308 678.6 308 L731.4 308 Q740.2 308 741.96 300 L749 140" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" />
+    <text x="705" y="352" class="t mid">Mokka</text>
+    <g data-k="o:0@13.3 1@14"><circle cx="673" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="689" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="705" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="721" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="737" cy="384" r="5.5" fill="none" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="673" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="689" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="705" cy="408" r="5.5" fill="none" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="721" cy="408" r="5.5" fill="none" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="737" cy="408" r="5.5" fill="none" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="673" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="689" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="705" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="721" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="737" cy="432" r="5.5" fill="none" stroke="#f8cbad" stroke-opacity=".5"/></g>
+  </g><g data-k="o:.3@14.2 1@14.6">
+    <line x1="855" y1="70" x2="855" y2="300" stroke="#3a2114" stroke-width="5" stroke-linecap="round" data-k="o:0@14.6 .9@14.8 .9@16.3 0@16.6"/>
+    <g data-k="sy:0@14.6 1@16.5" style="transform-origin:50% 100%">
+      <path d="M815.9 252 L894.1 252 L892 305 L818 305 Z" fill="#3a2114" fill-opacity="1"/>
+      <rect x="817" y="252" width="76" height="11" rx="3" fill="#d9a35f"/>
+      
+      
+    </g>
+    <path d="M811 140 L818.04 300 Q819.8 308 828.6 308 L881.4 308 Q890.2 308 891.96 300 L899 140" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" />
+    <text x="855" y="352" class="t mid">Espresso</text>
+    <g data-k="o:0@16.1 1@16.8"><circle cx="823" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="839" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="855" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="871" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="887" cy="384" r="5.5" fill="#c99a6b" stroke="#c99a6b" stroke-opacity=".5"/><circle cx="823" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="839" cy="408" r="5.5" fill="#f3eee8" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="855" cy="408" r="5.5" fill="none" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="871" cy="408" r="5.5" fill="none" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="887" cy="408" r="5.5" fill="none" stroke="#f3eee8" stroke-opacity=".5"/><circle cx="823" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="839" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="855" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="871" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/><circle cx="887" cy="432" r="5.5" fill="#f8cbad" stroke="#f8cbad" stroke-opacity=".5"/></g>
+  </g>
+  <g transform="translate(250 484)"><circle cx="0" cy="-6" r="6" fill="#c99a6b"/><text x="14" y="0" class="ts">Körper</text><circle cx="170" cy="-6" r="6" fill="#f3eee8"/><text x="184" y="0" class="ts">Klarheit</text><circle cx="340" cy="-6" r="6" fill="#f8cbad"/><text x="354" y="0" class="ts">Konzentration</text></g></svg>
+      </div>
+      <div data-slot="sub"></div>
+    </div>
+  </div></div>
+</section>
+<section class="scene light" id="s-querschnitt" data-id="querschnitt" data-ch="1" data-title="Getränke im Querschnitt" data-steps="4"><div class="inner">
+  <div class="split">
+    <div class="stack">
+      <div class="kicker rv" style="--d:0"><span class="n">01</span>Kaffeezubereitung</div>
+      <h2 class="title rv" style="--d:1">Was steckt im Glas?</h2>
+      <div class="tabs rv" style="--d:2" role="group" aria-label="Getränk wählen"><button data-go="0" aria-pressed="false">Espresso</button><button data-go="1" aria-pressed="false">Filterkaffee</button><button data-go="2" aria-pressed="false">Handbrew</button><button data-go="3" aria-pressed="false">Cold Brew</button><button data-go="4" aria-pressed="false">French Press</button></div>
+      <div class="pane rv" style="--d:3"><div data-only="0" class="stack" style="gap:10px"><p class="lead wide">Sehr konzentriert. Öle und feinste Partikel bilden die Crema.</p>
+        <div class="stats "><div class="stat"><span class="v">ca. 8–12 %</span><span class="d">Gelöste Stoffe (TDS)</span></div><div class="stat"><span class="v">hoch</span><span class="d">Öle</span></div><div class="stat"><span class="v">mittel</span><span class="d">Schwebstoffe</span></div></div></div><div data-only="1" class="stack" style="gap:10px"><p class="lead wide">Der Papierfilter hält Öle und Schwebstoffe zurück: klar und aromatisch.</p>
+        <div class="stats "><div class="stat"><span class="v">ca. 1,2–1,5 %</span><span class="d">Gelöste Stoffe (TDS)</span></div><div class="stat"><span class="v">gering</span><span class="d">Öle</span></div><div class="stat"><span class="v">gering</span><span class="d">Schwebstoffe</span></div></div></div><div data-only="2" class="stack" style="gap:10px"><p class="lead wide">Wie Filterkaffee, aber von Hand gesteuert: jede Variable liegt bei dir.</p>
+        <div class="stats "><div class="stat"><span class="v">ca. 1,2–1,5 %</span><span class="d">Gelöste Stoffe (TDS)</span></div><div class="stat"><span class="v">gering</span><span class="d">Öle</span></div><div class="stat"><span class="v">gering</span><span class="d">Schwebstoffe</span></div></div></div><div data-only="3" class="stack" style="gap:10px"><p class="lead wide">Kalt und lange extrahiert. Konzentration hängt von Ratio und Verdünnung ab.</p>
+        <div class="stats "><div class="stat"><span class="v">je nach Rezeptur</span><span class="d">Gelöste Stoffe (TDS)</span></div><div class="stat"><span class="v">gering</span><span class="d">Öle</span></div><div class="stat"><span class="v">gering</span><span class="d">Schwebstoffe</span></div></div></div><div data-only="4" class="stack" style="gap:10px"><p class="lead wide">Das Metallsieb lässt Öle und Schwebstoffe durch: vollmundig, körperreich.</p>
+        <div class="stats "><div class="stat"><span class="v">wie Filter</span><span class="d">Gelöste Stoffe (TDS)</span></div><div class="stat"><span class="v">hoch</span><span class="d">Öle</span></div><div class="stat"><span class="v">hoch</span><span class="d">Schwebstoffe</span></div></div></div></div>
+      <p class="why"><b>Richtwerte.</b> Jede Methode löst andere Mengen aus dem Kaffee. Der Filter entscheidet, was im Glas landet.</p>
+    </div>
+    <div class="rv-img" style="--d:2"><svg class="dg" viewBox="0 0 590 440" role="img" aria-label="Getränk im Querschnitt"><defs>
+  <linearGradient id="g-steel" x1="0" x2="1"><stop offset="0" stop-color="#6f6862"/><stop offset=".45" stop-color="#e2ddd8"/><stop offset="1" stop-color="#7a736d"/></linearGradient>
+  <linearGradient id="g-steel-v" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#cfc9c3"/><stop offset="1" stop-color="#6f6862"/></linearGradient>
+  <linearGradient id="g-espresso" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c99a6b"/><stop offset=".22" stop-color="#7a4a28"/><stop offset="1" stop-color="#2a170d"/></linearGradient>
+  <linearGradient id="g-puck" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5b3720"/><stop offset="1" stop-color="#3a2114"/></linearGradient>
+  <radialGradient id="g-bean" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#8a5a36"/><stop offset="1" stop-color="#3a2114"/></radialGradient>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker>
+</defs>
+  <g data-only="0">
+    <path d="M150 70 L172 380 L348 380 L370 70 Z" fill="#2a170d" fill-opacity="1"/>
+    <circle cx="215.9" cy="169.6" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="234.7" cy="115.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="296.6" cy="323.6" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="189.5" cy="288.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="192.6" cy="152.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="308.9" cy="168" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="236.1" cy="190.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="263.1" cy="268.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="241.7" cy="224.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="288.6" cy="202.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="196.6" cy="292.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="306.4" cy="104.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="226.6" cy="128.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="272.9" cy="108.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="236.5" cy="344.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="312.1" cy="291.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="339.4" cy="107.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="236.6" cy="304.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="180.4" cy="152.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="321.1" cy="142.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="223.1" cy="330.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="302.6" cy="348.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="298.3" cy="136.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="253.6" cy="255.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="272" cy="206.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="218.2" cy="261.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="252.4" cy="107.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="304" cy="132.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="181" cy="281.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="243.1" cy="252.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="222.5" cy="363.6" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="199.3" cy="139.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="181.9" cy="234.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="222.3" cy="182.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="299.5" cy="233.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="209.4" cy="241.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="208.2" cy="262" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="240.4" cy="135.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="186.6" cy="283.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="341.8" cy="102.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="218.7" cy="194.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="310.5" cy="187.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="229.2" cy="358.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="268.7" cy="284.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="318.5" cy="104.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="284.9" cy="198.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="202.8" cy="199.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="327.3" cy="226.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="338" cy="261" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="330" cy="156.6" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="278.2" cy="217.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="193.5" cy="279.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="230.8" cy="158.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="263.9" cy="274.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="256.4" cy="260.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="328.5" cy="264.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="269" cy="121.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="306.8" cy="287.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="299.9" cy="143.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="248.7" cy="192.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="186.7" cy="95.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="185.2" cy="119.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="273.7" cy="343.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="248.3" cy="199.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="332.5" cy="207.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="328.8" cy="300.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="243" cy="135.6" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="285.7" cy="226.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="238.6" cy="133.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="230.3" cy="234.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="260.3" cy="206.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="282.4" cy="256.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="219.5" cy="229.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="259" cy="267.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="289.4" cy="286.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="305.5" cy="297.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="217.9" cy="117.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="296.9" cy="263.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="268.9" cy="178.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="292.8" cy="114.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="319.1" cy="132.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="298.4" cy="355.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="312.4" cy="120.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="341.8" cy="324.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="213.4" cy="204.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="222.8" cy="362.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="197.9" cy="231.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="200.7" cy="271.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="326.6" cy="256.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="189.7" cy="307.6" r="2.2" fill="#f8cbad" opacity=".55"/>
+    <path d="M187.4 102.5l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M341 243.4l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M201.1 211.8l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M181.2 140.8l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M268.7 140.8l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M211.4 173.3l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M232.6 135.5l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M288.5 271.5l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M256.9 147.5l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M231.6 285l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M338.9 293.3l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M212 274.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M313.9 151.8l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M181.6 107.2l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M285.2 254.4l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M262.3 260.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M303.3 344.4l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M281.4 203.2l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M289.9 306.7l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M292.7 132.2l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M261.6 353.8l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M188.3 160.8l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M291.7 339.5l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M321.1 196.3l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M181.7 280.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M341.4 352l4 -2l3 3l-3 4z" fill="#120f0d"/>
+    <circle cx="343.8" cy="83.6" r="3.7" fill="#d9a35f" stroke="#7a5238"/><circle cx="226.3" cy="84.7" r="5" fill="#d9a35f" stroke="#7a5238"/><circle cx="237.8" cy="84.3" r="4.4" fill="#d9a35f" stroke="#7a5238"/><circle cx="307" cy="86.5" r="3.8" fill="#d9a35f" stroke="#7a5238"/><circle cx="283.3" cy="88.1" r="3.8" fill="#d9a35f" stroke="#7a5238"/><circle cx="353.3" cy="74.6" r="4.7" fill="#d9a35f" stroke="#7a5238"/><circle cx="319.9" cy="79.1" r="5.4" fill="#d9a35f" stroke="#7a5238"/><circle cx="179.4" cy="94.9" r="5.1" fill="#d9a35f" stroke="#7a5238"/><circle cx="344.4" cy="75.3" r="3.8" fill="#d9a35f" stroke="#7a5238"/><circle cx="252.2" cy="95.8" r="3.8" fill="#d9a35f" stroke="#7a5238"/><circle cx="236.3" cy="86" r="4.8" fill="#d9a35f" stroke="#7a5238"/><circle cx="265.8" cy="93.3" r="3.3" fill="#d9a35f" stroke="#7a5238"/><circle cx="253.9" cy="95.7" r="5.9" fill="#d9a35f" stroke="#7a5238"/><circle cx="210.2" cy="94.4" r="4.7" fill="#d9a35f" stroke="#7a5238"/><circle cx="328.7" cy="91.5" r="4.3" fill="#d9a35f" stroke="#7a5238"/><circle cx="319" cy="87.1" r="3.2" fill="#d9a35f" stroke="#7a5238"/><circle cx="267" cy="92.4" r="5.3" fill="#d9a35f" stroke="#7a5238"/><circle cx="253.6" cy="79.9" r="5.4" fill="#d9a35f" stroke="#7a5238"/><circle cx="187.7" cy="94.5" r="5.4" fill="#d9a35f" stroke="#7a5238"/><circle cx="241.7" cy="88.7" r="3.1" fill="#d9a35f" stroke="#7a5238"/><circle cx="333.8" cy="95.7" r="5.8" fill="#d9a35f" stroke="#7a5238"/><circle cx="255" cy="89.2" r="4.9" fill="#d9a35f" stroke="#7a5238"/><circle cx="336" cy="81" r="4.7" fill="#d9a35f" stroke="#7a5238"/><circle cx="192.6" cy="74.6" r="3.4" fill="#d9a35f" stroke="#7a5238"/><circle cx="237.2" cy="88" r="5.5" fill="#d9a35f" stroke="#7a5238"/><circle cx="331.6" cy="93.4" r="4.3" fill="#d9a35f" stroke="#7a5238"/>
+  </g><g data-only="1">
+    <path d="M150 70 L172 380 L348 380 L370 70 Z" fill="#8a4a22" fill-opacity="0.6900000000000001"/>
+    <circle cx="235.3" cy="177.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="304.7" cy="175.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="214.5" cy="110" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="207.1" cy="182.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="244.4" cy="295.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="293.3" cy="323.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="286.7" cy="356.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="206.4" cy="177.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="207.5" cy="283.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="191.1" cy="95.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="249.8" cy="261.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="190.1" cy="363" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="256" cy="203.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="317.1" cy="280.2" r="2.2" fill="#f8cbad" opacity=".55"/>
+    <path d="M308 108.1l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M294 336.8l4 -2l3 3l-3 4z" fill="#120f0d"/>
+    <circle cx="236.4" cy="84.4" r="4.4" fill="#d9a35f" stroke="#7a5238"/><circle cx="217.2" cy="80.4" r="4.5" fill="#d9a35f" stroke="#7a5238"/>
+  </g><g data-only="2">
+    <path d="M150 70 L172 380 L348 380 L370 70 Z" fill="#9c5527" fill-opacity="0.6900000000000001"/>
+    <circle cx="227.1" cy="274.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="213.7" cy="209.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="301.1" cy="214.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="290.8" cy="333" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="224.9" cy="112.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="309.3" cy="153.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="334.3" cy="243.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="337.8" cy="332.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="295.5" cy="171" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="303.5" cy="339" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="179" cy="256.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="311.7" cy="235.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="265.9" cy="356.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="272" cy="179.4" r="2.2" fill="#f8cbad" opacity=".55"/>
+    <path d="M279.8 299.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M228.5 257.6l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M311.6 309.2l4 -2l3 3l-3 4z" fill="#120f0d"/>
+    <circle cx="273" cy="91.4" r="5.3" fill="#d9a35f" stroke="#7a5238"/><circle cx="239.7" cy="74.1" r="3.5" fill="#d9a35f" stroke="#7a5238"/>
+  </g><g data-only="3">
+    <path d="M150 70 L172 380 L348 380 L370 70 Z" fill="#4a2a18" fill-opacity="0.79"/>
+    <circle cx="274.1" cy="227" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="246.6" cy="104.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="265.4" cy="316.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="215.6" cy="164.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="278.7" cy="271.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="327.1" cy="350.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="238.1" cy="200.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="312.8" cy="196" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="338.2" cy="326.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="332.3" cy="254" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="240.2" cy="183.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="341.1" cy="185.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="236" cy="232.6" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="175.1" cy="145.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="228.5" cy="104.6" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="298.8" cy="97.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="238.7" cy="149.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="321.1" cy="144.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="242.9" cy="363.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="242.4" cy="140.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="245.6" cy="267.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="260.1" cy="195.3" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="177.1" cy="154.9" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="272.1" cy="201.2" r="2.2" fill="#f8cbad" opacity=".55"/>
+    <path d="M265.2 131.8l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M260.8 123.2l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M199.2 173.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M231.8 113.6l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M184.2 255.3l4 -2l3 3l-3 4z" fill="#120f0d"/>
+    <circle cx="292.3" cy="84" r="4.8" fill="#d9a35f" stroke="#7a5238"/><circle cx="326.5" cy="90.9" r="4" fill="#d9a35f" stroke="#7a5238"/><circle cx="344.5" cy="78.8" r="5.9" fill="#d9a35f" stroke="#7a5238"/>
+  </g><g data-only="4">
+    <path d="M150 70 L172 380 L348 380 L370 70 Z" fill="#5b3720" fill-opacity="0.7100000000000001"/>
+    <circle cx="293.8" cy="165.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="329.5" cy="330.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="225.4" cy="149.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="288.3" cy="300" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="266.5" cy="306" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="241.8" cy="276.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="198.6" cy="297.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="295.7" cy="217.1" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="277.8" cy="211.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="258.1" cy="288.6" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="225.8" cy="204.4" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="278.4" cy="176.8" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="337.7" cy="252.2" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="252.7" cy="331.7" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="311.3" cy="235.5" r="2.2" fill="#f8cbad" opacity=".55"/><circle cx="335.2" cy="271.5" r="2.2" fill="#f8cbad" opacity=".55"/>
+    <path d="M283.2 111.5l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M182.1 217.7l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M275 232.5l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M185.2 216.7l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M230.4 158.6l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M234.5 241.3l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M332 119.4l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M338.8 365.2l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M335.2 118.4l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M260.8 321.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M327.7 224.7l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M195.2 154.2l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M273.3 336.8l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M279.1 269.7l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M327.9 176l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M205 355.3l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M191.4 333.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M252.4 151.6l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M222 174.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M338.4 333.7l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M195 251.3l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M285.7 202l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M323.6 342.3l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M287.8 211.4l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M338.2 105.1l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M260.3 280.6l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M340.5 281.5l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M254.9 166.8l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M296.2 328.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M215.9 219.1l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M322.8 198.7l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M189.7 353.1l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M195.8 122.2l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M332.7 250l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M310.2 365.4l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M270.3 364.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M308.5 304.9l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M186.5 181l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M316.5 262.7l4 -2l3 3l-3 4z" fill="#120f0d"/><path d="M326.7 129.1l4 -2l3 3l-3 4z" fill="#120f0d"/>
+    <circle cx="261.2" cy="84.3" r="3.9" fill="#d9a35f" stroke="#7a5238"/><circle cx="278" cy="93.7" r="5.9" fill="#d9a35f" stroke="#7a5238"/><circle cx="353.1" cy="93.9" r="3.9" fill="#d9a35f" stroke="#7a5238"/><circle cx="267.5" cy="81.5" r="4.6" fill="#d9a35f" stroke="#7a5238"/><circle cx="298.4" cy="93" r="3.7" fill="#d9a35f" stroke="#7a5238"/><circle cx="316.2" cy="92.2" r="3.6" fill="#d9a35f" stroke="#7a5238"/><circle cx="333" cy="80.5" r="5.9" fill="#d9a35f" stroke="#7a5238"/><circle cx="262.9" cy="91.3" r="3.9" fill="#d9a35f" stroke="#7a5238"/><circle cx="319.8" cy="84.3" r="4.2" fill="#d9a35f" stroke="#7a5238"/><circle cx="201.4" cy="83.6" r="4.5" fill="#d9a35f" stroke="#7a5238"/><circle cx="205.4" cy="85.5" r="4.2" fill="#d9a35f" stroke="#7a5238"/><circle cx="316.4" cy="81.9" r="3.8" fill="#d9a35f" stroke="#7a5238"/><circle cx="213.5" cy="88.4" r="5.5" fill="#d9a35f" stroke="#7a5238"/><circle cx="203.7" cy="89.7" r="5.1" fill="#d9a35f" stroke="#7a5238"/><circle cx="190.1" cy="96" r="3.4" fill="#d9a35f" stroke="#7a5238"/><circle cx="318.1" cy="87.9" r="5.3" fill="#d9a35f" stroke="#7a5238"/><circle cx="231.7" cy="95.7" r="3.9" fill="#d9a35f" stroke="#7a5238"/><circle cx="256.6" cy="89.8" r="3.6" fill="#d9a35f" stroke="#7a5238"/><circle cx="263.6" cy="92.4" r="3.3" fill="#d9a35f" stroke="#7a5238"/><circle cx="169.2" cy="89" r="5.3" fill="#d9a35f" stroke="#7a5238"/>
+  </g>
+  <path d="M146 56 L170 384 Q171 392 180 392 L340 392 Q349 392 350 384 L374 56" fill="none" stroke="#262626" stroke-width="3" stroke-linejoin="round"/>
+  <g class="ts"><path class="ln" d="M374 84h46" stroke-width="1.5"/><text x="426" y="80">Öle</text><text x="426" y="100" class="tm" id="cut-oil"></text>
+  <path class="ln" d="M362 210h58" stroke-width="1.5"/><text x="426" y="206">Gelöste Stoffe</text><text x="426" y="226" class="tm" id="cut-tds"></text>
+  <path class="ln" d="M354 330h66" stroke-width="1.5"/><text x="426" y="326">Schwebstoffe</text><text x="426" y="346" class="tm" id="cut-sus"></text>
+  <text x="130" y="230" class="end">Wasser</text><path class="ln" d="M136 224h28" stroke-width="1.5"/></g></svg></div>
+  </div></div>
+</section>
+<section class="scene" id="s-handbrew" data-id="handbrew" data-ch="1" data-title="1.2 Handbrew: manuelle Filterzubereitung"><div class="inner">
+  <div class="fs">
+    <div class="fs-side">
+      <div class="kicker rv" style="--d:0"><span class="n">01</span>Kaffeezubereitung</div>
+      <h2 class="fs-name rv" style="--d:1">Handbrew in Zeitlupe</h2>
+      
+      <div class="rv" style="--d:2" data-slot="phases"></div>
+      <div class="fs-foot rv" style="--d:3"><div data-slot="speeds"></div><span class="time" data-slot="time">0,0 s</span></div>
+      
+    </div>
+    <div class="fs-main rv-img" style="--d:1">
+      <div class="film" data-film data-dur="21" data-rate="0.5" data-still="8" data-marks='[["Trockenes Kaffeebett",0,"15 g Kaffee, gleichmäßig im Filter verteilt."],["Erste Wasserzugabe",2.4,"Blooming: ca. das <b>2–3-Fache</b> der Kaffeemenge aufgießen."],["CO₂ entweicht",5.2,"Das Kaffeebett quillt auf und setzt <b>CO₂</b> frei."],["30–45 Sekunden warten",8.5,"Gleichmäßige Vorbenetzung. Erst dann geht es weiter."],["Aufgießen bis 240 g",12.8,"In ruhigen Kreisen aufgießen. Brühzeit <b>2:30–3:00 min</b>."]]'>
+        <svg class="mg" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid meet" role="img" aria-label="1.2 Handbrew: manuelle Filterzubereitung"><defs>
+  <linearGradient id="g-steel" x1="0" x2="1"><stop offset="0" stop-color="#6f6862"/><stop offset=".45" stop-color="#e2ddd8"/><stop offset="1" stop-color="#7a736d"/></linearGradient>
+  <linearGradient id="g-steel-v" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#cfc9c3"/><stop offset="1" stop-color="#6f6862"/></linearGradient>
+  <linearGradient id="g-espresso" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c99a6b"/><stop offset=".22" stop-color="#7a4a28"/><stop offset="1" stop-color="#2a170d"/></linearGradient>
+  <linearGradient id="g-puck" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5b3720"/><stop offset="1" stop-color="#3a2114"/></linearGradient>
+  <radialGradient id="g-bean" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#8a5a36"/><stop offset="1" stop-color="#3a2114"/></radialGradient>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker>
+</defs>
+  <rect x="300" y="468" width="360" height="34" rx="10" fill="#2b2420" stroke="#5a4f47"/><rect x="430" y="476" width="100" height="18" rx="5" fill="#120f0d"/>
+  <text x="480" y="491" class="tm mid" style="font-size:15px" data-num="0@2.4 40@5.2 40@12.6 240@19" data-fmt="{} g"></text>
+  <!-- server -->
+  <g data-k="sy:0@5 .12@12 .12@13.2 1@19.6" style="transform-origin:50% 100%"><path d="M412 372 L420 462 L540 462 L548 372 Z" fill="#7a4420" fill-opacity=".85"/></g>
+  <path d="M396 340 L409.44 462 Q412.8 470 429.6 470 L530.4 470 Q547.2 470 550.56 462 L564 340" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" />
+  <!-- dripper -->
+  <path d="M352 168 L608 168 L512 322 L448 322 Z" fill="rgba(243,238,232,.06)" stroke="#f3eee8" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M362 176 L598 176 L508 318 L452 318 Z" fill="none" stroke="#f3eee8" stroke-opacity=".35" stroke-width="1.5"/>
+  <rect x="408" y="322" width="144" height="12" rx="4" fill="url(#g-steel)"/>
+  <!-- water standing in the cone -->
+  <g data-k="o:0@13 .75@14 .75@18.6 .25@20"><path d="M396 222 L564 222 L530 262 L430 262 Z" fill="#7a4a28"/></g>
+  <!-- coffee bed: dry, then wet and swelling -->
+  <g data-k="sy:1@2.6 1.28@7 1.2@12 1@14" style="transform-origin:50% 100%"><path d="M424 262 L536 262 L508 318 L452 318 Z" data-k="fill:#9a6a44@2.5 #4a2c1a@5.5"/>
+    <path d="M424 262 Q480 250 536 262" fill="none" stroke="#c99a6b" stroke-width="3" data-k="o:0@5 1@7 1@11 0@13"/></g>
+  <!-- CO2 bubbles -->
+  <g data-k="o:0@4.6 1@5.6 1@11 0@12.4"><circle cx="456.9" cy="252" r="7.4" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2.2" data-off="1.6" data-k="y~:0@0 -69.2@2.2;o:0@0 .9@0.4 0@2.2;x:0@0 5.8@2.2"/><circle cx="492" cy="252" r="3.2" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="1.9" data-off="1.5" data-k="y~:0@0 -57.9@1.9;o:0@0 .9@0.4 0@1.9;x:0@0 4.7@1.9"/><circle cx="483.9" cy="252" r="6.5" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2.4" data-off="1.8" data-k="y~:0@0 -58.4@2.4;o:0@0 .9@0.5 0@2.4;x:0@0 -2.3@2.4"/><circle cx="460.6" cy="252" r="6" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="1.8" data-off="0.5" data-k="y~:0@0 -70.6@1.8;o:0@0 .9@0.4 0@1.8;x:0@0 -0.6@1.8"/><circle cx="468.1" cy="252" r="6.9" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2.2" data-off="1.8" data-k="y~:0@0 -94.1@2.2;o:0@0 .9@0.4 0@2.2;x:0@0 7.8@2.2"/><circle cx="445.3" cy="252" r="4.3" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2.1" data-off="0.4" data-k="y~:0@0 -59.2@2.1;o:0@0 .9@0.4 0@2.1;x:0@0 -1.7@2.1"/><circle cx="451.8" cy="252" r="6.4" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2.3" data-off="0" data-k="y~:0@0 -71.1@2.3;o:0@0 .9@0.5 0@2.3;x:0@0 4.1@2.3"/><circle cx="460.1" cy="252" r="7.5" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2.1" data-off="0.3" data-k="y~:0@0 -64.3@2.1;o:0@0 .9@0.4 0@2.1;x:0@0 2.5@2.1"/><circle cx="452.5" cy="252" r="6.6" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2.2" data-off="1.5" data-k="y~:0@0 -52.6@2.2;o:0@0 .9@0.4 0@2.2;x:0@0 4.7@2.2"/><circle cx="472.7" cy="252" r="4.6" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2.6" data-off="0.4" data-k="y~:0@0 -97.8@2.6;o:0@0 .9@0.5 0@2.6;x:0@0 -1.3@2.6"/><circle cx="445.1" cy="252" r="3.7" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2.1" data-off="1.8" data-k="y~:0@0 -72.2@2.1;o:0@0 .9@0.4 0@2.1;x:0@0 -4@2.1"/><circle cx="476.9" cy="252" r="5.7" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2.1" data-off="0.3" data-k="y~:0@0 -90.2@2.1;o:0@0 .9@0.4 0@2.1;x:0@0 -1.3@2.1"/><circle cx="469.1" cy="252" r="4.3" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="1.8" data-off="1.2" data-k="y~:0@0 -67.3@1.8;o:0@0 .9@0.4 0@1.8;x:0@0 5.7@1.8"/><circle cx="516.8" cy="252" r="3.8" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2" data-off="1.5" data-k="y~:0@0 -89.5@2;o:0@0 .9@0.4 0@2;x:0@0 -3@2"/><circle cx="453.7" cy="252" r="5.3" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="2" data-off="1.6" data-k="y~:0@0 -99.5@2;o:0@0 .9@0.4 0@2;x:0@0 2@2"/><circle cx="441.1" cy="252" r="5.9" fill="none" stroke="#f3eee8" stroke-width="1.5" data-loop="1.4" data-off="0" data-k="y~:0@0 -73.1@1.4;o:0@0 .9@0.3 0@1.4;x:0@0 6.6@1.4"/>
+    <text x="640" y="214" class="tb">CO₂</text><path class="lead-l" d="M632 206 L540 216"/></g>
+  <!-- kettle -->
+  <path d="M960 40 C860 40 800 150 700 120 C640 104 600 70 548 96" fill="none" stroke="url(#g-steel)" stroke-width="16" stroke-linecap="round"/>
+  <g data-k="o:0@2.3 1@2.5 1@5 0@5.3"><path d="M540 100 Q520 120 516 258" fill="none" stroke="#cfe3f2" stroke-width="5" stroke-linecap="round"/></g>
+  <g data-k="o:0@12.8 1@13 1@19 0@19.3"><g data-loop="2.4" data-k="x:-34@0 30@1.2 -34@2.4"><path d="M540 100 Q520 120 516 232" fill="none" stroke="#cfe3f2" stroke-width="6" stroke-linecap="round"/></g></g>
+  <!-- drips -->
+  <g data-k="o:0@5.4 1@6 1@19.8 0@20"><ellipse cx="480" cy="338" rx="3.5" ry="6" fill="#7a4420" data-loop=".9" data-off="0" data-k="y~:0@0 60@.9;o:1@0 1@.7 0@.9"/><ellipse cx="480" cy="338" rx="3.5" ry="6" fill="#7a4420" data-loop=".9" data-off="0.3" data-k="y~:0@0 60@.9;o:1@0 1@.7 0@.9"/><ellipse cx="480" cy="338" rx="3.5" ry="6" fill="#7a4420" data-loop=".9" data-off="0.6" data-k="y~:0@0 60@.9;o:1@0 1@.7 0@.9"/></g>
+  <!-- readouts -->
+  <text x="48" y="150" class="tl">Zeit</text><text x="48" y="194" class="tb" style="font-size:44px" data-num="0@2.5 40@12.8 170@20" data-fmt="mm:ss"></text>
+  <text x="48" y="250" class="tl">Wasser</text><text x="48" y="294" class="tb" style="font-size:44px" data-num="0@2.4 40@5.2 40@12.6 240@19" data-fmt="{} g"></text>
+  <g data-k="o:0@2.4 1@2.9 1@12 0@12.8"><text x="48" y="344" class="tm">Blooming</text></g></svg>
+      </div>
+      <div data-slot="sub"></div>
+    </div>
+  </div></div>
+</section>
+<section class="scene light" id="s-handbrew-werte" data-id="handbrew-werte" data-ch="1" data-title="Handbrew: Richtwerte und Einflussfaktoren" data-steps="5"><div class="inner">
+  <div class="split">
+    <div class="stack">
+      <div class="kicker rv" style="--d:0"><span class="n">01</span>Kaffeezubereitung</div>
+      <h2 class="title rv" style="--d:1">Fünf Stellschrauben am Filter</h2>
+      <div class="rv" style="--d:2"><table class="tbl "><thead><tr><th>Parameter</th><th>Richtwert</th></tr></thead><tbody><tr><td>Brew Ratio</td><td>1:16</td></tr><tr><td>Kaffee</td><td>15 g</td></tr><tr><td>Wasser</td><td>240 g</td></tr><tr><td>Temperatur</td><td>92–96 °C</td></tr><tr><td>Brühzeit</td><td>2:30–3:00 min</td></tr></tbody></table></div>
+    </div>
+    <div class="rv-img" style="--d:2">
+      <svg class="dg" viewBox="0 0 620 470" role="img" aria-label="Arbeitsplatz von oben mit fünf Einflussfaktoren">
+        <rect x="180" y="110" width="260" height="290" rx="22" fill="#262626" opacity=".12"/><rect x="250" y="360" width="120" height="26" rx="8" fill="#262626" opacity=".7"/>
+        <circle cx="310" cy="235" r="112" fill="#f3eee8" stroke="#262626" stroke-width="2.5"/><circle cx="310" cy="235" r="92" fill="none" stroke="#262626" stroke-opacity=".3"/>
+        <circle cx="310" cy="235" r="70" fill="#6b4429"/><circle cx="310" cy="235" r="44" fill="none" stroke="#f3eee8" stroke-width="3" class="flow slow"/><circle cx="310" cy="235" r="20" fill="none" stroke="#f3eee8" stroke-width="3" class="flow slow"/>
+        <path d="M398 150 q30 -10 48 12" fill="none" stroke="#262626" stroke-width="12" stroke-linecap="round"/>
+        <path d="M560 40 C470 50 420 120 350 200" fill="none" stroke="#7a736d" stroke-width="12" stroke-linecap="round"/><circle cx="574" cy="40" r="34" fill="#cfc9c3" stroke="#262626" stroke-width="2.5"/>
+        <g data-s="1"><circle cx="262" cy="210" r="15" fill="#7a5238"/><text x="262" y="217" class="mid" fill="#f3eee8" font-size="17">1</text><text x="40" y="70" class="t"><tspan class="tm">1 </tspan>Mahlgrad</text><text x="40" y="94" class="ts">Oberfläche und Durchfluss</text></g>
+        <g data-s="2"><circle cx="574" cy="40" r="15" fill="#7a5238"/><text x="574" y="47" class="mid" fill="#f3eee8" font-size="17">2</text><text x="470" y="110" class="t"><tspan class="tm">2 </tspan>Wassertemperatur</text><text x="470" y="134" class="ts">92–96 °C</text></g>
+        <g data-s="3"><circle cx="402" cy="150" r="15" fill="#7a5238"/><text x="402" y="157" class="mid" fill="#f3eee8" font-size="17">3</text><text x="456" y="200" class="t"><tspan class="tm">3 </tspan>Gießgeschwindigkeit</text><text x="456" y="224" class="ts">ruhig und gleichmäßig</text></g>
+        <g data-s="4"><circle cx="310" cy="373" r="15" fill="#7a5238"/><text x="310" y="380" class="mid" fill="#f3eee8" font-size="17">4</text><text x="310" y="430" class="t mid"><tspan class="tm">4 </tspan>Kontaktzeit</text><text x="310" y="454" class="ts mid">2:30–3:00 min</text></g>
+        <g data-s="5"><circle cx="310" cy="235" r="15" fill="#7a5238"/><text x="310" y="242" class="mid" fill="#f3eee8" font-size="17">5</text><text x="40" y="330" class="t"><tspan class="tm">5 </tspan>Blooming</text><text x="40" y="354" class="ts">30–45 s Vorbenetzung</text></g>
+      </svg>
+    </div>
+  </div></div>
+</section>
+<section class="scene" id="s-coldbrew" data-id="coldbrew" data-ch="1" data-title="1.3 Cold Brew: kalte Kaffeeextraktion"><div class="inner">
+  <div class="fs">
+    <div class="fs-side">
+      <div class="kicker rv" style="--d:0"><span class="n">01</span>Kaffeezubereitung</div>
+      <h2 class="fs-name rv" style="--d:1">Cold Brew im Zeitraffer</h2>
+      
+      <div class="rv" style="--d:2" data-slot="phases"></div>
+      <div class="fs-foot rv" style="--d:3"><div data-slot="speeds"></div><span class="time" data-slot="time">0,0 s</span></div>
+      
+    </div>
+    <div class="fs-main rv-img" style="--d:1">
+      <div class="film" data-film data-dur="17.5" data-rate="1" data-still="11" data-marks='[["Kaffee grob mahlen",0,"Grober Mahlgrad: wenig Oberfläche, langsame Extraktion."],["Mit kaltem Wasser vermischen",3,"Brew Ratio <b>1:8 bis 1:12</b>. Alles gut durchfeuchten."],["12–18 Stunden ziehen lassen",6,"Zeit ersetzt Temperatur: <b>12–18 Stunden</b> Kontaktzeit."],["Filtern und servieren",12.4,"Filtern, auf Eis servieren. Je nach Rezeptur verdünnen."]]' data-labels='["Zeitraffer","Halbes Tempo","Viertel-Tempo"]'>
+        <svg class="mg" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid meet" role="img" aria-label="1.3 Cold Brew: kalte Kaffeeextraktion"><defs>
+  <linearGradient id="g-steel" x1="0" x2="1"><stop offset="0" stop-color="#6f6862"/><stop offset=".45" stop-color="#e2ddd8"/><stop offset="1" stop-color="#7a736d"/></linearGradient>
+  <linearGradient id="g-steel-v" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#cfc9c3"/><stop offset="1" stop-color="#6f6862"/></linearGradient>
+  <linearGradient id="g-espresso" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c99a6b"/><stop offset=".22" stop-color="#7a4a28"/><stop offset="1" stop-color="#2a170d"/></linearGradient>
+  <linearGradient id="g-puck" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5b3720"/><stop offset="1" stop-color="#3a2114"/></linearGradient>
+  <radialGradient id="g-bean" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#8a5a36"/><stop offset="1" stop-color="#3a2114"/></radialGradient>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker>
+</defs>
+  <!-- jar -->
+  <g data-k="sy:0@3 1@5.6 1@12.4 .1@16.4" style="transform-origin:50% 100%"><rect x="236" y="170" width="228" height="290" data-k="fill:#a9c9de@3 #a9c9de@6 #7a4a28@8.5 #4a2a18@12" fill-opacity=".92"/></g>
+  <g data-k="y:-440@1.3 0@2 0@3.4 -43.6@5.6 -26.2@12 0@16.4;r:0@1.3 114@16"><path d="M298.8 434.8l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@2 0@2.7 0@3.4 -42@5.6 -25.2@12 0@16.4;r:0@2 97.5@16"><path d="M329.1 443.9l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1 0@1.7 0@3.4 -176.4@5.6 -105.8@12 0@16.4;r:0@1 277.2@16"><path d="M275.6 434.7l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@1.1 0@1.8 0@3.4 -8.3@5.6 -5@12 0@16.4;r:0@1.1 142.6@16"><path d="M380.9 409.9l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@1.9 0@2.6 0@3.4 -125.3@5.6 -75.2@12 0@16.4;r:0@1.9 138@16"><path d="M345.6 408.1l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@0.5 0@1.2 0@3.4 -132.1@5.6 -79.3@12 0@16.4;r:0@0.5 100.8@16"><path d="M386.6 392.3l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.7 0@2.4 0@3.4 -185.7@5.6 -111.4@12 0@16.4;r:0@1.7 182.3@16"><path d="M369.5 441.3l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@0.6 0@1.3 0@3.4 -168.3@5.6 -101@12 0@16.4;r:0@0.6 129.6@16"><path d="M319.3 434.1l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@0.8 0@1.5 0@3.4 -38.9@5.6 -23.3@12 0@16.4;r:0@0.8 288@16"><path d="M359.9 436.8l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@1 0@1.7 0@3.4 -151.2@5.6 -90.7@12 0@16.4;r:0@1 136.7@16"><path d="M387.3 409.5l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.9 0@2.6 0@3.4 -30.5@5.6 -18.3@12 0@16.4;r:0@1.9 85.9@16"><path d="M399.9 409.1l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@0.8 0@1.5 0@3.4 -102.7@5.6 -61.6@12 0@16.4;r:0@0.8 284.9@16"><path d="M359 401l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@2.1 0@2.8 0@3.4 -8@5.6 -4.8@12 0@16.4;r:0@2.1 216.2@16"><path d="M393.7 437.1l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@0.6 0@1.3 0@3.4 -193.2@5.6 -115.9@12 0@16.4;r:0@0.6 16.6@16"><path d="M262.1 429l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@0.5 0@1.2 0@3.4 -34.3@5.6 -20.6@12 0@16.4;r:0@0.5 273.3@16"><path d="M293.3 422.1l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@1 0@1.7 0@3.4 -196.8@5.6 -118.1@12 0@16.4;r:0@1 131.5@16"><path d="M326.3 424.4l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@2.4 0@3.1 0@3.4 -84@5.6 -50.4@12 0@16.4;r:0@2.4 112.1@16"><path d="M301.1 406.5l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@1.2 0@1.9 0@3.4 -219.1@5.6 -131.5@12 0@16.4;r:0@1.2 225.3@16"><path d="M293.2 385.4l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.7 0@2.4 0@3.4 -67@5.6 -40.2@12 0@16.4;r:0@1.7 158.2@16"><path d="M392.5 441.7l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.7 0@2.4 0@3.4 -106.2@5.6 -63.7@12 0@16.4;r:0@1.7 71.8@16"><path d="M264.3 424.3l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.1 0@1.8 0@3.4 -39.9@5.6 -23.9@12 0@16.4;r:0@1.1 45.4@16"><path d="M357.3 435l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@1.1 0@1.8 0@3.4 -63.9@5.6 -38.3@12 0@16.4;r:0@1.1 106.7@16"><path d="M310 422.6l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@0.8 0@1.5 0@3.4 -76.9@5.6 -46.1@12 0@16.4;r:0@0.8 72.5@16"><path d="M406.1 410.1l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.5 0@2.2 0@3.4 -8@5.6 -4.8@12 0@16.4;r:0@1.5 145.1@16"><path d="M310.2 395.3l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@1.9 0@2.6 0@3.4 -211.6@5.6 -127@12 0@16.4;r:0@1.9 153@16"><path d="M438.7 452.2l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@2.2 0@2.9 0@3.4 -61.4@5.6 -36.8@12 0@16.4;r:0@2.2 42.3@16"><path d="M348.9 435.1l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@0.4 0@1.1 0@3.4 -32.1@5.6 -19.3@12 0@16.4;r:0@0.4 0.1@16"><path d="M320.9 419.4l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@0.7 0@1.4 0@3.4 -50.6@5.6 -30.4@12 0@16.4;r:0@0.7 78.1@16"><path d="M435.8 414.5l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@1.4 0@2.1 0@3.4 -208.8@5.6 -125.3@12 0@16.4;r:0@1.4 169.7@16"><path d="M367.1 398.2l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@1.6 0@2.3 0@3.4 -88.2@5.6 -52.9@12 0@16.4;r:0@1.6 124.7@16"><path d="M374.2 409.8l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@0.8 0@1.5 0@3.4 -150.3@5.6 -90.2@12 0@16.4;r:0@0.8 54.6@16"><path d="M276 435.7l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.5 0@2.2 0@3.4 -201.6@5.6 -121@12 0@16.4;r:0@1.5 30@16"><path d="M250.2 427l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@2.2 0@2.9 0@3.4 -113.8@5.6 -68.3@12 0@16.4;r:0@2.2 102.4@16"><path d="M414.8 434l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1 0@1.7 0@3.4 -106.6@5.6 -64@12 0@16.4;r:0@1 123.8@16"><path d="M262.3 404.6l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.5 0@2.2 0@3.4 -97.4@5.6 -58.4@12 0@16.4;r:0@1.5 0.3@16"><path d="M400.4 420l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@0.4 0@1.1 0@3.4 -55.2@5.6 -33.1@12 0@16.4;r:0@0.4 230.7@16"><path d="M265 387.9l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.6 0@2.3 0@3.4 -209.8@5.6 -125.9@12 0@16.4;r:0@1.6 248.6@16"><path d="M373.5 447.5l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.4 0@2.1 0@3.4 -5.9@5.6 -3.5@12 0@16.4;r:0@1.4 147@16"><path d="M448.1 433l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@0.6 0@1.3 0@3.4 -15@5.6 -9@12 0@16.4;r:0@0.6 217.5@16"><path d="M412.5 437.4l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@1.5 0@2.2 0@3.4 -137.6@5.6 -82.6@12 0@16.4;r:0@1.5 113.4@16"><path d="M422.1 405.8l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@2.3 0@3 0@3.4 -117.7@5.6 -70.6@12 0@16.4;r:0@2.3 258@16"><path d="M384.9 397l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@1 0@1.7 0@3.4 -62.7@5.6 -37.6@12 0@16.4;r:0@1 193.8@16"><path d="M434.1 394.3l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@0.6 0@1.3 0@3.4 -76.5@5.6 -45.9@12 0@16.4;r:0@0.6 211.3@16"><path d="M381.9 451l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@0.9 0@1.6 0@3.4 -92.3@5.6 -55.4@12 0@16.4;r:0@0.9 240.1@16"><path d="M283.7 428.7l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g><g data-k="y:-440@2 0@2.7 0@3.4 -201.4@5.6 -120.8@12 0@16.4;r:0@2 238.3@16"><path d="M334.1 436.7l9 -4l7 6l-5 9l-9 -2z" fill="#3a2114"/></g><g data-k="y:-440@2 0@2.7 0@3.4 -39.5@5.6 -23.7@12 0@16.4;r:0@2 103.3@16"><path d="M361.9 421.6l9 -4l7 6l-5 9l-9 -2z" fill="#5b3720"/></g>
+  <path d="M230 120 L230 452 Q230 468 246 468 L454 468 Q470 468 470 452 L470 120" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2.5" stroke-opacity=".75"/>
+  <rect x="222" y="104" width="256" height="18" rx="6" fill="url(#g-steel)" data-k="o:0@5.4 1@6 1@12 0@12.6"/>
+  <!-- water in -->
+  <g data-k="o:0@3 1@3.2 1@5.4 0@5.7"><path d="M350 0 L350 440" stroke="#cfe3f2" stroke-width="10" stroke-linecap="round" fill="none"/><text x="376" y="60" class="ts">kaltes Wasser</text></g>
+  <!-- clock -->
+  <g data-k="o:.25@5.6 1@6.2 1@12 .25@12.8"><circle cx="760" cy="150" r="78" fill="none" stroke="#f3eee8" stroke-width="2.5"/>
+    <path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(0 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(30 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(60 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(90 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(120 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(150 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(180 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(210 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(240 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(270 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(300 760 150)"/><path d="M760 80v10" stroke="#f3eee8" stroke-width="2" transform="rotate(330 760 150)"/>
+    <g style="transform-box:view-box;transform-origin:760px 150px" data-k="r~:0@6 540@12"><path d="M760 150V104" stroke="#f8cbad" stroke-width="5" stroke-linecap="round"/></g>
+    <g style="transform-box:view-box;transform-origin:760px 150px" data-k="r~:0@6 6480@12"><path d="M760 150V86" stroke="#f3eee8" stroke-width="2.5" stroke-linecap="round"/></g>
+    <circle cx="760" cy="150" r="5" fill="#f8cbad"/>
+    <text x="760" y="270" class="tb mid" style="font-size:40px" data-num="0@6 18@12" data-fmt="{} h"></text></g>
+  <!-- filter and serving glass -->
+  <g data-k="o:0@12.2 1@12.8"><path d="M470 430 L600 430 L600 300" fill="none" stroke="url(#g-steel)" stroke-width="12"/><path d="M574 286 L626 286 L608 322 L592 322 Z" fill="#f3eee8" fill-opacity=".85"/><text x="640" y="310" class="ts">Filter</text>
+    <g data-k="o:0@12.8 1@13 1@16.2 0@16.5"><path d="M600 322V470" stroke="#2a170d" stroke-width="6" stroke-linecap="round"/></g>
+    <g data-k="sy:0@13 1@16.4" style="transform-origin:50% 100%"><path d="M548 388 L556 484 L644 484 L652 388 Z" fill="#4a2a18"/><rect x="549" y="388" width="102" height="4" fill="#c99a6b" opacity=".6"/></g>
+    <rect x="566" y="396" width="30" height="30" rx="6" fill="#f3eee8" opacity=".4" transform="rotate(-10 580 410)"/><rect x="602" y="410" width="28" height="28" rx="6" fill="#f3eee8" opacity=".32" transform="rotate(12 616 424)"/>
+    <path d="M536 360 L546.24 484 Q548.8 492 561.6 492 L638.4 492 Q651.2 492 653.76 484 L664 360" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" /></g></svg>
+      </div>
+      <div data-slot="sub"></div>
+    </div>
+  </div></div>
+</section>
+<section class="scene light" id="s-coldbrew-werte" data-id="coldbrew-werte" data-ch="1" data-title="Cold Brew: Richtwerte und Charakteristik"><div class="inner">
+  <div class="split">
+    <div class="stack">
+      <div class="kicker rv" style="--d:0"><span class="n">01</span>Kaffeezubereitung</div>
+      <h2 class="title rv" style="--d:1">Kalt, lang, mild</h2>
+      <div class="rv" style="--d:2"><table class="tbl "><thead><tr><th>Parameter</th><th>Richtwert</th></tr></thead><tbody><tr><td>Brew Ratio</td><td>1:8–1:12</td></tr><tr><td>Mahlgrad</td><td>Grob</td></tr><tr><td>Temperatur</td><td>Kalt</td></tr><tr><td>Kontaktzeit</td><td>12–18 Stunden</td></tr></tbody></table></div>
+    </div>
+    <div class="stack">
+      <span class="label rv" style="--d:2">Charakteristik</span>
+      <div class="rv" style="--d:3"><ul class="notes "><li><span>Häufig weichere Säurewahrnehmung.</span></li><li><span>Milde, süßliche Aromatik.</span></li><li><span>Weniger ausgeprägte Bitterkeit möglich.</span></li><li><span>Koffeingehalt abhängig von Rezeptur und Konzentration.</span></li></ul></div>
+      <div class="rv" style="--d:4"><p class="why"><b>Warum so lange?</b> Kaltes Wasser löst langsamer. Die Zeit gleicht die fehlende Temperatur aus.</p></div>
+    </div>
+  </div></div>
+</section>
+</div>
+<div id="leak" aria-hidden="true"></div><div id="grain" aria-hidden="true"></div><div class="vignette" aria-hidden="true"></div>
+<header class="hud">
+  <div class="mark"><b>BUNCA</b><b style="color:var(--peach)">.</b><span>ACADEMY</span></div>
+  <div class="hud-where" id="where"></div>
+  <div class="hud-btns">
+    <button class="hbtn" data-action="overview" aria-label="Übersicht öffnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg><span class="lbl">Übersicht</span></button>
+    <button class="hbtn" data-action="sound" aria-pressed="false" aria-label="Ton an oder aus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><g class="w"><path d="M15.5 9.5a3.5 3.5 0 010 5"/><path d="M18 7a7 7 0 010 10"/></g><g class="x"><path d="M16 9.5l5 5M21 9.5l-5 5"/></g></svg><span class="lbl">Ton aus</span></button>
+    <button class="hbtn" data-action="fullscreen" aria-label="Vollbild"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
+</header>
+<footer class="dock">
+  <button class="nav" data-action="prev" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg></button>
+  <div class="prog" id="prog"></div>
+  <span class="count" id="count"></span>
+  <button class="nav next" data-action="next" aria-label="Weiter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg></button>
+</footer>
+<div id="overview" hidden role="dialog" aria-label="Übersicht">
+  <button class="hbtn close" data-action="overview-close" aria-label="Übersicht schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span class="lbl">Schließen</span></button>
+  <div class="ov-cols" id="ov-cols"></div>
+  <div class="keys"><span><kbd>←</kbd><kbd>→</kbd>Blättern</span><span><kbd>O</kbd>Übersicht</span><span><kbd>K</kbd>Film anhalten</span><span><kbd>T</kbd>Ton</span><span><kbd>F</kbd>Vollbild</span><span><kbd>I</kbd>Intro</span></div>
+</div>
+<div id="trailer" class="bars" hidden>
+  <div class="amb" id="tr-amb" data-amb="beans"></div>
+  <div class="ttl" id="ttl"></div>
+  <div class="tr-ui"><button class="hbtn" data-action="trailer-sound" id="tr-snd">Ton an</button><button class="hbtn" data-action="trailer-skip">Überspringen</button></div>
+</div>
+<script type="application/json" id="ba-data">{"chapters":[{"n":"","name":"Start"},{"n":"01","name":"Kaffeezubereitung"},{"n":"02","name":"Espressomaschinen"},{"n":"03","name":"Die Kaffeebohne"},{"n":"04","name":"Espressoextraktion"},{"n":"05","name":"Kaffeemühlen"},{"n":"06","name":"Puck Preparation"},{"n":"07","name":"Cupping"},{"n":"","name":"Abschluss"}],"quiz":[{"q":"Was passiert in der Blooming-Phase beim Handbrew?","o":["Der Kaffee wird ein zweites Mal gemahlen.","Das Kaffeebett wird vorbenetzt und setzt CO₂ frei.","Das Wasser wird auf 100 °C nachgeheizt."],"a":1,"e":"Mit dem \u003cb>2–3-Fachen\u003c/b> der Kaffeemenge vorbenetzen, CO₂ entweichen lassen, 30–45 Sekunden warten.","go":"handbrew"},{"q":"Wie lange zieht ein Cold Brew typischerweise?","o":["2–3 Minuten","30–45 Sekunden","12–18 Stunden"],"a":2,"e":"Kaltes Wasser löst langsam: \u003cb>12–18 Stunden\u003c/b> bei grobem Mahlgrad und Ratio 1:8–1:12.","go":"coldbrew"}],"shots":[{"text":"\u003cdiv class=\"sm\">BUNCA.ACADEMY\u003c/div>","dur":1900,"amb":"beans"},{"text":"\u003cdiv class=\"line\">Eine Bohne.\u003c/div>","dur":2200,"amb":"beans"},{"text":"\u003cdiv class=\"line\">Tausend Entscheidungen.\u003c/div>","dur":2400,"amb":"grounds"},{"text":"\u003cdiv class=\"line\">Röstung. Mühle. Puck.\u003c/div>","dur":2400,"amb":"grounds"},{"text":"\u003cdiv class=\"line\">Druck. Temperatur. Zeit.\u003c/div>","dur":2400,"amb":"steam"},{"text":"\u003cdiv class=\"line\">Jeder Tropfen zählt.\u003c/div>","dur":2400,"amb":"drops"},{"text":"\u003cdiv class=\"big\">Barista Advanced\u003c/div>\u003cdiv class=\"tg\">Good coffee is no accident.\u003c/div>","dur":4200,"hold":true,"amb":"crema"}]}</script>
+<script>
+(() => {
+'use strict';
+const DATA = JSON.parse(document.getElementById('ba-data').textContent);
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, u) => a + (b - a) * u;
+const de = (v, dec = 0) => v.toFixed(dec).replace('.', ',');
+const ICON = {
+  play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>'
+};
+
+/* ---------------- sound (WebAudio) ---------------- */
+const state = { i: 0, step: 0, sound: false };
+const sfx = {
+  ctx: null,
+  ensure() { if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { this.ctx = null; } } if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); return this.ctx; },
+  noise(c, dur) { const b = c.createBuffer(1, c.sampleRate * dur, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; const s = c.createBufferSource(); s.buffer = b; return s; },
+  whoosh(vol = .06) {
+    if (!state.sound) return; const c = this.ensure(); if (!c) return; const t = c.currentTime;
+    const n = this.noise(c, .7), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'bandpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(2400, t + .45);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .18); g.gain.exponentialRampToValueAtTime(.0001, t + .65);
+    n.connect(f).connect(g).connect(c.destination); n.start(t); n.stop(t + .7);
+  },
+  hit(vol = .22) {
+    if (!state.sound) return; const c = this.ensure(); if (!c) return; const t = c.currentTime;
+    const o = c.createOscillator(), g = c.createGain(); o.type = 'sine';
+    o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(42, t + 1.2);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + 1.6);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + 1.7);
+  }
+};
+
+const scenes = $$('.scene');
+const ids = scenes.map(s => s.dataset.id);
+const CH = DATA.chapters;
+
+/* ---------------- timeline: data-k="o:0@1 1@2;y:30@1 0@2" (value@second) ----------------
+   Every moving part of a motion graphic is a pure function of the film clock, so a film can be
+   paused, scrubbed and slowed down without losing a frame. */
+const hex = h => { h = h.slice(1); if (h.length === 3) h = [...h].map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16, n >> 8 & 255, n & 255]; };
+function parseTracks(str) {
+  return str.split(';').map(seg => {
+    const j = seg.indexOf(':'); if (j < 0) return null;
+    let p = seg.slice(0, j).trim(); const lin = p.endsWith('~'); if (lin) p = p.slice(0, -1);
+    const k = seg.slice(j + 1).trim().split(/\s+/).map(s => { const a = s.lastIndexOf('@'), v = s.slice(0, a); return [v[0] === '#' ? hex(v) : +v, +s.slice(a + 1)]; });
+    return { p, lin, k };
+  }).filter(Boolean);
+}
+function sample(tr, t) {
+  const k = tr.k; let a = k[0], b = k[k.length - 1];
+  if (t <= a[1]) return a[0]; if (t >= b[1]) return b[0];
+  for (let i = 0; i < k.length - 1; i++) if (t < k[i + 1][1]) { a = k[i]; b = k[i + 1]; break; }
+  let u = (t - a[1]) / (b[1] - a[1] || 1); if (!tr.lin) u = u * u * (3 - 2 * u);
+  return Array.isArray(a[0]) ? a[0].map((c, j) => Math.round(lerp(c, b[0][j], u))) : lerp(a[0], b[0], u);
+}
+const mmss = v => { v = Math.max(0, v); const m = Math.floor(v / 60), s = Math.floor(v % 60); return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0'); };
+class Tl {
+  constructor(root) {
+    this.items = $$('[data-k],[data-num]', root).map(el => ({
+      el, tr: el.dataset.k ? parseTracks(el.dataset.k) : [], loop: +el.dataset.loop || 0, off: +el.dataset.off || 0,
+      num: el.dataset.num ? parseTracks('n~:' + el.dataset.num)[0] : null, fmt: el.dataset.fmt || '{}', dec: +el.dataset.dec || 0, last: null
+    }));
+  }
+  set(t) {
+    for (const it of this.items) {
+      let lt = t; if (it.loop) lt = ((t - it.off) % it.loop + it.loop) % it.loop;
+      const st = it.el.style; let tf = null;
+      for (const tr of it.tr) {
+        const v = sample(tr, lt);
+        switch (tr.p) {
+          case 'o': st.opacity = v; break;
+          case 'x': case 'y': case 's': case 'sx': case 'sy': case 'r': (tf = tf || {})[tr.p] = v; break;
+          case 'd': st.strokeDashoffset = v; break;
+          case 'fill': st.fill = `rgb(${v})`; break;
+          case 'stroke': st.stroke = `rgb(${v})`; break;
+          default: if (tr.p[0] === '@') it.el.setAttribute(tr.p.slice(1), v); else st.setProperty(tr.p, v);
+        }
+      }
+      if (tf) st.transform = `translate(${tf.x || 0}px,${tf.y || 0}px) rotate(${tf.r || 0}deg) scale(${tf.sx ?? tf.s ?? 1},${tf.sy ?? tf.s ?? 1})`;
+      if (it.num) {
+        const v = sample(it.num, lt), s = it.fmt === 'mm:ss' ? mmss(v) : it.fmt.replace('{}', de(v, it.dec));
+        if (s !== it.last) { it.last = s; it.el.textContent = s; }
+      }
+    }
+  }
+}
+
+/* ---------------- film player (motion graphics with slow motion) ---------------- */
+const DRAW = {};          // canvas films: DRAW.name = (ctx, t, w, h, film) => {}
+const films = new Map();
+const SPEEDS = [['1', 'Normal'], ['0.5', 'Zeitlupe ½×'], ['0.25', 'Super-Zeitlupe ¼×']];
+class Film {
+  constructor(root) {
+    this.root = root; this.scene = root.closest('.scene');
+    this.dur = +root.dataset.dur || 10; this.marks = JSON.parse(root.dataset.marks || '[]');
+    this.bare = root.hasAttribute('data-bare');
+    this.base = +(root.dataset.rate || 1); this.rate = this.base;
+    this.labels = root.dataset.labels ? JSON.parse(root.dataset.labels) : null;
+    this.t = reduce ? +(root.dataset.still || this.dur * .7) : 0;
+    this.playing = !reduce; this.active = false; this.fn = DRAW[root.dataset.draw] || null;
+    this.build();
+  }
+  build() {
+    const r = this.root, sc = this.scene;
+    this.cv = $('canvas', r);
+    if (this.cv) { this.ctx = this.cv.getContext('2d'); new ResizeObserver(() => this.size()).observe(this.cv); }
+    this.tl = new Tl(r);
+    if (this.bare) return;
+    const fr = document.createElement('div'); fr.className = 'film-frame';
+    while (r.firstChild) fr.appendChild(r.firstChild); r.appendChild(fr);
+    fr.insertAdjacentHTML('beforeend', `<span class="cine-badge"></span><button class="cine-hit" aria-label="Abspielen oder pausieren"></button><div class="cine-big"><span></span></div>
+      <div class="cine-scrub"><div class="tr"></div><div class="fi"></div>${this.marks.map(m => `<i class="mk" style="left:${m[1] / this.dur * 100}%"></i>`).join('')}<input type="range" min="0" max="${this.dur}" step="0.01" value="0" aria-label="Position im Film"></div>`);
+    this.badge = $('.cine-badge', fr); this.big = $('.cine-big', fr); this.fill = $('.fi', fr); this.range = $('input', fr);
+    $('.cine-hit', fr).addEventListener('click', () => this.toggle());
+    this.range.addEventListener('input', () => { this.t = +this.range.value; this.paint(); });
+    const sp = $('[data-slot="speeds"]', sc);
+    if (sp) {
+      sp.innerHTML = `<div class="speeds" role="group" aria-label="Geschwindigkeit">${SPEEDS.map((o, k) => `<button data-sp="${o[0]}" aria-pressed="false">${this.labels ? this.labels[k] : o[1]}</button>`).join('')}</div>`;
+      this.spBtns = $$('[data-sp]', sp);
+      this.spBtns.forEach(b => b.addEventListener('click', () => { this.setRate(+b.dataset.sp); this.play(); }));
+    }
+    const ph = $('[data-slot="phases"]', sc);
+    if (ph && this.marks.length) {
+      ph.innerHTML = `<ol class="phases">${this.marks.map((m, k) => `<li><button data-k="${k}"><span class="pn">0${k + 1}</span><span class="pt">${m[0]}</span><span class="pc">${de(m[1], 1)} s</span></button></li>`).join('')}</ol>`;
+      this.phBtns = $$('button', ph);
+      this.phBtns.forEach(b => b.addEventListener('click', () => { this.t = this.marks[+b.dataset.k][1] + .02; this.play(); this.paint(); }));
+    }
+    const sub = $('[data-slot="sub"]', sc);
+    if (sub && this.marks.some(m => m[2])) { sub.classList.add('subs'); sub.innerHTML = this.marks.map(m => `<p>${m[2] || ''}</p>`).join(''); this.subs = $$('p', sub); }
+    this.timeEl = $('[data-slot="time"]', sc);
+    this.setRate(this.base);
+  }
+  size() { const d = Math.min(devicePixelRatio || 1, 2), w = this.cv.clientWidth, h = this.cv.clientHeight; if (!w) return; this.cv.width = w * d; this.cv.height = h * d; this.ctx.setTransform(d, 0, 0, d, 0, 0); this.w = w; this.h = h; this.paint(); }
+  setRate(r) {
+    this.rate = r; if (this.bare) return;
+    const k = SPEEDS.findIndex(o => +o[0] === r);
+    (this.spBtns || []).forEach(b => b.setAttribute('aria-pressed', +b.dataset.sp === r));
+    this.badge.textContent = (this.labels || SPEEDS.map(o => o[1]))[k < 0 ? 0 : k]; this.badge.classList.toggle('slow', r !== 1);
+  }
+  flash(icon) { $('span', this.big).innerHTML = icon; this.big.classList.add('show'); clearTimeout(this._fl); this._fl = setTimeout(() => this.big.classList.remove('show'), 600); }
+  toggle() { if (this.playing) { this.playing = false; this.flash(ICON.pause); } else { this.play(); this.flash(ICON.play); } }
+  play() { this.playing = true; }
+  enter() {
+    if (this.active) return; this.active = true; this.last = performance.now();
+    const tick = now => {
+      if (!this.active) return;
+      const dt = Math.min(.1, (now - this.last) / 1000); this.last = now;
+      if (this.playing) { this.t += dt * this.rate; if (this.t >= this.dur) this.t = this.t % this.dur; }
+      this.paint(); this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+  }
+  leave() { this.active = false; cancelAnimationFrame(this.raf); }
+  reset() { this.t = reduce ? this.t : 0; this.playing = !reduce; if (!this.bare) this.setRate(this.base); }
+  paint() {
+    const t = this.t;
+    this.tl.set(t);
+    if (this.fn && this.w) this.fn(this.ctx, t, this.w, this.h, this);
+    if (this.bare) return;
+    this.fill.style.width = (t / this.dur * 100) + '%';
+    if (document.activeElement !== this.range) this.range.value = t;
+    if (this.timeEl) this.timeEl.textContent = de(t, 1) + ' s';
+    let k = -1; this.marks.forEach((m, j) => { if (t >= m[1]) k = j; });
+    if (k !== this._k) { this._k = k; (this.phBtns || []).forEach((b, j) => b.classList.toggle('on', j === k)); (this.subs || []).forEach((p, j) => p.classList.toggle('on', j === k)); }
+  }
+}
+
+/* ---------------- ambient slow-motion backdrops ---------------- */
+const AMB = {
+  beans: { n: [26, 14, 7], size: [10, 22, 46], vy: [.012, .022, .04], vx: 0, spin: .25 },
+  drops: { n: [30, 18, 8], size: [5, 9, 16], vy: [.05, .09, .15], vx: 0, spin: 0 },
+  steam: { n: [10, 8, 5], size: [90, 150, 230], vy: [-.012, -.02, -.03], vx: .01, spin: 0 },
+  grounds: { n: [90, 50, 22], size: [1.6, 3, 6], vy: [.004, .008, .014], vx: .006, spin: .4 },
+  bubbles: { n: [30, 18, 9], size: [4, 8, 15], vy: [-.015, -.028, -.045], vx: .004, spin: 0 },
+  crema: { n: [9, 7, 4], size: [120, 190, 280], vy: [.004, -.006, .008], vx: .012, spin: 0 }
+};
+const ambs = new Map();
+class Amb {
+  constructor(el) {
+    this.el = el; this.mode = el.dataset.amb; this.on = false; this.t = Math.random() * 100;
+    this.cvs = ['blur(6px)', 'blur(2px)', 'none'].map(f => { const c = document.createElement('canvas'); c.style.filter = f; el.appendChild(c); return c; });
+    this.seed(); new ResizeObserver(() => this.size()).observe(el);
+  }
+  seed() { const P = AMB[this.mode]; this.parts = P.n.map((n, z) => Array.from({ length: n }, () => ({ x: Math.random(), y: Math.random(), k: .6 + Math.random() * .8, a: Math.random() * 6.28, w: Math.random() * 6.28 }))); }
+  setMode(m) { if (m === this.mode) return; this.mode = m; this.seed(); }
+  size() { const d = Math.min(devicePixelRatio || 1, 1.5), w = this.el.clientWidth, h = this.el.clientHeight; if (!w) return; this.w = w; this.h = h; this.cvs.forEach(c => { c.width = w * d; c.height = h * d; c.getContext('2d').setTransform(d, 0, 0, d, 0, 0); }); this.draw(0); }
+  start() { if (this.on) return; this.on = true; if (reduce) { this.draw(0); return; } let last = performance.now(); const loop = now => { if (!this.on) return; const dt = Math.min(.05, (now - last) / 1000); last = now; this.draw(dt); this.raf = requestAnimationFrame(loop); }; this.raf = requestAnimationFrame(loop); }
+  stop() { this.on = false; cancelAnimationFrame(this.raf); }
+  draw(dt) {
+    if (!this.w) return; const P = AMB[this.mode], w = this.w, h = this.h, u = Math.min(w, h) / 700; this.t += dt;
+    this.cvs.forEach((cv, z) => {
+      const c = cv.getContext('2d'); c.clearRect(0, 0, w, h);
+      for (const q of this.parts[z]) {
+        q.y += P.vy[z] * q.k * dt * 2.2; q.x += Math.sin(this.t * .5 + q.w) * P.vx * dt; q.a += P.spin * q.k * dt * (q.w > 3 ? 1 : -1);
+        if (q.y > 1.15) { q.y = -.15; q.x = Math.random(); } if (q.y < -.15) { q.y = 1.15; q.x = Math.random(); }
+        const x = q.x * w, y = q.y * h, s = P.size[z] * q.k * Math.max(.7, u);
+        c.save(); c.translate(x, y);
+        if (this.mode === 'beans') {
+          c.rotate(q.a); c.scale(1, .5 + .5 * Math.abs(Math.cos(q.a * .7 + q.w)));
+          const g = c.createLinearGradient(-s, -s, s, s); g.addColorStop(0, '#8a5a36'); g.addColorStop(1, '#3a2114');
+          c.fillStyle = g; c.globalAlpha = .5 + z * .22; c.beginPath(); c.ellipse(0, 0, s, s * .68, 0, 0, 6.29); c.fill();
+          c.strokeStyle = 'rgba(20,12,8,.8)'; c.lineWidth = Math.max(1, s * .09); c.beginPath(); c.moveTo(-s * .8, 0); c.bezierCurveTo(-s * .3, -s * .28, s * .3, s * .28, s * .8, 0); c.stroke();
+        } else if (this.mode === 'drops') {
+          c.globalAlpha = .35 + z * .25; const g = c.createLinearGradient(0, -s * 2.4, 0, s); g.addColorStop(0, 'rgba(201,154,107,0)'); g.addColorStop(.6, '#8a5a36'); g.addColorStop(1, '#c99a6b');
+          c.fillStyle = g; c.beginPath(); c.moveTo(0, -s * 2.6); c.quadraticCurveTo(s, 0, 0, s); c.quadraticCurveTo(-s, 0, 0, -s * 2.6); c.fill();
+          c.fillStyle = 'rgba(248,203,173,.7)'; c.beginPath(); c.arc(-s * .25, s * .2, s * .16, 0, 6.29); c.fill();
+        } else if (this.mode === 'steam' || this.mode === 'crema') {
+          const col = this.mode === 'steam' ? '243,238,232' : (q.w > 3 ? '201,154,107' : '122,82,56');
+          const g = c.createRadialGradient(0, 0, 0, 0, 0, s); g.addColorStop(0, `rgba(${col},${this.mode === 'steam' ? .11 : .22})`); g.addColorStop(1, `rgba(${col},0)`);
+          c.fillStyle = g; c.scale(1 + .3 * Math.sin(this.t * .3 + q.w), 1.5); c.beginPath(); c.arc(0, 0, s, 0, 6.29); c.fill();
+        } else if (this.mode === 'grounds') {
+          c.rotate(q.a); c.globalAlpha = .35 + z * .25; c.fillStyle = q.w > 5.6 ? '#f8cbad' : q.w > 3 ? '#8a5a36' : '#5b3720';
+          c.beginPath(); c.moveTo(-s, -s * .4); c.lineTo(s * .3, -s); c.lineTo(s, s * .2); c.lineTo(-s * .2, s); c.closePath(); c.fill();
+        } else {
+          c.globalAlpha = .25 + z * .2; c.strokeStyle = '#f3eee8'; c.lineWidth = 1 + z * .5; c.beginPath(); c.arc(0, 0, s, 0, 6.29); c.stroke();
+          c.fillStyle = 'rgba(243,238,232,.5)'; c.beginPath(); c.arc(-s * .35, -s * .35, s * .16, 0, 6.29); c.fill();
+        }
+        c.restore();
+      }
+    });
+  }
+}
+
+/* ---------------- quiz ---------------- */
+const QUIZ = DATA.quiz;
+const quiz = { i: 0, res: [], el: $('#quiz') };
+function quizRender() {
+  const el = quiz.el; if (!el) return;
+  const prog = `<div class="qprog" aria-hidden="true">${QUIZ.map((_, k) => `<i class="${k < quiz.res.length ? (quiz.res[k] ? 'ok' : 'no') : k === quiz.i ? 'cur' : ''}"></i>`).join('')}</div>`;
+  if (quiz.i >= QUIZ.length) {
+    const n = quiz.res.filter(Boolean).length;
+    const msg = n === QUIZ.length ? 'Alles richtig. Ab an die Maschine.' : n >= QUIZ.length * .7 ? 'Stark. Die Theorie sitzt, jetzt kommt die Praxis.' : n >= QUIZ.length * .4 ? 'Guter Anfang. Schau dir die markierten Szenen nochmal an.' : 'Noch mal durch die Szenen, dann klappt es.';
+    const wrong = QUIZ.map((q, k) => quiz.res[k] ? null : q).filter(Boolean);
+    el.innerHTML = `<div class="qhead"><span class="label">Quiz · Ergebnis</span>${prog}</div>
+      <div class="score">${n}<span style="font-size:.4em;color:var(--mute)"> / ${QUIZ.length}</span></div>
+      <p class="qtext">${msg}</p>
+      ${wrong.length ? `<div class="stack" style="gap:8px"><span class="label">Nochmal ansehen</span><div style="display:flex;flex-wrap:wrap;gap:8px">${[...new Set(wrong.map(w => w.go))].map(g => `<button class="chip" data-goto="${g}">${scenes[ids.indexOf(g)].dataset.title}</button>`).join('')}</div></div>` : ''}
+      <div class="qfoot"><button class="btn" id="q-again">Nochmal</button><button class="btn pri" data-action="next">Zum Abschluss</button></div>`;
+    $('#q-again').addEventListener('click', () => { quiz.i = 0; quiz.res = []; quizRender(); });
+    return;
+  }
+  const Q = QUIZ[quiz.i];
+  el.innerHTML = `<div class="qhead"><span class="label">Quiz · Frage ${quiz.i + 1} von ${QUIZ.length}</span>${prog}</div>
+    <p class="qtext">${Q.q}</p>
+    <div class="opts">${Q.o.map((o, k) => `<button class="opt" data-k="${k}"><span class="k">${'ABC'[k]}</span><span>${o}</span></button>`).join('')}</div>
+    <p class="explain" id="q-ex"></p>
+    <div class="qfoot"><button class="btn pri" id="q-next" hidden>${quiz.i === QUIZ.length - 1 ? 'Ergebnis' : 'Nächste Frage'}</button><button class="chip" data-goto="${Q.go}" id="q-go" hidden>Szene ansehen</button></div>`;
+  $$('.opt', el).forEach(b => b.addEventListener('click', () => {
+    const k = +b.dataset.k, ok = k === Q.a;
+    quiz.res[quiz.i] = ok;
+    $$('.opt', el).forEach(x => { x.disabled = true; if (+x.dataset.k === Q.a) x.classList.add('ok'); });
+    if (!ok) b.classList.add('no');
+    $('#q-ex').innerHTML = (ok ? 'Richtig. ' : 'Nicht ganz. ') + Q.e;
+    $('#q-next').hidden = false; $('#q-go').hidden = false; $('#q-next').focus({ preventScroll: true });
+    if (ok) sfx.whoosh(.03);
+  }));
+  $('#q-next').addEventListener('click', () => { quiz.i++; quizRender(); });
+}
+
+/* ---------------- scene hooks (filled by the scene files) ---------------- */
+const hooks = {};
+
+/* 00-start.mjs */
+
+const mixc = (a, b, u) => 'rgb(' + a.map((v, i) => Math.round(lerp(v, b[i], u))) + ')';
+// Hero: a bottomless-portafilter shot in slow motion. Everything is a function of t, so it loops cleanly.
+DRAW.pour = (c, t, w, h) => {
+  const cx = w / 2, on = clamp((t - 3.2) / 1.6, 0, 1) * clamp((24 - t) / 1.6, 0, 1);
+  const lvl = clamp((t - 4.2) / 18.8, 0, 1), fade = clamp((27 - t) / .9, 0, 1) * clamp(t / .9, 0, 1);
+  c.globalAlpha = 1; c.clearRect(0, 0, w, h);
+  let g = c.createRadialGradient(cx, h * .32, 0, cx, h * .32, h * .85); g.addColorStop(0, '#30221a'); g.addColorStop(1, '#120f0d'); c.fillStyle = g; c.fillRect(0, 0, w, h);
+  c.globalAlpha = fade;
+  const gx0 = w * .25, gx1 = w * .75, gy0 = h * .58, gy1 = h * .9, tap = w * .04;
+  const xl = y => gx0 + tap * (y - gy0) / (gy1 - gy0), xr = y => gx1 - tap * (y - gy0) / (gy1 - gy0);
+  const surf = gy1 - (gy1 - gy0) * .8 * lvl;
+  const col = mixc([58, 33, 20], [217, 163, 95], Math.pow(lvl, 1.5));
+  // basket
+  const by = h * .1, brx = w * .36, bry = h * .028;
+  c.fillStyle = '#1b130e'; c.beginPath(); c.ellipse(cx, by, brx, bry, 0, 0, 6.29); c.fill();
+  const wet = clamp((t - .6) / 2.6, 0, 1);
+  for (let i = 0; i < 46; i++) {
+    const a = i * 2.39996, r = Math.sqrt((i + .5) / 46), x = cx + Math.cos(a) * r * brx * .9, y = by + Math.sin(a) * r * bry * .8;
+    const s = clamp(wet * 1.6 - r * .5 - (i % 5) * .08, 0, 1);
+    c.fillStyle = 'rgba(201,154,107,' + (.75 * s) + ')'; c.beginPath(); c.ellipse(x, y, w * .008 * s + .4, h * .004 * s + .3, 0, 0, 6.29); c.fill();
+  }
+  g = c.createLinearGradient(cx - brx, 0, cx + brx, 0); g.addColorStop(0, '#6f6862'); g.addColorStop(.45, '#e2ddd8'); g.addColorStop(1, '#7a736d');
+  c.strokeStyle = g; c.lineWidth = Math.max(5, h * .016); c.beginPath(); c.ellipse(cx, by, brx, bry, 0, 0, 6.29); c.stroke();
+  c.lineWidth = Math.max(8, h * .03); c.lineCap = 'round'; c.beginPath(); c.moveTo(cx + brx, by); c.lineTo(w * 1.05, by - h * .012); c.stroke();
+  // stream
+  const y0 = by + bry * .6, yEnd = lvl > 0 ? surf : gy1 - 2;
+  if (on > 0.01) {
+    const wn = w * .011 * (.55 + .45 * on), wt = brx * .62 * on, half = y => wn + (wt - wn) * Math.exp(-(y - y0) / (h * .055));
+    const mid = y => cx + Math.sin(y * .018 + t * 1.7) * w * .004 * clamp((y - y0) / (h * .2), 0, 1);
+    g = c.createLinearGradient(0, y0, 0, yEnd); g.addColorStop(0, '#3a2114'); g.addColorStop(.35, col); g.addColorStop(1, col);
+    c.fillStyle = g; c.beginPath();
+    for (let y = y0; y <= yEnd; y += 4) c.lineTo(mid(y) - half(y), y);
+    for (let y = yEnd; y >= y0; y -= 4) c.lineTo(mid(y) + half(y), y);
+    c.closePath(); c.fill();
+    c.lineWidth = Math.max(1, w * .004); c.strokeStyle = 'rgba(248,203,173,.5)';
+    for (let k = 0; k < 4; k++) { c.beginPath(); for (let y = y0; y <= yEnd; y += 5) c.lineTo(mid(y) + half(y) * .7 * Math.sin(y * .03 - t * 2.4 + k * 1.57), y); c.stroke(); }
+  }
+  // single drops before and after the stream
+  for (let k = 0; k < 5; k++) {
+    const t0 = k < 2 ? 2.2 + k * .55 : 24.2 + (k - 2) * .7, u = (t - t0) / .9;
+    if (u > 0 && u < 1) { const y = y0 + (yEnd - y0) * u * u; c.fillStyle = k < 2 ? '#5b3720' : '#d9a35f'; c.beginPath(); c.ellipse(cx + (k % 2 ? 6 : -4), y, w * .012, w * .012 * (1 + u * 1.4), 0, 0, 6.29); c.fill(); }
+  }
+  // liquid
+  if (lvl > 0) {
+    g = c.createLinearGradient(0, surf, 0, gy1); g.addColorStop(0, '#7a4a28'); g.addColorStop(1, '#22130b'); c.fillStyle = g;
+    c.beginPath(); c.moveTo(xl(surf), surf); c.lineTo(xr(surf), surf); c.lineTo(xr(gy1), gy1); c.lineTo(xl(gy1), gy1); c.closePath(); c.fill();
+    const cr = h * (.008 + .03 * lvl);
+    g = c.createLinearGradient(0, surf, 0, surf + cr * 2); g.addColorStop(0, '#d9a35f'); g.addColorStop(1, 'rgba(201,154,107,0)'); c.fillStyle = g; c.fillRect(xl(surf), surf, xr(surf) - xl(surf), cr * 2);
+    for (let i = 0; i < 40; i++) { // crema cascade
+      const px = xl(gy1) + (xr(gy1) - xl(gy1)) * ((i * .618) % 1), ph = (t * .13 + i * .37) % 1, y = surf + (gy1 - surf) * (i % 2 ? ph : 1 - ph);
+      c.fillStyle = 'rgba(217,163,95,' + (.5 * Math.sin(ph * 3.14) * on) + ')'; c.beginPath(); c.arc(px, y, 1 + (i % 3) * .5, 0, 6.29); c.fill();
+    }
+    for (let k = 0; k < 3; k++) { const u = (t * .9 + k / 3) % 1; c.strokeStyle = 'rgba(248,203,173,' + (.55 * (1 - u) * on) + ')'; c.lineWidth = 1.5; c.beginPath(); c.ellipse(cx, surf + 1, w * .03 + u * w * .16, h * .003 + u * h * .008, 0, 0, 6.29); c.stroke(); }
+  }
+  // glass
+  c.strokeStyle = 'rgba(243,238,232,.75)'; c.lineWidth = 2; c.lineJoin = 'round';
+  c.beginPath(); c.moveTo(xl(gy0), gy0); c.lineTo(xl(gy1), gy1 + 6); c.lineTo(xr(gy1), gy1 + 6); c.lineTo(xr(gy0), gy0); c.stroke();
+  c.strokeStyle = 'rgba(243,238,232,.18)'; c.lineWidth = w * .02; c.beginPath(); c.moveTo(xl(gy0) + w * .05, gy0 + 8); c.lineTo(xl(gy1) + w * .045, gy1 - 6); c.stroke();
+  c.globalAlpha = 1;
+};
+
+
+/* 10-kaffeezubereitung.mjs */
+
+const CUTS = [["ca. 8–12 %","hoch","mittel"],["ca. 1,2–1,5 %","gering","gering"],["ca. 1,2–1,5 %","gering","gering"],["je nach Rezeptur","gering","gering"],["wie Filter","hoch","hoch"]];
+hooks['querschnitt'] = { step: (sc, n) => { const c = CUTS[n]; $('#cut-tds').textContent = c[0]; $('#cut-oil').textContent = c[1]; $('#cut-sus').textContent = c[2]; } };
+
+
+
+$$('[data-film]').forEach(r => films.set(r, new Film(r)));
+$$('[data-amb]').forEach(el => { if (!el.closest('#trailer')) ambs.set(el, new Amb(el)); });
+const filmsIn = sc => [...films.values()].filter(f => f.scene === sc);
+const ambsIn = sc => [...ambs.values()].filter(a => a.el.closest('.scene') === sc);
+quizRender();
+
+/* ---------------- progress & overview ---------------- */
+const prog = $('#prog');
+prog.innerHTML = scenes.map((s, k) => {
+  const first = k > 0 && s.dataset.ch !== scenes[k - 1].dataset.ch ? ' ch1' : '';
+  return `<button aria-label="${k + 1}: ${s.dataset.title}" title="${s.dataset.title}" data-k="${k}" class="${first}"></button>`;
+}).join('');
+$$('button', prog).forEach(b => b.addEventListener('click', () => go(+b.dataset.k)));
+const ovCols = $('#ov-cols');
+ovCols.innerHTML = CH.map((c, ch) => {
+  const list = scenes.map((s, k) => [s, k]).filter(([s]) => +s.dataset.ch === ch);
+  return `<div><h3>${c.n ? `<span class="n">${c.n}</span>` : ''}${c.name}</h3><ol>${list.map(([s, k]) => `<li><button data-k="${k}"><span class="i">${String(k + 1).padStart(2, '0')}</span><span>${s.dataset.title}</span></button></li>`).join('')}</ol></div>`;
+}).join('');
+$$('button', ovCols).forEach(b => b.addEventListener('click', () => { closeOverview(); go(+b.dataset.k); }));
+function openOverview() { $$('button', ovCols).forEach(b => b.classList.toggle('cur', +b.dataset.k === state.i)); $('#overview').hidden = false; $('#overview .close').focus(); const c = $('button.cur', ovCols); if (c) c.scrollIntoView({ block: 'center' }); }
+function closeOverview() { $('#overview').hidden = true; }
+
+/* ---------------- scene lifecycle ---------------- */
+function setStep(n) {
+  const sc = scenes[state.i], h = hooks[sc.dataset.id];
+  state.step = n; sc.dataset.step = n;
+  $$('[data-s]', sc).forEach(e => e.classList.toggle('on', n >= +e.dataset.s));
+  $$('[data-only]', sc).forEach(e => e.classList.toggle('on', e.dataset.only.split(',').includes(String(n))));
+  $$('[data-go]', sc).forEach(b => { b.classList.toggle('on', +b.dataset.go === n); if (b.hasAttribute('aria-pressed')) b.setAttribute('aria-pressed', +b.dataset.go === n); });
+  if (h && h.step) h.step(sc, n);
+}
+function go(i, opts = {}) {
+  if (i < 0 || i >= scenes.length) return;
+  const prev = scenes[state.i], next = scenes[i], back = i < state.i;
+  if (prev !== next) {
+    prev.classList.remove('is-active', 'back'); prev.classList.add('is-leaving');
+    setTimeout(() => prev.classList.remove('is-leaving'), 780);
+    filmsIn(prev).forEach(f => f.leave()); ambsIn(prev).forEach(a => a.stop());
+    const hp = hooks[prev.dataset.id]; if (hp && hp.leave) hp.leave(prev);
+    next.classList.toggle('back', back);
+    void next.offsetWidth;
+    next.classList.add('is-active');
+    $('.inner', next) && ($('.inner', next).scrollTop = 0);
+    if (next.dataset.cut === 'leak' && !reduce) { const l = $('#leak'); l.classList.remove('go'); void l.offsetWidth; l.classList.add('go'); sfx.hit(.16); }
+    else sfx.whoosh(.035);
+    filmsIn(next).forEach(f => f.reset());
+  }
+  state.i = i;
+  const steps = +(next.dataset.steps || 0);
+  setStep(opts.step === 'max' ? steps : (opts.step || 0));
+  filmsIn(next).forEach(f => f.enter()); ambsIn(next).forEach(a => a.start());
+  const hn = hooks[next.dataset.id]; if (hn && hn.enter && (prev !== next || !next._entered)) hn.enter(next);
+  next._entered = true;
+  hud();
+  try { history.replaceState(null, '', '#' + next.dataset.id); } catch (e) {}
+}
+function hud() {
+  const s = scenes[state.i], ch = CH[s.dataset.ch];
+  document.body.dataset.tone = s.classList.contains('light') ? 'light' : 'dark';
+  $('#where').innerHTML = (ch.n ? `<em>${ch.n} ${ch.name}</em> · ` : '') + s.dataset.title;
+  $('#count').textContent = `${state.i + 1} / ${scenes.length}`;
+  $$('button', prog).forEach((b, k) => { b.classList.toggle('cur', k === state.i); b.classList.toggle('done', k < state.i); });
+}
+function next() {
+  const sc = scenes[state.i], steps = +(sc.dataset.steps || 0);
+  if (state.step < steps) { setStep(state.step + 1); sfx.whoosh(.02); }
+  else go(state.i + 1);
+}
+function prev() {
+  if (state.step > 0 && +(scenes[state.i].dataset.steps || 0)) setStep(state.step - 1);
+  else go(state.i - 1, { step: 'max' });
+}
+
+/* ---------------- sound toggle ---------------- */
+function setSound(on) {
+  state.sound = on;
+  const b = $('[data-action="sound"]'); b.setAttribute('aria-pressed', on);
+  $('.lbl', b).textContent = on ? 'Ton an' : 'Ton aus';
+  $('.w', b).style.display = on ? '' : 'none'; $('.x', b).style.display = on ? 'none' : '';
+  if (on) sfx.ensure();
+}
+
+/* ---------------- intro (title cards over slow-motion backdrops) ---------------- */
+const SHOTS = DATA.shots;
+const tr = { el: $('#trailer'), run: 0, amb: null };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function trailer() {
+  closeOverview();
+  const run = ++tr.run, cur = scenes[state.i];
+  filmsIn(cur).forEach(f => f.leave()); ambsIn(cur).forEach(a => a.stop());
+  tr.el.hidden = false; $('#ttl').innerHTML = '';
+  if (!tr.amb) tr.amb = new Amb($('#tr-amb'));
+  tr.amb.size(); tr.amb.start();
+  $('#tr-snd').textContent = state.sound ? 'Ton aus' : 'Ton an';
+  requestAnimationFrame(() => tr.el.classList.add('in'));
+  for (const S of SHOTS) {
+    if (S.amb) tr.amb.setMode(S.amb);
+    $('#ttl').innerHTML = `<div class="${S.hold ? 'hold' : 'show'}" style="animation-duration:${S.dur}ms">${S.text}</div>`;
+    sfx.hit(S.hold ? .26 : .12);
+    await sleep(S.dur); if (run !== tr.run) return;
+  }
+  trEnd(true);
+}
+function trEnd(toAgenda) {
+  tr.run++; tr.el.classList.remove('in'); if (tr.amb) tr.amb.stop(); tr.el.hidden = true;
+  if (toAgenda && state.i === 0) go(1); else go(state.i);
+}
+
+/* ---------------- events ---------------- */
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-action]'), g = e.target.closest('[data-goto]'), st = e.target.closest('[data-go]');
+  if (g) { closeOverview(); go(ids.indexOf(g.dataset.goto)); return; }
+  if (st && st.closest('.scene') === scenes[state.i]) { setStep(+st.dataset.go); sfx.whoosh(.02); return; }
+  if (!a) return;
+  const act = a.dataset.action;
+  if (act === 'next') next();
+  else if (act === 'prev') prev();
+  else if (act === 'overview') openOverview();
+  else if (act === 'overview-close') closeOverview();
+  else if (act === 'sound') setSound(!state.sound);
+  else if (act === 'fullscreen') toggleFs();
+  else if (act === 'trailer') { if (a.closest('#s-start')) setSound(true); trailer(); }
+  else if (act === 'trailer-skip') trEnd(true);
+  else if (act === 'trailer-sound') { setSound(!state.sound); $('#tr-snd').textContent = state.sound ? 'Ton aus' : 'Ton an'; }
+});
+function toggleFs() { const d = document; try { if (!d.fullscreenElement) { const p = d.documentElement.requestFullscreen && d.documentElement.requestFullscreen(); if (p) p.catch(() => {}); } else { d.exitFullscreen && d.exitFullscreen().catch(() => {}); } } catch (e) {} }
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = e.target.tagName;
+  if (!tr.el.hidden) { if (e.key === 'Escape' || e.key === 'ArrowRight') { e.preventDefault(); trEnd(true); } return; }
+  if (!$('#overview').hidden) { if (e.key === 'Escape' || e.key === 'o') closeOverview(); return; }
+  const inRange = tag === 'INPUT';
+  if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && inRange) return;
+  if (e.key === ' ' && (tag === 'BUTTON' || inRange)) return;
+  switch (e.key) {
+    case 'ArrowRight': case 'PageDown': case ' ': e.preventDefault(); next(); break;
+    case 'ArrowLeft': case 'PageUp': e.preventDefault(); prev(); break;
+    case 'Home': go(0); break;
+    case 'End': go(scenes.length - 1); break;
+    case 'o': case 'O': openOverview(); break;
+    case 't': case 'T': setSound(!state.sound); break;
+    case 'f': case 'F': toggleFs(); break;
+    case 'i': case 'I': trailer(); break;
+    case 'k': case 'K': { const f = filmsIn(scenes[state.i]).find(x => !x.bare); if (f) f.toggle(); break; }
+  }
+});
+let sx = null, sy = null, st0 = 0;
+document.addEventListener('touchstart', e => { if (e.target.closest('input, canvas, .cine-scrub, .noswipe')) { sx = null; return; } sx = e.touches[0].clientX; sy = e.touches[0].clientY; st0 = Date.now(); }, { passive: true });
+document.addEventListener('touchend', e => {
+  if (sx === null || !tr.el.hidden || !$('#overview').hidden) return;
+  const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && Date.now() - st0 < 700) { dx < 0 ? next() : prev(); }
+  sx = null;
+}, { passive: true });
+window.addEventListener('hashchange', () => { const k = ids.indexOf(location.hash.slice(1)); if (k >= 0 && k !== state.i) go(k); });
+document.addEventListener('visibilitychange', () => { const sc = scenes[state.i]; if (document.hidden) { filmsIn(sc).forEach(f => f.leave()); ambsIn(sc).forEach(a => a.stop()); } else if (tr.el.hidden) { filmsIn(sc).forEach(f => f.enter()); ambsIn(sc).forEach(a => a.start()); } });
+let wake = null;
+document.addEventListener('click', () => { if (!wake && navigator.wakeLock) navigator.wakeLock.request('screen').then(w => { wake = w; w.addEventListener('release', () => wake = null); }).catch(() => {}); }, { passive: true });
+if (!(document.documentElement.requestFullscreen && document.fullscreenEnabled)) $$('[data-action="fullscreen"]').forEach(b => b.hidden = true);
+
+(function grain() {
+  const c = document.createElement('canvas'); c.width = c.height = 160; const x = c.getContext('2d'); const d = x.createImageData(160, 160);
+  for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+  x.putImageData(d, 0, 0); $('#grain').style.backgroundImage = `url(${c.toDataURL()})`;
+})();
+
+setSound(false);
+const startK = Math.max(0, ids.indexOf(location.hash.slice(1)));
+state.i = startK; scenes[startK].classList.add('is-active');
+go(startK);
+window.__ba = { go, ids, films, state };
+})();
+
+</script>
+</body>
+</html>
