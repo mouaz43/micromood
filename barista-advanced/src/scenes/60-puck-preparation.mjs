@@ -333,10 +333,6 @@ film({ id: 'puck-prozess', ch: CH, title: '6.2 Der Puck-Preparation-Prozess', na
     ['Bezug', S[5], '<b>6. Bezug.</b> Das Wasser fließt gleichmäßig durch den Puck.']
   ], svg: prozessSvg() }) +
 
-realFilm({ id: 'puck-echt', ch: CH, title: "Puck Preparation in echt", name: "Verteilen, tampen, prüfen", clip: 'ch6-puck', dur: 15.5, rate: 0.5,
-  lead: "Drei Handgriffe am Tresen, in Zeitlupe.",
-  marks: [["WDT", 0, "Dünne Nadeln lockern das Kaffeemehl und <b>brechen Klumpen auf</b>."], ["Tampen", 5, "Tamper gerade ansetzen und <b>gleichmäßig verdichten</b>."], ["Kontrolle", 11.5, "Eine ebene, stabile Oberfläche: bereit für den Bezug."]] }) +
-
 scene({ id: 'wdt', ch: CH, title: '6.3 WDT Tool', light: true }, inner(`
   <div class="split">
     <div class="stack">

@@ -174,10 +174,6 @@ film({ id: 'phasen', ch: CH, title: '4.2 Extraktionsphasen', name: 'Ein Bezug, d
     ['25–30+ Sekunden', 14.6, '<b>Weitere Extraktion und zunehmende Verdünnung.</b> Der Strahl wird heller und dünner.']
   ], svg: phSvg() }) +
 
-realFilm({ id: 'bezug-echt', ch: CH, title: "Bezug in echt", name: "Der Strahl in Zeitlupe", clip: 'ch4-bezug', dur: 10, rate: 0.25,
-  lead: "Mit 50 Bildern pro Sekunde gefilmt: jede Veränderung im Strahl wird sichtbar.",
-  marks: [["Zwei Strahlen", 0, "Ausschnitt aus einem Bezug: zwei gleichmäßige Strahlen aus den Ausläufen."], ["Crema wächst", 3.5, "Die Crema im Glas wird dicker, feine Bläschen steigen auf."], ["Strahl wird heller", 7, "Der Strahl wird heller: <b>zunehmende Verdünnung</b> gegen Ende des Bezugs."]] }) +
-
 scene({ id: 'phasen-modell', ch: CH, title: 'Extraktionsphasen: das Modell', light: true }, inner(`
   <div class="split">
     <div class="stack">

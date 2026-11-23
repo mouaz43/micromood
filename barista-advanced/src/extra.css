@@ -245,3 +245,34 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
 #trailer .ttl{z-index:4}
 @media (prefers-reduced-motion:reduce){.real-bg video{animation:none}}
 @media (max-width:980px),(max-aspect-ratio:1/1){.fs .real-tag{order:2}}
+
+/* intro titles in the presentation's own type: light Jost, like the scene titles */
+.ttl .line{font-family:var(--display);font-style:normal;font-weight:300;letter-spacing:-.02em;font-size:clamp(38px,6.4vw,118px);line-height:1}
+.ttl .show{animation-name:ttl2}.ttl .hold{animation-name:ttlHold2}
+@keyframes ttl2{0%{opacity:0;transform:translateY(.25em);filter:blur(8px)}25%{opacity:1;transform:none;filter:none}82%{opacity:1}100%{opacity:0;transform:translateY(-.12em)}}
+@keyframes ttlHold2{0%{opacity:0;transform:translateY(.2em);filter:blur(10px)}35%{opacity:1;transform:none;filter:none}100%{opacity:1}}
+.ttl .sm{font-weight:500}
+
+/* ================= brighter pass ================= */
+:root{--night:#1d1815;--roast:#2a231d;--greige:#bcb3ac;--frame:#231c17;--steel:#b3aaa3}
+.scene{--mute:#c4bbb3;--card:rgba(243,238,232,.085);--line:rgba(243,238,232,.2)}
+.scene.light{--mute:#3d3833;--card:rgba(38,38,38,.07)}
+body{--hud-mute:#c4bbb3;--hud-bg:29,24,21}
+body[data-tone="light"]{--hud-bg:188,179,172}
+.vignette{background:radial-gradient(120% 90% at 50% 50%,transparent 68%,rgba(0,0,0,.2))}
+#grain{opacity:.035}
+.amb{background:radial-gradient(80% 70% at 70% 30%,rgba(160,110,74,.42),transparent 72%),var(--night)}
+.film-frame{box-shadow:0 18px 44px rgba(0,0,0,.34),0 0 0 1px rgba(243,238,232,.07)}
+.chap .real-bg{opacity:1}
+.chap .real-bg + .chap-shade{background:linear-gradient(90deg,rgba(29,24,21,.86) 0%,rgba(29,24,21,.55) 42%,rgba(29,24,21,.16) 100%),linear-gradient(0deg,rgba(29,24,21,.5),transparent 40%)}
+.chap-list li{color:#efe8e1;border-color:rgba(243,238,232,.26)}
+.agenda.seven .ag .ag-v video{opacity:.72}
+.agenda.seven .ag.has-v::before{background:linear-gradient(180deg,rgba(29,24,21,.05) 20%,rgba(29,24,21,.84))}
+.agenda.seven .ag p{color:#d8d0c9}
+.fin-v .real-bg{opacity:.95}
+#trailer .tr-v.on{opacity:.8}
+#trailer .tr-v{filter:brightness(.82)}
+#overview{background:rgba(29,24,21,.96)}
+.phases button{color:#b9b0a8}
+.chap .real-bg ~ .inner .chap-list{background:rgba(29,24,21,.58);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding:4px 18px;border-radius:16px}
+.chap .real-bg ~ .inner .chap-list li:first-child{border-top:0}.chap .real-bg ~ .inner .chap-list li:last-child{border-bottom:0}

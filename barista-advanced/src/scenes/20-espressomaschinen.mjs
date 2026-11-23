@@ -445,10 +445,6 @@ film({ id: 'aufbau', ch: CH, title: '2.1 Aufbau einer Espressomaschine', name: '
     ['Dampfsystem', 21, 'Das <b>Dampfsystem</b> führt Dampf aus dem Kessel zur Dampflanze.']
   ], svg: aufbauSvg() }) +
 
-realFilm({ id: 'maschine-echt', ch: CH, title: "Siebträgermaschine in echt", name: "Zwei Gläser, ein Bezug", clip: 'ch2-maschine', dur: 9, rate: 0.5,
-  lead: "Brühgruppe, Siebträger, zwei Ausläufe: so sieht der Wasserweg am Ende aus.",
-  marks: [["Zwei Ausläufe", 0, "Der Bezug läuft über zwei Ausläufe in zwei Gläser."], ["Ruhiger Strahl", 3, "Pumpe und Brühgruppe liefern Druck und Temperatur: der Strahl fließt gleichmäßig."], ["Crema", 6, "Oben im Glas sammelt sich die <b>Crema</b>."]] }) +
-
 scene({ id: 'maschinentypen', ch: CH, title: '2.2 Maschinentypen: Einkreiser, Zweikreiser und Dualboiler', light: true, steps: 2 }, inner(`
   <div class="split">
     <div class="stack">

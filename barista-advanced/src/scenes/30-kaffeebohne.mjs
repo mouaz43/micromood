@@ -378,10 +378,6 @@ film({ id: 'roesten', ch: CH, title: '3.4 Röstgrade: was beim Rösten passiert'
     ['Veränderung der Zellstruktur', 16.5, '<b>Veränderung der Zellstruktur:</b> die Bohne dehnt sich aus, wird poröser und verliert an Dichte.']
   ], svg: roastSvg() }) +
 
-realFilm({ id: 'bohnen-echt', ch: CH, title: "Geröstete Bohnen in echt", name: "Die Bohne in der Hand", clip: 'ch3-bohnen', dur: 6.4, rate: 0.5,
-  lead: "Nach der Röstung: Farbe, Größe und Oberfläche zeigen, wie die Bohne geröstet wurde.",
-  marks: [["Bohnen aufnehmen", 0, "Geröstete Kaffeebohnen, direkt aus dem Behälter."], ["Genau hinsehen", 2.4, "Farbe und Oberfläche zeigen den <b>Röstgrad</b>."], ["Durch die Finger", 4.6, "Eine gleichmäßige Farbe spricht für eine gleichmäßige Röstung."]] }) +
-
 scene({ id: 'roestgrade', ch: CH, title: 'Röstgrade: Light, Medium und Dark Roast', light: true }, inner(`
   <div class="stack c3-rg">
     <div class="split">

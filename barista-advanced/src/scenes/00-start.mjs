@@ -54,13 +54,13 @@ scene({ id: 'agenda', ch: 0, title: 'Die sieben Kapitel' }, inner(`
   </div>`));
 
 export const shots = [
-  { text: '<div class="sm">BUNCA.ACADEMY</div>', dur: 2200, amb: 'beans' },
-  { text: '<div class="line">Eine Bohne.</div>', dur: 2600, amb: 'beans', vid: 'ch3-bohnen', from: 2 },
-  { text: '<div class="line">Tausend Entscheidungen.</div>', dur: 2600, amb: 'grounds', vid: 'ch5-mahlen', from: 6 },
-  { text: '<div class="line">Mühle. Verteilung. Puck.</div>', dur: 2800, amb: 'grounds', vid: 'ch6-puck', from: 24 },
-  { text: '<div class="line">Druck. Temperatur. Zeit.</div>', dur: 2800, amb: 'steam', vid: 'ch2-maschine', from: 8 },
-  { text: '<div class="line">Jeder Tropfen zählt.</div>', dur: 2800, amb: 'drops', vid: 'ch4-bezug', from: 4 },
-  { text: '<div class="big">Barista Advanced</div><div class="tg">Good coffee is no accident.</div>', dur: 4600, hold: true, amb: 'crema', vid: 'milch', from: 3 }
+  { text: '<div class="sm">BUNCA.ACADEMY</div>', dur: 2200, amb: 'beans', vid: 'bohnen', from: 2 },
+  { text: '<div class="line">Eine Bohne.</div>', dur: 2800, amb: 'beans', vid: 'ch3-roesten', from: 4 },
+  { text: '<div class="line">Tausend Entscheidungen.</div>', dur: 2800, amb: 'grounds', vid: 'ch5-mahlen', from: 5 },
+  { text: '<div class="line">Mahlen. Verteilen. Tampen.</div>', dur: 2800, amb: 'grounds', vid: 'ch6-puck', from: 24 },
+  { text: '<div class="line">Druck. Temperatur. Zeit.</div>', dur: 2800, amb: 'steam', vid: 'ch2-maschine', from: 4 },
+  { text: '<div class="line">Jeder Tropfen zählt.</div>', dur: 3000, amb: 'drops', vid: 'ch4-bezug', from: 3 },
+  { text: '<div class="big">Barista Advanced</div><div class="tg">Good coffee is no accident.</div>', dur: 4800, hold: true, amb: 'crema', vid: 'ch7-dampf', from: 2 }
 ];
 
 export const js = `

@@ -750,6 +750,37 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
 @media (prefers-reduced-motion:reduce){.real-bg video{animation:none}}
 @media (max-width:980px),(max-aspect-ratio:1/1){.fs .real-tag{order:2}}
 
+/* intro titles in the presentation's own type: light Jost, like the scene titles */
+.ttl .line{font-family:var(--display);font-style:normal;font-weight:300;letter-spacing:-.02em;font-size:clamp(38px,6.4vw,118px);line-height:1}
+.ttl .show{animation-name:ttl2}.ttl .hold{animation-name:ttlHold2}
+@keyframes ttl2{0%{opacity:0;transform:translateY(.25em);filter:blur(8px)}25%{opacity:1;transform:none;filter:none}82%{opacity:1}100%{opacity:0;transform:translateY(-.12em)}}
+@keyframes ttlHold2{0%{opacity:0;transform:translateY(.2em);filter:blur(10px)}35%{opacity:1;transform:none;filter:none}100%{opacity:1}}
+.ttl .sm{font-weight:500}
+
+/* ================= brighter pass ================= */
+:root{--night:#1d1815;--roast:#2a231d;--greige:#bcb3ac;--frame:#231c17;--steel:#b3aaa3}
+.scene{--mute:#c4bbb3;--card:rgba(243,238,232,.085);--line:rgba(243,238,232,.2)}
+.scene.light{--mute:#3d3833;--card:rgba(38,38,38,.07)}
+body{--hud-mute:#c4bbb3;--hud-bg:29,24,21}
+body[data-tone="light"]{--hud-bg:188,179,172}
+.vignette{background:radial-gradient(120% 90% at 50% 50%,transparent 68%,rgba(0,0,0,.2))}
+#grain{opacity:.035}
+.amb{background:radial-gradient(80% 70% at 70% 30%,rgba(160,110,74,.42),transparent 72%),var(--night)}
+.film-frame{box-shadow:0 18px 44px rgba(0,0,0,.34),0 0 0 1px rgba(243,238,232,.07)}
+.chap .real-bg{opacity:1}
+.chap .real-bg + .chap-shade{background:linear-gradient(90deg,rgba(29,24,21,.86) 0%,rgba(29,24,21,.55) 42%,rgba(29,24,21,.16) 100%),linear-gradient(0deg,rgba(29,24,21,.5),transparent 40%)}
+.chap-list li{color:#efe8e1;border-color:rgba(243,238,232,.26)}
+.agenda.seven .ag .ag-v video{opacity:.72}
+.agenda.seven .ag.has-v::before{background:linear-gradient(180deg,rgba(29,24,21,.05) 20%,rgba(29,24,21,.84))}
+.agenda.seven .ag p{color:#d8d0c9}
+.fin-v .real-bg{opacity:.95}
+#trailer .tr-v.on{opacity:.8}
+#trailer .tr-v{filter:brightness(.82)}
+#overview{background:rgba(29,24,21,.96)}
+.phases button{color:#b9b0a8}
+.chap .real-bg ~ .inner .chap-list{background:rgba(29,24,21,.58);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding:4px 18px;border-radius:16px}
+.chap .real-bg ~ .inner .chap-list li:first-child{border-top:0}.chap .real-bg ~ .inner .chap-list li:last-child{border-bottom:0}
+
 .c2-leg{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:13px;color:var(--mute)}
 .c2-leg i{display:inline-block;width:24px;height:9px;border-radius:5px;margin-right:7px;border:1.5px solid #262626;vertical-align:-1px}
 .c2-kreis{max-height:calc(100dvh - var(--hud-h) - var(--dock-h) - 96px)}
@@ -998,11 +1029,11 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
   <div class="stack">
     <div class="kicker rv" style="--d:0">Agenda</div>
     <div class="agenda seven">
-      <button class="ag has-v rv" style="--d:1" data-goto="kapitel-1"><span class="ag-v" aria-hidden="true"><video data-bg data-rate="1" data-src="media/ch1-presse-s.mp4" poster="media/ch1-presse.jpg" muted loop playsinline preload="none"></video></span>
+      <button class="ag has-v rv" style="--d:1" data-goto="kapitel-1"><span class="ag-v" aria-hidden="true"><video data-bg data-rate="1" data-src="media/ch1-handbrew-s.mp4" poster="media/ch1-handbrew.jpg" muted loop playsinline preload="none"></video></span>
         <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14h44L38 40H26z"/><path d="M26 40v6h12v-6"/><path d="M20 50h24v6a6 6 0 01-6 6H26a6 6 0 01-6-6z"/><path d="M32 4v6"/></svg>
         <span class="n">01</span><h3>Kaffeezubereitung</h3><p>3 Themen · Vom Filter bis zum Espresso.</p></button><button class="ag has-v rv" style="--d:2" data-goto="kapitel-2"><span class="ag-v" aria-hidden="true"><video data-bg data-rate="1" data-src="media/ch2-maschine-s.mp4" poster="media/ch2-maschine.jpg" muted loop playsinline preload="none"></video></span>
         <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="48" height="16" rx="3"/><path d="M14 24v32h36V24"/><path d="M26 24v8h12v-8"/><path d="M24 36h16l-2 6H26z"/><path d="M26 50h12v6H26z"/><circle cx="46" cy="16" r="3"/></svg>
-        <span class="n">02</span><h3>Espresso­maschinen</h3><p>7 Themen · Wasser, Druck und Temperatur.</p></button><button class="ag has-v rv" style="--d:3" data-goto="kapitel-3"><span class="ag-v" aria-hidden="true"><video data-bg data-rate="1" data-src="media/ch3-bohnen-s.mp4" poster="media/ch3-bohnen.jpg" muted loop playsinline preload="none"></video></span>
+        <span class="n">02</span><h3>Espresso­maschinen</h3><p>7 Themen · Wasser, Druck und Temperatur.</p></button><button class="ag has-v rv" style="--d:3" data-goto="kapitel-3"><span class="ag-v" aria-hidden="true"><video data-bg data-rate="1" data-src="media/ch3-roesten-s.mp4" poster="media/ch3-roesten.jpg" muted loop playsinline preload="none"></video></span>
         <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="32" cy="32" rx="16" ry="24" transform="rotate(28 32 32)"/><path d="M22 14c12 8 4 26 20 36"/></svg>
         <span class="n">03</span><h3>Die Kaffeebohne</h3><p>5 Themen · Von der Kirsche bis zur Röstung.</p></button><button class="ag has-v rv" style="--d:4" data-goto="kapitel-4"><span class="ag-v" aria-hidden="true"><video data-bg data-rate="1" data-src="media/ch4-bezug-s.mp4" poster="media/ch4-bezug.jpg" muted loop playsinline preload="none"></video></span>
         <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 20h34v8a12 12 0 01-12 12H20A12 12 0 018 28z"/><path d="M42 23h16"/><path d="M25 46v6M25 58v2"/></svg>
@@ -1018,7 +1049,7 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
   </div></div>
 </section>
 <section class="scene chap" id="s-kapitel-1" data-id="kapitel-1" data-ch="1" data-title="Kapitel 1: Kaffeezubereitung" data-cut="leak">
-  <div class="cine-bg real-bg"><video data-bg data-rate="0.5" data-src="media/ch1-presse.mp4" poster="media/ch1-presse.jpg" muted loop playsinline preload="none" aria-hidden="true"></video></div><div class="chap-shade"></div>
+  <div class="cine-bg real-bg"><video data-bg data-rate="0.5" data-src="media/ch1-handbrew.mp4" poster="media/ch1-handbrew.jpg" muted loop playsinline preload="none" aria-hidden="true"></video></div><div class="chap-shade"></div>
   <div class="inner"><div class="chap-grid">
     <div><div class="chap-n" aria-hidden="true">01</div><h2 class="chap-t rv" style="--d:2">Kaffeezubereitung</h2><p class="chap-sub rv" style="--d:4">Vom Filter bis zum Espresso.</p></div>
     <ol class="chap-list rv" style="--d:6"><li><span class="i">1.1</span><span>Arten der Kaffeezubereitung</span></li><li><span class="i">1.2</span><span>Handbrew – manuelle Filterzubereitung</span></li><li><span class="i">1.3</span><span>Cold Brew – kalte Kaffeeextraktion</span></li></ol>
@@ -1199,25 +1230,6 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
   <path class="ln" d="M362 210h58" stroke-width="1.5"/><text x="426" y="206">Gelöste Stoffe</text><text x="426" y="226" class="tm" id="cut-tds"></text>
   <path class="ln" d="M354 330h66" stroke-width="1.5"/><text x="426" y="326">Schwebstoffe</text><text x="426" y="346" class="tm" id="cut-sus"></text>
   <text x="130" y="230" class="end">Wasser</text><path class="ln" d="M136 224h28" stroke-width="1.5"/></g></svg></div>
-  </div></div>
-</section>
-<section class="scene real" id="s-presse-echt" data-id="presse-echt" data-ch="1" data-title="French Press in echt"><div class="inner">
-  <div class="fs">
-    <div class="fs-side">
-      <div class="kicker rv" style="--d:0"><span class="n">01</span>Kaffeezubereitung</div>
-      <h2 class="fs-name rv" style="--d:1">Vollmundig, körperreich</h2>
-      <span class="real-tag rv" style="--d:1">Echte Aufnahme</span>
-      <p class="mute rv fs-extra" style="--d:2">Das Metallsieb der French Press lässt Öle und feine Schwebstoffe mit in die Tasse.</p>
-      <div class="rv" style="--d:2" data-slot="phases"></div>
-      <div class="fs-foot rv" style="--d:3"><div data-slot="speeds"></div><span class="time" data-slot="time">0,0 s</span></div>
-      
-    </div>
-    <div class="fs-main rv-img" style="--d:1">
-      <div class="film" data-film data-dur="9" data-rate="0.5" data-slow="4" data-marks='[["Ausgießen",0,"Die French Press wird langsam ausgegossen."],["Voller Strahl",2,"Das Metallsieb hält nur grobe Partikel zurück: <b>Öle und feine Schwebstoffe</b> kommen mit."],["In der Tasse",5.5,"Das Ergebnis: <b>vollmundig, körperreich</b>."]]'>
-        <video data-src="media/ch1-presse.mp4" poster="media/ch1-presse.jpg" muted loop playsinline preload="none" aria-label="French Press in echt"></video>
-      </div>
-      <div data-slot="sub"></div>
-    </div>
   </div></div>
 </section>
 <section class="scene" id="s-handbrew" data-id="handbrew" data-ch="1" data-title="1.2 Handbrew: manuelle Filterzubereitung"><div class="inner">
@@ -1475,25 +1487,6 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
   <g data-k="o:.3@21 1@21.5"><path d="M786 140 H832 V310" fill="none" stroke="#a39a93" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M786 137.5 H830" stroke="#f3eee8" stroke-opacity=".5" stroke-width="2"/><rect x="826" y="306" width="12" height="12" rx="3" fill="#cfc9c3"/><circle cx="786" cy="140" r="11" fill="#2b2420" stroke="#cfc9c3" stroke-width="2"/>
     <g data-k="o:0@22.6 1@23"><circle cx="832" cy="324" r="9" fill="#f3eee8" filter="url(#f-soft)" data-loop="1.8" data-off="0" data-k="y<:0@0 47.2@1.8;x:0@0 8.6@1.8;s<:.5@0 2.2@1.8;o:.6@0 0@1.8"/><circle cx="832" cy="324" r="9" fill="#f3eee8" filter="url(#f-soft)" data-loop="1.6" data-off="0.3" data-k="y<:0@0 64.2@1.6;x:0@0 4@1.6;s<:.5@0 2.9@1.6;o:.6@0 0@1.6"/><circle cx="832" cy="324" r="9" fill="#f3eee8" filter="url(#f-soft)" data-loop="1.6" data-off="0.6" data-k="y<:0@0 47.4@1.6;x:0@0 -0.8@1.6;s<:.5@0 2.5@1.6;o:.6@0 0@1.6"/><circle cx="832" cy="324" r="9" fill="#f3eee8" filter="url(#f-soft)" data-loop="1.6" data-off="0.9" data-k="y<:0@0 61.5@1.6;x:0@0 7.6@1.6;s<:.5@0 2.8@1.6;o:.6@0 0@1.6"/><circle cx="832" cy="324" r="9" fill="#f3eee8" filter="url(#f-soft)" data-loop="1.7" data-off="1.2" data-k="y<:0@0 64.5@1.7;x:0@0 4@1.7;s<:.5@0 2.1@1.7;o:.6@0 0@1.7"/><circle cx="832" cy="324" r="9" fill="#f3eee8" filter="url(#f-soft)" data-loop="2" data-off="1.6" data-k="y<:0@0 44.9@2;x:0@0 23.6@2;s<:.5@0 2.6@2;o:.6@0 0@2"/></g></g>
   <path class="lead-l" d="M690 102 V132" data-k="o:0@21.2 .9@21.7"/><text x="690" y="96" class="t mid" data-k="o:0@21.2 1@21.7;y^:9@21.2 0@21.9">Dampfsystem</text></svg>
-      </div>
-      <div data-slot="sub"></div>
-    </div>
-  </div></div>
-</section>
-<section class="scene real" id="s-maschine-echt" data-id="maschine-echt" data-ch="2" data-title="Siebträgermaschine in echt"><div class="inner">
-  <div class="fs">
-    <div class="fs-side">
-      <div class="kicker rv" style="--d:0"><span class="n">02</span>Espressomaschinen</div>
-      <h2 class="fs-name rv" style="--d:1">Zwei Gläser, ein Bezug</h2>
-      <span class="real-tag rv" style="--d:1">Echte Aufnahme</span>
-      <p class="mute rv fs-extra" style="--d:2">Brühgruppe, Siebträger, zwei Ausläufe: so sieht der Wasserweg am Ende aus.</p>
-      <div class="rv" style="--d:2" data-slot="phases"></div>
-      <div class="fs-foot rv" style="--d:3"><div data-slot="speeds"></div><span class="time" data-slot="time">0,0 s</span></div>
-      
-    </div>
-    <div class="fs-main rv-img" style="--d:1">
-      <div class="film" data-film data-dur="9" data-rate="0.5" data-slow="4" data-marks='[["Zwei Ausläufe",0,"Der Bezug läuft über zwei Ausläufe in zwei Gläser."],["Ruhiger Strahl",3,"Pumpe und Brühgruppe liefern Druck und Temperatur: der Strahl fließt gleichmäßig."],["Crema",6,"Oben im Glas sammelt sich die <b>Crema</b>."]]'>
-        <video data-src="media/ch2-maschine.mp4" poster="media/ch2-maschine.jpg" muted loop playsinline preload="none" aria-label="Siebträgermaschine in echt"></video>
       </div>
       <div data-slot="sub"></div>
     </div>
@@ -2006,7 +1999,7 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
   </div></div>
 </section>
 <section class="scene chap" id="s-kapitel-3" data-id="kapitel-3" data-ch="3" data-title="Kapitel 3: Die Kaffeebohne" data-cut="leak">
-  <div class="cine-bg real-bg"><video data-bg data-rate="0.5" data-src="media/ch3-bohnen.mp4" poster="media/ch3-bohnen.jpg" muted loop playsinline preload="none" aria-hidden="true"></video></div><div class="chap-shade"></div>
+  <div class="cine-bg real-bg"><video data-bg data-rate="0.5" data-src="media/ch3-roesten.mp4" poster="media/ch3-roesten.jpg" muted loop playsinline preload="none" aria-hidden="true"></video></div><div class="chap-shade"></div>
   <div class="inner"><div class="chap-grid">
     <div><div class="chap-n" aria-hidden="true">03</div><h2 class="chap-t rv" style="--d:2">Die Kaffeebohne</h2><p class="chap-sub rv" style="--d:4">Von der Kirsche bis zur Röstung.</p></div>
     <ol class="chap-list rv" style="--d:6"><li><span class="i">3.1</span><span>Arabica und Robusta</span></li><li><span class="i">3.2</span><span>Pflückmethoden</span></li><li><span class="i">3.3</span><span>Aufbereitungsverfahren: Natural, Washed und Honey</span></li><li><span class="i">3.4</span><span>Röstgrade</span></li><li><span class="i">3.5</span><span>Helle Röstungen und ihre besonderen Herausforderungen</span></li></ol>
@@ -2424,25 +2417,6 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
     </div>
   </div></div>
 </section>
-<section class="scene real" id="s-bohnen-echt" data-id="bohnen-echt" data-ch="3" data-title="Geröstete Bohnen in echt"><div class="inner">
-  <div class="fs">
-    <div class="fs-side">
-      <div class="kicker rv" style="--d:0"><span class="n">03</span>Die Kaffeebohne</div>
-      <h2 class="fs-name rv" style="--d:1">Die Bohne in der Hand</h2>
-      <span class="real-tag rv" style="--d:1">Echte Aufnahme</span>
-      <p class="mute rv fs-extra" style="--d:2">Nach der Röstung: Farbe, Größe und Oberfläche zeigen, wie die Bohne geröstet wurde.</p>
-      <div class="rv" style="--d:2" data-slot="phases"></div>
-      <div class="fs-foot rv" style="--d:3"><div data-slot="speeds"></div><span class="time" data-slot="time">0,0 s</span></div>
-      
-    </div>
-    <div class="fs-main rv-img" style="--d:1">
-      <div class="film" data-film data-dur="6.4" data-rate="0.5" data-slow="4" data-marks='[["Bohnen aufnehmen",0,"Geröstete Kaffeebohnen, direkt aus dem Behälter."],["Genau hinsehen",2.4,"Farbe und Oberfläche zeigen den <b>Röstgrad</b>."],["Durch die Finger",4.6,"Eine gleichmäßige Farbe spricht für eine gleichmäßige Röstung."]]'>
-        <video data-src="media/ch3-bohnen.mp4" poster="media/ch3-bohnen.jpg" muted loop playsinline preload="none" aria-label="Geröstete Bohnen in echt"></video>
-      </div>
-      <div data-slot="sub"></div>
-    </div>
-  </div></div>
-</section>
 <section class="scene light" id="s-roestgrade" data-id="roestgrade" data-ch="3" data-title="Röstgrade: Light, Medium und Dark Roast"><div class="inner">
   <div class="stack c3-rg">
     <div class="split">
@@ -2739,25 +2713,6 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
     <g data-k="o:0@17 1@18.4"><g transform="translate(869 384.6)"><path d="M0 0 q-12 -22 0 -44 t0 -44" fill="none" stroke="#f3eee8" stroke-width="9" stroke-linecap="round" filter="url(#f-soft)" data-loop="3.2" data-off="0" data-k="y~:10@0 -46@3.2;x:0@0 -9@1.6 0@3.2;o:0@0 .34@1 0@3.2;sy:.6@0 1.15@3.2"/></g><g transform="translate(891 384.6)"><path d="M0 0 q-12 -22 0 -44 t0 -44" fill="none" stroke="#f3eee8" stroke-width="9" stroke-linecap="round" filter="url(#f-soft)" data-loop="3.9" data-off="1.1" data-k="y~:10@0 -46@3.9;x:0@0 9@2 0@3.9;o:0@0 .34@1.2 0@3.9;sy:.6@0 1.15@3.9"/></g></g>
     <path d="M825 300 L833.8 436 Q836 444 847 444 L913 444 Q924 444 926.2 436 L935 300" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" /><text x="880" y="476" class="ts mid">25–30+ s</text></g>
   <text x="48" y="190" class="tl">Bezugszeit</text><text x="48" y="238" class="tb" style="font-size:46px" data-num="0@2 31@17.5" data-fmt="mm:ss"></text></svg>
-      </div>
-      <div data-slot="sub"></div>
-    </div>
-  </div></div>
-</section>
-<section class="scene real" id="s-bezug-echt" data-id="bezug-echt" data-ch="4" data-title="Bezug in echt"><div class="inner">
-  <div class="fs">
-    <div class="fs-side">
-      <div class="kicker rv" style="--d:0"><span class="n">04</span>Espressoextraktion</div>
-      <h2 class="fs-name rv" style="--d:1">Der Strahl in Zeitlupe</h2>
-      <span class="real-tag rv" style="--d:1">Echte Aufnahme</span>
-      <p class="mute rv fs-extra" style="--d:2">Mit 50 Bildern pro Sekunde gefilmt: jede Veränderung im Strahl wird sichtbar.</p>
-      <div class="rv" style="--d:2" data-slot="phases"></div>
-      <div class="fs-foot rv" style="--d:3"><div data-slot="speeds"></div><span class="time" data-slot="time">0,0 s</span></div>
-      
-    </div>
-    <div class="fs-main rv-img" style="--d:1">
-      <div class="film" data-film data-dur="10" data-rate="0.25" data-slow="4" data-marks='[["Zwei Strahlen",0,"Ausschnitt aus einem Bezug: zwei gleichmäßige Strahlen aus den Ausläufen."],["Crema wächst",3.5,"Die Crema im Glas wird dicker, feine Bläschen steigen auf."],["Strahl wird heller",7,"Der Strahl wird heller: <b>zunehmende Verdünnung</b> gegen Ende des Bezugs."]]'>
-        <video data-src="media/ch4-bezug.mp4" poster="media/ch4-bezug.jpg" muted loop playsinline preload="none" aria-label="Bezug in echt"></video>
       </div>
       <div data-slot="sub"></div>
     </div>
@@ -3113,25 +3068,6 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
     <g data-k="sy<:0@19.3 1@21.2" style="transform-origin:50% 100%"><path d="M523 450Q552 408 581 450Z" fill="#7a5238"/></g>
   </g>
   <g data-k="o:0@12.9 1@13.4 1@21.2 0@21.6"><path d="M514 386 L520.08 444 Q521.6 452 529.2 452 L574.8 452 Q582.4 452 583.92 444 L590 386" fill="rgba(243,238,232,.05)" stroke="#f3eee8" stroke-width="2" stroke-opacity=".7" /><clipPath id="c5-cp8"><path d="M516 386H588L582 452H522Z"/></clipPath><g clip-path="url(#c5-cp8)" data-off="1.2" style="mix-blend-mode:screen"><rect x="514" y="386" width="16.7" height="66" fill="url(#g-glint)" data-loop="5" data-k="x:0@0 60.8@2.3 60.8@5;o:0@0 .8@0.8 0@2.3"/></g></g></svg>
-      </div>
-      <div data-slot="sub"></div>
-    </div>
-  </div></div>
-</section>
-<section class="scene real" id="s-mahlen-echt" data-id="mahlen-echt" data-ch="5" data-title="Mahlen in echt"><div class="inner">
-  <div class="fs">
-    <div class="fs-side">
-      <div class="kicker rv" style="--d:0"><span class="n">05</span>Kaffeemühlen</div>
-      <h2 class="fs-name rv" style="--d:1">Direkt ins Sieb</h2>
-      <span class="real-tag rv" style="--d:1">Echte Aufnahme</span>
-      <p class="mute rv fs-extra" style="--d:2">Bohnen gelangen ins Mahlwerk, die Mahlscheiben zerkleinern sie, das Mahlgut fällt ins Sieb.</p>
-      <div class="rv" style="--d:2" data-slot="phases"></div>
-      <div class="fs-foot rv" style="--d:3"><div data-slot="speeds"></div><span class="time" data-slot="time">0,0 s</span></div>
-      
-    </div>
-    <div class="fs-main rv-img" style="--d:1">
-      <div class="film" data-film data-dur="9" data-rate="0.5" data-slow="4" data-marks='[["Siebträger in der Gabel",0,"Der Siebträger sitzt direkt unter dem Auswurfschacht."],["Mahlgut fällt",1.4,"Die Mahlscheiben zerkleinern die Bohnen, das <b>Mahlgut wird ausgeworfen</b>."],["Auswurf abklopfen",3.2,"Ein leichtes Klopfen löst Mahlgut, das im Schacht hängen bleibt (<b>Retention</b>)."]]'>
-        <video data-src="media/ch5-mahlen.mp4" poster="media/ch5-mahlen.jpg" muted loop playsinline preload="none" aria-label="Mahlen in echt"></video>
       </div>
       <div data-slot="sub"></div>
     </div>
@@ -3802,25 +3738,6 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
   </g>
   <g data-k="o:1@0 1@3.3 0@3.6"><text x="48" y="150" class="tl">Schritt 1 von 6</text><text x="48" y="198" class="tb" style="font-size:46px">Dosieren</text></g><g data-k="o:0@3.6 1@4 1@6.9 0@7.2;x<:-14@3.6 0@4.1"><text x="48" y="150" class="tl">Schritt 2 von 6</text><text x="48" y="198" class="tb" style="font-size:46px">WDT</text></g><g data-k="o:0@7.2 1@7.6 1@10.5 0@10.8;x<:-14@7.2 0@7.7"><text x="48" y="150" class="tl">Schritt 3 von 6</text><text x="48" y="198" class="tb" style="font-size:46px">Leveling</text></g><g data-k="o:0@10.8 1@11.2 1@14.1 0@14.4;x<:-14@10.8 0@11.3"><text x="48" y="150" class="tl">Schritt 4 von 6</text><text x="48" y="198" class="tb" style="font-size:46px">Tampen</text></g><g data-k="o:0@14.4 1@14.8 1@17.3 0@17.6;x<:-14@14.4 0@14.9"><text x="48" y="150" class="tl">Schritt 5 von 6</text><text x="48" y="198" class="tb" style="font-size:46px">Kontrolle</text></g><g data-k="o:0@17.6 1@18 1@22.3 1@22.6;x<:-14@17.6 0@18.1"><text x="48" y="150" class="tl">Schritt 6 von 6</text><text x="48" y="198" class="tb" style="font-size:46px">Bezug</text></g>
   <circle cx="55" cy="232" r="6" fill="#3a2f29" data-k="fill:#3a2f29@0 #f8cbad@0.3"/><circle cx="81" cy="232" r="6" fill="#3a2f29" data-k="fill:#3a2f29@3.6 #f8cbad@3.9;s^:.6@3.6 1@4.1"/><circle cx="107" cy="232" r="6" fill="#3a2f29" data-k="fill:#3a2f29@7.2 #f8cbad@7.5;s^:.6@7.2 1@7.7"/><circle cx="133" cy="232" r="6" fill="#3a2f29" data-k="fill:#3a2f29@10.8 #f8cbad@11.1;s^:.6@10.8 1@11.3"/><circle cx="159" cy="232" r="6" fill="#3a2f29" data-k="fill:#3a2f29@14.4 #f8cbad@14.7;s^:.6@14.4 1@14.9"/><circle cx="185" cy="232" r="6" fill="#3a2f29" data-k="fill:#3a2f29@17.6 #f8cbad@17.9;s^:.6@17.6 1@18.1"/></svg>
-      </div>
-      <div data-slot="sub"></div>
-    </div>
-  </div></div>
-</section>
-<section class="scene real" id="s-puck-echt" data-id="puck-echt" data-ch="6" data-title="Puck Preparation in echt"><div class="inner">
-  <div class="fs">
-    <div class="fs-side">
-      <div class="kicker rv" style="--d:0"><span class="n">06</span>Puck Preparation</div>
-      <h2 class="fs-name rv" style="--d:1">Verteilen, tampen, prüfen</h2>
-      <span class="real-tag rv" style="--d:1">Echte Aufnahme</span>
-      <p class="mute rv fs-extra" style="--d:2">Drei Handgriffe am Tresen, in Zeitlupe.</p>
-      <div class="rv" style="--d:2" data-slot="phases"></div>
-      <div class="fs-foot rv" style="--d:3"><div data-slot="speeds"></div><span class="time" data-slot="time">0,0 s</span></div>
-      
-    </div>
-    <div class="fs-main rv-img" style="--d:1">
-      <div class="film" data-film data-dur="15.5" data-rate="0.5" data-slow="4" data-marks='[["WDT",0,"Dünne Nadeln lockern das Kaffeemehl und <b>brechen Klumpen auf</b>."],["Tampen",5,"Tamper gerade ansetzen und <b>gleichmäßig verdichten</b>."],["Kontrolle",11.5,"Eine ebene, stabile Oberfläche: bereit für den Bezug."]]'>
-        <video data-src="media/ch6-puck.mp4" poster="media/ch6-puck.jpg" muted loop playsinline preload="none" aria-label="Puck Preparation in echt"></video>
       </div>
       <div data-slot="sub"></div>
     </div>
@@ -4614,7 +4531,7 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
   <div class="ttl" id="ttl"></div>
   <div class="tr-ui"><button class="hbtn" data-action="trailer-sound" id="tr-snd">Ton an</button><button class="hbtn" data-action="trailer-skip">Überspringen</button></div>
 </div>
-<script type="application/json" id="ba-data">{"chapters":[{"n":"","name":"Start"},{"n":"01","name":"Kaffeezubereitung"},{"n":"02","name":"Espressomaschinen"},{"n":"03","name":"Die Kaffeebohne"},{"n":"04","name":"Espressoextraktion"},{"n":"05","name":"Kaffeemühlen"},{"n":"06","name":"Puck Preparation"},{"n":"07","name":"Cupping"},{"n":"","name":"Abschluss"}],"quiz":[{"q":"Was passiert in der Blooming-Phase beim Handbrew?","o":["Der Kaffee wird ein zweites Mal gemahlen.","Das Kaffeebett wird vorbenetzt und setzt CO₂ frei.","Das Wasser wird auf 100 °C nachgeheizt."],"a":1,"e":"Mit dem \u003cb>2–3-Fachen\u003c/b> der Kaffeemenge vorbenetzen, CO₂ entweichen lassen, 30–45 Sekunden warten.","go":"handbrew"},{"q":"Wie lange zieht ein Cold Brew typischerweise?","o":["2–3 Minuten","30–45 Sekunden","12–18 Stunden"],"a":2,"e":"Kaltes Wasser löst langsam: \u003cb>12–18 Stunden\u003c/b> bei grobem Mahlgrad und Ratio 1:8–1:12.","go":"coldbrew"},{"q":"Was unterscheidet einen Dualboiler von einem Einkreiser?","o":["Er hat zwei getrennte Kessel, Bezug und Dampf sind gleichzeitig möglich.","Er arbeitet ohne Pumpe.","Er hat nur einen Kessel und wechselt zwischen Dampf und Bezug."],"a":0,"e":"Dualboiler: \u003cb>zwei getrennte Kessel\u003c/b>, gleichzeitiger Bezug möglich, hohe Temperaturkontrolle. Der Einkreiser wechselt mit einem Kessel zwischen Dampf und Bezug.","go":"maschinentypen"},{"q":"Welche Aufgabe hat das OPV (Over Pressure Valve)?","o":["Es misst die Temperatur im Kessel.","Es begrenzt den maximalen Pumpendruck und führt überschüssiges Wasser zurück.","Es erzeugt den Dampf für die Dampflanze."],"a":1,"e":"Das OPV \u003cb>begrenzt den maximalen Pumpendruck\u003c/b>, führt überschüssiges Wasser zurück und verhindert übermäßigen Druckaufbau.","go":"preinfusion-opv"},{"q":"Welche Beschreibung passt zu Arabica im Vergleich zu Robusta?","o":["Kräftiger, erdiger und ca. 2–2,7 % Koffein","Komplexere Aromatik und ca. 1–1,5 % Koffein","Häufig bitterer und robuster im Anbau"],"a":1,"e":"Arabica: \u003cb>komplexere Aromatik\u003c/b>, häufig fruchtiger, ca. 1–1,5 % Koffein, weniger Körper, anspruchsvoller Anbau.","go":"arabica-robusta"},{"q":"Warum sind helle Röstungen schwieriger zu extrahieren?","o":["Sie sind poröser und geben ihre Stoffe zu schnell ab.","Sie haben eine höhere strukturelle Dichte und häufig geringere Löslichkeit.","Sie enthalten kaum noch Säure."],"a":1,"e":"Dichte Struktur, geringere Löslichkeit. Mögliche Anpassungen: \u003cb>höhere Brühtemperatur, feinere Mahlung, angepasstes Brew Ratio\u003c/b>.","go":"helle-roestung"},{"q":"18 g Kaffee, 36 g Espresso, 10 % TDS. Wie hoch ist der Extraction Yield?","o":["10 %","20 %","36 %"],"a":1,"e":"(0,10 × 36) / 18 = 0,20. Der Extraction Yield liegt bei \u003cb>20 %\u003c/b>.","go":"ey-tds"},{"q":"Woran erkennst du Channeling am Bottomless-Siebträger?","o":["An einem ruhigen, zentrierten Strahl.","An besonders dunkler Crema.","An Spritzen und unregelmäßigem Durchfluss."],"a":2,"e":"Das Wasser nimmt den leichtesten Weg. Die Folge: \u003cb>Spritzen\u003c/b>, ungleichmäßige Extraktion, bitter und sauer zugleich.","go":"channeling"},{"q":"Was bedeutet Retention bei einer Kaffeemühle?","o":["Mahlgut, das nach dem Mahlen in der Mühle zurückbleibt.","Die Zeit, die die Mühle für eine Dosis braucht.","Der Abstand zwischen den Mahlscheiben."],"a":0,"e":"Im \u003cb>aktiven Totraum\u003c/b> wird es vom nächsten Mahlvorgang ausgetragen, im \u003cb>passiven Totraum\u003c/b> bleibt es über längere Zeit liegen.","go":"retention"},{"q":"Was bewirkt die Ross Droplet Technique (RDT)?","o":["Sie kühlt die Mahlscheiben auf Raumtemperatur.","Sie stellt den Nullpunkt der Mühle neu ein.","Sie reduziert die statische Aufladung des Mahlguts."],"a":2,"e":"Eine \u003cb>minimale Wassermenge\u003c/b> auf den Bohnen reduziert die statische Aufladung und sorgt für einen saubereren Mahlgutauswurf.","go":"statik-rdt"},{"q":"Was zählt beim Tampen am meisten?","o":["Maximale Kraft.","Gleichmäßigkeit: ein gerade angesetzter Tamper und ein ebener Puck.","Ein möglichst schwerer Tamper."],"a":1,"e":"\u003cb>Gleichmäßigkeit ist wichtiger als maximale Kraft.\u003c/b> Schräges Verdichten vermeiden.","go":"tampen"},{"q":"Wo liegt der Puck Screen?","o":["In der Brühgruppe.","Unter dem Sieb.","Direkt auf dem Kaffeepuck."],"a":2,"e":"Puck Screen = \u003cb>auf dem Kaffee\u003c/b>, Duschsieb = in der Brühgruppe.","go":"puck-screen"},{"q":"Wann wird beim Cupping die Kruste aufgebrochen?","o":["Direkt nach dem Aufgießen.","Nach ca. 4 Minuten.","Erst nach dem Abschöpfen."],"a":1,"e":"Nach \u003cb>ca. 4 Minuten\u003c/b> brichst du die Kruste auf und beurteilst die aufsteigenden Aromen. Danach wird abgeschöpft.","go":"crust"},{"q":"Was beurteilst du in der Kategorie „Körper“?","o":["Mundgefühl und Textur","Geruch und Duftnoten","Länge und Qualität"],"a":0,"e":"\u003cb>Körper\u003c/b> steht für Mundgefühl und Textur. Geruch und Duftnoten gehören zum Aroma, Länge und Qualität zum Nachgeschmack.","go":"sensorik"}],"shots":[{"text":"\u003cdiv class=\"sm\">BUNCA.ACADEMY\u003c/div>","dur":2200,"amb":"beans"},{"text":"\u003cdiv class=\"line\">Eine Bohne.\u003c/div>","dur":2600,"amb":"beans","vid":"ch3-bohnen","from":2},{"text":"\u003cdiv class=\"line\">Tausend Entscheidungen.\u003c/div>","dur":2600,"amb":"grounds","vid":"ch5-mahlen","from":6},{"text":"\u003cdiv class=\"line\">Mühle. Verteilung. Puck.\u003c/div>","dur":2800,"amb":"grounds","vid":"ch6-puck","from":24},{"text":"\u003cdiv class=\"line\">Druck. Temperatur. Zeit.\u003c/div>","dur":2800,"amb":"steam","vid":"ch2-maschine","from":8},{"text":"\u003cdiv class=\"line\">Jeder Tropfen zählt.\u003c/div>","dur":2800,"amb":"drops","vid":"ch4-bezug","from":4},{"text":"\u003cdiv class=\"big\">Barista Advanced\u003c/div>\u003cdiv class=\"tg\">Good coffee is no accident.\u003c/div>","dur":4600,"hold":true,"amb":"crema","vid":"milch","from":3}]}</script>
+<script type="application/json" id="ba-data">{"chapters":[{"n":"","name":"Start"},{"n":"01","name":"Kaffeezubereitung"},{"n":"02","name":"Espressomaschinen"},{"n":"03","name":"Die Kaffeebohne"},{"n":"04","name":"Espressoextraktion"},{"n":"05","name":"Kaffeemühlen"},{"n":"06","name":"Puck Preparation"},{"n":"07","name":"Cupping"},{"n":"","name":"Abschluss"}],"quiz":[{"q":"Was passiert in der Blooming-Phase beim Handbrew?","o":["Der Kaffee wird ein zweites Mal gemahlen.","Das Kaffeebett wird vorbenetzt und setzt CO₂ frei.","Das Wasser wird auf 100 °C nachgeheizt."],"a":1,"e":"Mit dem \u003cb>2–3-Fachen\u003c/b> der Kaffeemenge vorbenetzen, CO₂ entweichen lassen, 30–45 Sekunden warten.","go":"handbrew"},{"q":"Wie lange zieht ein Cold Brew typischerweise?","o":["2–3 Minuten","30–45 Sekunden","12–18 Stunden"],"a":2,"e":"Kaltes Wasser löst langsam: \u003cb>12–18 Stunden\u003c/b> bei grobem Mahlgrad und Ratio 1:8–1:12.","go":"coldbrew"},{"q":"Was unterscheidet einen Dualboiler von einem Einkreiser?","o":["Er hat zwei getrennte Kessel, Bezug und Dampf sind gleichzeitig möglich.","Er arbeitet ohne Pumpe.","Er hat nur einen Kessel und wechselt zwischen Dampf und Bezug."],"a":0,"e":"Dualboiler: \u003cb>zwei getrennte Kessel\u003c/b>, gleichzeitiger Bezug möglich, hohe Temperaturkontrolle. Der Einkreiser wechselt mit einem Kessel zwischen Dampf und Bezug.","go":"maschinentypen"},{"q":"Welche Aufgabe hat das OPV (Over Pressure Valve)?","o":["Es misst die Temperatur im Kessel.","Es begrenzt den maximalen Pumpendruck und führt überschüssiges Wasser zurück.","Es erzeugt den Dampf für die Dampflanze."],"a":1,"e":"Das OPV \u003cb>begrenzt den maximalen Pumpendruck\u003c/b>, führt überschüssiges Wasser zurück und verhindert übermäßigen Druckaufbau.","go":"preinfusion-opv"},{"q":"Welche Beschreibung passt zu Arabica im Vergleich zu Robusta?","o":["Kräftiger, erdiger und ca. 2–2,7 % Koffein","Komplexere Aromatik und ca. 1–1,5 % Koffein","Häufig bitterer und robuster im Anbau"],"a":1,"e":"Arabica: \u003cb>komplexere Aromatik\u003c/b>, häufig fruchtiger, ca. 1–1,5 % Koffein, weniger Körper, anspruchsvoller Anbau.","go":"arabica-robusta"},{"q":"Warum sind helle Röstungen schwieriger zu extrahieren?","o":["Sie sind poröser und geben ihre Stoffe zu schnell ab.","Sie haben eine höhere strukturelle Dichte und häufig geringere Löslichkeit.","Sie enthalten kaum noch Säure."],"a":1,"e":"Dichte Struktur, geringere Löslichkeit. Mögliche Anpassungen: \u003cb>höhere Brühtemperatur, feinere Mahlung, angepasstes Brew Ratio\u003c/b>.","go":"helle-roestung"},{"q":"18 g Kaffee, 36 g Espresso, 10 % TDS. Wie hoch ist der Extraction Yield?","o":["10 %","20 %","36 %"],"a":1,"e":"(0,10 × 36) / 18 = 0,20. Der Extraction Yield liegt bei \u003cb>20 %\u003c/b>.","go":"ey-tds"},{"q":"Woran erkennst du Channeling am Bottomless-Siebträger?","o":["An einem ruhigen, zentrierten Strahl.","An besonders dunkler Crema.","An Spritzen und unregelmäßigem Durchfluss."],"a":2,"e":"Das Wasser nimmt den leichtesten Weg. Die Folge: \u003cb>Spritzen\u003c/b>, ungleichmäßige Extraktion, bitter und sauer zugleich.","go":"channeling"},{"q":"Was bedeutet Retention bei einer Kaffeemühle?","o":["Mahlgut, das nach dem Mahlen in der Mühle zurückbleibt.","Die Zeit, die die Mühle für eine Dosis braucht.","Der Abstand zwischen den Mahlscheiben."],"a":0,"e":"Im \u003cb>aktiven Totraum\u003c/b> wird es vom nächsten Mahlvorgang ausgetragen, im \u003cb>passiven Totraum\u003c/b> bleibt es über längere Zeit liegen.","go":"retention"},{"q":"Was bewirkt die Ross Droplet Technique (RDT)?","o":["Sie kühlt die Mahlscheiben auf Raumtemperatur.","Sie stellt den Nullpunkt der Mühle neu ein.","Sie reduziert die statische Aufladung des Mahlguts."],"a":2,"e":"Eine \u003cb>minimale Wassermenge\u003c/b> auf den Bohnen reduziert die statische Aufladung und sorgt für einen saubereren Mahlgutauswurf.","go":"statik-rdt"},{"q":"Was zählt beim Tampen am meisten?","o":["Maximale Kraft.","Gleichmäßigkeit: ein gerade angesetzter Tamper und ein ebener Puck.","Ein möglichst schwerer Tamper."],"a":1,"e":"\u003cb>Gleichmäßigkeit ist wichtiger als maximale Kraft.\u003c/b> Schräges Verdichten vermeiden.","go":"tampen"},{"q":"Wo liegt der Puck Screen?","o":["In der Brühgruppe.","Unter dem Sieb.","Direkt auf dem Kaffeepuck."],"a":2,"e":"Puck Screen = \u003cb>auf dem Kaffee\u003c/b>, Duschsieb = in der Brühgruppe.","go":"puck-screen"},{"q":"Wann wird beim Cupping die Kruste aufgebrochen?","o":["Direkt nach dem Aufgießen.","Nach ca. 4 Minuten.","Erst nach dem Abschöpfen."],"a":1,"e":"Nach \u003cb>ca. 4 Minuten\u003c/b> brichst du die Kruste auf und beurteilst die aufsteigenden Aromen. Danach wird abgeschöpft.","go":"crust"},{"q":"Was beurteilst du in der Kategorie „Körper“?","o":["Mundgefühl und Textur","Geruch und Duftnoten","Länge und Qualität"],"a":0,"e":"\u003cb>Körper\u003c/b> steht für Mundgefühl und Textur. Geruch und Duftnoten gehören zum Aroma, Länge und Qualität zum Nachgeschmack.","go":"sensorik"}],"shots":[{"text":"\u003cdiv class=\"sm\">BUNCA.ACADEMY\u003c/div>","dur":2200,"amb":"beans","vid":"bohnen","from":2},{"text":"\u003cdiv class=\"line\">Eine Bohne.\u003c/div>","dur":2800,"amb":"beans","vid":"ch3-roesten","from":4},{"text":"\u003cdiv class=\"line\">Tausend Entscheidungen.\u003c/div>","dur":2800,"amb":"grounds","vid":"ch5-mahlen","from":5},{"text":"\u003cdiv class=\"line\">Mahlen. Verteilen. Tampen.\u003c/div>","dur":2800,"amb":"grounds","vid":"ch6-puck","from":24},{"text":"\u003cdiv class=\"line\">Druck. Temperatur. Zeit.\u003c/div>","dur":2800,"amb":"steam","vid":"ch2-maschine","from":4},{"text":"\u003cdiv class=\"line\">Jeder Tropfen zählt.\u003c/div>","dur":3000,"amb":"drops","vid":"ch4-bezug","from":3},{"text":"\u003cdiv class=\"big\">Barista Advanced\u003c/div>\u003cdiv class=\"tg\">Good coffee is no accident.\u003c/div>","dur":4800,"hold":true,"amb":"crema","vid":"ch7-dampf","from":2}]}</script>
 <script>
 (() => {
 'use strict';

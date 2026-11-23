@@ -132,10 +132,6 @@ scene({ id: 'querschnitt', ch: CH, title: 'Getränke im Querschnitt', light: tru
     <div class="rv-img" style="--d:2">${cutSvg()}</div>
   </div>`)) +
 
-realFilm({ id: 'presse-echt', ch: CH, title: "French Press in echt", name: "Vollmundig, körperreich", clip: 'ch1-presse', dur: 9, rate: 0.5,
-  lead: "Das Metallsieb der French Press lässt Öle und feine Schwebstoffe mit in die Tasse.",
-  marks: [["Ausgießen", 0, "Die French Press wird langsam ausgegossen."], ["Voller Strahl", 2, "Das Metallsieb hält nur grobe Partikel zurück: <b>Öle und feine Schwebstoffe</b> kommen mit."], ["In der Tasse", 5.5, "Das Ergebnis: <b>vollmundig, körperreich</b>."]] }) +
-
 film({ id: 'handbrew', ch: CH, title: '1.2 Handbrew: manuelle Filterzubereitung', name: 'Handbrew in Zeitlupe', dur: 21, rate: .5, still: 8,
   marks: [
     ['Trockenes Kaffeebett', 0, '15 g Kaffee, gleichmäßig im Filter verteilt.'],
