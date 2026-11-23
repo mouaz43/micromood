@@ -194,12 +194,12 @@ html.vt .scene.is-active .kicker.rv,html.vt .scene.is-active .fs-main{animation:
 ::view-transition-group(*){animation-duration:.75s;animation-timing-function:cubic-bezier(.2,.7,.1,1)}
 ::view-transition-old(root){animation:vt-out .45s cubic-bezier(.4,0,.6,1) both}
 ::view-transition-new(root){animation:vt-in .85s cubic-bezier(.2,.7,.1,1) both}
-@keyframes vt-out{to{opacity:0;transform:translateX(-2.5%) scale(.985);filter:blur(6px)}}
-@keyframes vt-in{from{opacity:0;transform:translateX(3%) scale(1.03);filter:blur(8px)}}
+@keyframes vt-out{to{opacity:0;transform:translateX(-2.5%) scale(.985)}}
+@keyframes vt-in{from{opacity:0;transform:translateX(3%) scale(1.03)}}
 html[data-dir=back]::view-transition-old(root){animation-name:vt-out-b}
 html[data-dir=back]::view-transition-new(root){animation-name:vt-in-b}
-@keyframes vt-out-b{to{opacity:0;transform:translateX(2.5%) scale(.985);filter:blur(6px)}}
-@keyframes vt-in-b{from{opacity:0;transform:translateX(-3%) scale(1.03);filter:blur(8px)}}
+@keyframes vt-out-b{to{opacity:0;transform:translateX(2.5%) scale(.985)}}
+@keyframes vt-in-b{from{opacity:0;transform:translateX(-3%) scale(1.03)}}
 /* chapter cards open like an iris */
 html[data-cut=leak]::view-transition-old(root){animation:vt-hold 1s both;mix-blend-mode:normal}
 html[data-cut=leak]::view-transition-new(root){animation:vt-iris 1.05s cubic-bezier(.7,0,.2,1) both;mix-blend-mode:normal}
@@ -249,8 +249,8 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
 /* intro titles in the presentation's own type: light Jost, like the scene titles */
 .ttl .line{font-family:var(--display);font-style:normal;font-weight:300;letter-spacing:-.02em;font-size:clamp(38px,6.4vw,118px);line-height:1}
 .ttl .show{animation-name:ttl2}.ttl .hold{animation-name:ttlHold2}
-@keyframes ttl2{0%{opacity:0;transform:translateY(.25em);filter:blur(8px)}25%{opacity:1;transform:none;filter:none}82%{opacity:1}100%{opacity:0;transform:translateY(-.12em)}}
-@keyframes ttlHold2{0%{opacity:0;transform:translateY(.2em);filter:blur(10px)}35%{opacity:1;transform:none;filter:none}100%{opacity:1}}
+@keyframes ttl2{0%{opacity:0;transform:translateY(.25em);letter-spacing:.06em}25%{opacity:1;transform:none;letter-spacing:-.02em}82%{opacity:1}100%{opacity:0;transform:translateY(-.12em)}}
+@keyframes ttlHold2{0%{opacity:0;transform:translateY(.2em);letter-spacing:.06em}35%{opacity:1;transform:none;letter-spacing:-.02em}100%{opacity:1}}
 .ttl .sm{font-weight:500}
 
 /* ================= brighter pass ================= */
