@@ -67,9 +67,11 @@ ${read('base.css')}${read('extra.css')}${css}</style>
   <button class="hbtn close" data-action="overview-close" aria-label="Übersicht schließen">${ico.close}<span class="lbl">Schließen</span></button>
   <div class="ov-cols" id="ov-cols"></div>
   <div class="keys"><span><kbd>←</kbd><kbd>→</kbd>Blättern</span><span><kbd>O</kbd>Übersicht</span><span><kbd>K</kbd>Film anhalten</span><span><kbd>T</kbd>Ton</span><span><kbd>F</kbd>Vollbild</span><span><kbd>I</kbd>Intro</span></div>
+  <p class="keys" style="margin-top:14px">Videoaufnahmen: Coverr (freie Lizenz), farblich bearbeitet und ohne Ton.</p>
 </div>
 <div id="trailer" class="bars" hidden>
   <div class="amb" id="tr-amb" data-amb="beans"></div>
+  <video class="tr-v" id="tr-v0" muted playsinline preload="auto"></video><video class="tr-v" id="tr-v1" muted playsinline preload="auto"></video>
   <div class="ttl" id="ttl"></div>
   <div class="tr-ui"><button class="hbtn" data-action="trailer-sound" id="tr-snd">Ton an</button><button class="hbtn" data-action="trailer-skip">Überspringen</button></div>
 </div>

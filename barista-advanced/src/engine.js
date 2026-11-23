@@ -106,6 +106,9 @@ class Film {
     this.t = reduce ? +(root.dataset.still || this.dur * .7) : 0;
     this.playing = !reduce; this.active = false; this.fn = DRAW[root.dataset.draw] || null;
     this.cur = reduce ? 0 : this.base; this.seek = null; this.fd = 1;
+    // real footage: the file is pre-slowed by data-slow (frame-interpolated), so 1/4x plays at the file's own rate
+    this.vid = $('video', root); this.slow = +(root.dataset.slow || 1);
+    if (this.vid) { this.vid.muted = true; this.vid.loop = true; this.vid.playsInline = true; }
     this.build();
   }
   build() {
@@ -120,7 +123,7 @@ class Film {
       <div class="cine-scrub"><div class="tr"></div><div class="fi"></div>${this.marks.map(m => `<i class="mk" style="left:${m[1] / this.dur * 100}%"></i>`).join('')}<input type="range" min="0" max="${this.dur}" step="0.01" value="0" aria-label="Position im Film"></div>`);
     this.badge = $('.cine-badge', fr); this.big = $('.cine-big', fr); this.fill = $('.fi', fr); this.range = $('input', fr);
     $('.cine-hit', fr).addEventListener('click', () => this.toggle());
-    this.media = $('svg,canvas', fr);
+    this.media = $('svg,canvas,video', fr);
     this.range.addEventListener('input', () => { this.seek = +this.range.value; });
     ['change', 'pointerup', 'touchend', 'blur'].forEach(ev => this.range.addEventListener(ev, () => { if (this.seek !== null) { this.t = lerp(this.t, this.seek, .6); this.seek = null; } }));
     const sp = $('[data-slot="speeds"]', sc);
@@ -161,13 +164,29 @@ class Film {
       this.t += dt * this.cur;
       if (this.seek !== null) this.t += (this.seek - this.t) * (1 - Math.exp(-dt * 16));
       if (this.jump != null) { this.t += (this.jump - this.t) * (1 - Math.exp(-dt * 9)); if (Math.abs(this.jump - this.t) < .03) { this.t = this.jump; this.jump = null; } }
-      if (this.t >= this.dur) this.t = this.t % this.dur; if (this.t < 0) this.t = 0;
+      if (this.vid) this.drive();
+      else { if (this.t >= this.dur) this.t = this.t % this.dur; if (this.t < 0) this.t = 0; }
       this.paint(); this.raf = requestAnimationFrame(tick);
     };
     this.raf = requestAnimationFrame(tick);
   }
-  leave() { this.active = false; cancelAnimationFrame(this.raf); }
-  reset() { this.t = reduce ? this.t : 0; this.playing = !reduce; this.seek = this.jump = null; if (!this.bare) this.setRate(this.base); this.cur = reduce ? 0 : this.rate; }
+  leave() { this.active = false; cancelAnimationFrame(this.raf); if (this.vid) this.vid.pause(); }
+  // video follows the same eased clock: the playback rate ramps, pause coasts, scrubbing and phase jumps seek
+  drive() {
+    const v = this.vid; armVideo(v);
+    const target = this.seek !== null ? this.seek : this.jump != null ? this.jump : null;
+    if (target !== null) {
+      if (Math.abs(v.currentTime / this.slow - target) > .04 && !v.seeking && v.readyState > 0) v.currentTime = target * this.slow;
+      if (this.jump != null && Math.abs(v.currentTime / this.slow - this.jump) < .08) this.jump = null;
+      if (!v.paused) v.pause();
+    } else {
+      const pr = this.cur * this.slow;
+      if (pr < .06 || reduce) { if (!v.paused) v.pause(); }
+      else { if (Math.abs(v.playbackRate - pr) > .01) v.playbackRate = clamp(pr, .0625, 16); if (v.paused && v.readyState > 1) v.play().catch(() => {}); }
+    }
+    if (v.readyState > 0) this.t = Math.min(this.dur - .001, v.currentTime / this.slow);
+  }
+  reset() { if (this.vid && !reduce && this.vid.readyState > 0) this.vid.currentTime = 0; this.t = reduce ? this.t : 0; this.playing = !reduce; this.seek = this.jump = null; if (!this.bare) this.setRate(this.base); this.cur = reduce ? 0 : this.rate; }
   paint() {
     const t = this.t;
     this.tl.set(t);
@@ -185,6 +204,19 @@ class Film {
     if (k !== this._k) { this._k = k; (this.phBtns || []).forEach((b, j) => b.classList.toggle('on', j === k)); (this.subs || []).forEach((p, j) => p.classList.toggle('on', j === k)); }
   }
 }
+
+/* ---------------- real footage: lazy loading and background loops ---------------- */
+function armVideo(v) { if (v && !v.getAttribute('src') && v.dataset.src) { v.preload = 'auto'; v.src = v.dataset.src; } }
+function bgPlay(sc, on) {
+  for (const v of sc.querySelectorAll('video[data-bg]')) {
+    if (!on) { v.pause(); continue; }
+    armVideo(v); v.muted = true; v.loop = true; v.playsInline = true;
+    if (reduce) continue;
+    const go = () => { v.playbackRate = +(v.dataset.rate || 1); v.play().catch(() => {}); };
+    if (v.readyState > 1) go(); else v.addEventListener('canplay', go, { once: true });
+  }
+}
+function preloadNext(sc) { if (!sc) return; for (const v of sc.querySelectorAll('video[data-src]')) if (!v.getAttribute('src')) { v.preload = 'metadata'; v.src = v.dataset.src; } }
 
 /* ---------------- ambient slow-motion backdrops ---------------- */
 const AMB = {
@@ -334,7 +366,7 @@ function go(i, opts = {}) {
       vtName(prev, false);
       prev.classList.remove('is-active', 'back');
       if (!VT) { prev.classList.add('is-leaving'); setTimeout(() => prev.classList.remove('is-leaving'), 780); }
-      filmsIn(prev).forEach(f => f.leave()); ambsIn(prev).forEach(a => a.stop());
+      filmsIn(prev).forEach(f => f.leave()); ambsIn(prev).forEach(a => a.stop()); bgPlay(prev, false);
       const hp = hooks[prev.dataset.id]; if (hp && hp.leave) hp.leave(prev);
       next.classList.toggle('back', back);
       void next.offsetWidth;
@@ -346,7 +378,7 @@ function go(i, opts = {}) {
     vtName(next, true);
     const steps = +(next.dataset.steps || 0);
     setStep(opts.step === 'max' ? steps : (opts.step || 0));
-    filmsIn(next).forEach(f => { f.enter(); f.paint(); }); ambsIn(next).forEach(a => a.start());
+    filmsIn(next).forEach(f => { f.enter(); f.paint(); }); ambsIn(next).forEach(a => a.start()); bgPlay(next, true); preloadNext(scenes[i + 1]);
     const hn = hooks[next.dataset.id]; if (hn && hn.enter && (change || !next._entered)) hn.enter(next);
     next._entered = true;
     hud();
@@ -403,14 +435,26 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function trailer() {
   closeOverview();
   const run = ++tr.run, cur = scenes[state.i];
-  filmsIn(cur).forEach(f => f.leave()); ambsIn(cur).forEach(a => a.stop());
+  filmsIn(cur).forEach(f => f.leave()); ambsIn(cur).forEach(a => a.stop()); bgPlay(cur, false);
   tr.el.hidden = false; $('#ttl').innerHTML = '';
   if (!tr.amb) tr.amb = new Amb($('#tr-amb'));
   tr.amb.size(); tr.amb.start();
   $('#tr-snd').textContent = state.sound ? 'Ton aus' : 'Ton an';
   requestAnimationFrame(() => tr.el.classList.add('in'));
-  for (const S of SHOTS) {
+  // real footage shots cross-fade on two video layers above the particle backdrop
+  const layers = [$('#tr-v0'), $('#tr-v1')]; let flip = 0;
+  const cue = name => { const v = layers[flip]; v.src = 'media/' + name + '.mp4'; v.muted = true; v.playsInline = true; v.load(); return v; };
+  let nextV = SHOTS[0].vid ? cue(SHOTS[0].vid) : null;
+  for (let k = 0; k < SHOTS.length; k++) {
+    const S = SHOTS[k];
     if (S.amb) tr.amb.setMode(S.amb);
+    layers.forEach(v => v.classList.remove('on'));
+    if (S.vid && nextV) {
+      const v = nextV, start = () => { try { v.currentTime = S.from || 0; } catch (e) {} v.playbackRate = S.rate || 1; v.play().catch(() => {}); v.classList.add('on'); };
+      if (v.readyState > 0) start(); else v.addEventListener('loadedmetadata', start, { once: true });
+      flip = 1 - flip;
+    }
+    const N = SHOTS[k + 1]; nextV = N && N.vid ? cue(N.vid) : null;
     $('#ttl').innerHTML = `<div class="${S.hold ? 'hold' : 'show'}" style="animation-duration:${S.dur}ms">${S.text}</div>`;
     sfx.hit(S.hold ? .26 : .12);
     await sleep(S.dur); if (run !== tr.run) return;
@@ -419,6 +463,7 @@ async function trailer() {
 }
 function trEnd(toAgenda) {
   tr.run++; tr.el.classList.remove('in'); if (tr.amb) tr.amb.stop(); tr.el.hidden = true;
+  ['#tr-v0', '#tr-v1'].forEach(id => { const v = $(id); v.pause(); v.classList.remove('on'); v.removeAttribute('src'); v.load(); });
   if (toAgenda && state.i === 0) go(1); else go(state.i, { instant: true });
 }
 
@@ -469,7 +514,7 @@ document.addEventListener('touchend', e => {
   sx = null;
 }, { passive: true });
 window.addEventListener('hashchange', () => { const k = ids.indexOf(location.hash.slice(1)); if (k >= 0 && k !== state.i) go(k); });
-document.addEventListener('visibilitychange', () => { const sc = scenes[state.i]; if (document.hidden) { filmsIn(sc).forEach(f => f.leave()); ambsIn(sc).forEach(a => a.stop()); } else if (tr.el.hidden) { filmsIn(sc).forEach(f => f.enter()); ambsIn(sc).forEach(a => a.start()); } });
+document.addEventListener('visibilitychange', () => { const sc = scenes[state.i]; if (document.hidden) { filmsIn(sc).forEach(f => f.leave()); ambsIn(sc).forEach(a => a.stop()); bgPlay(sc, false); } else if (tr.el.hidden) { filmsIn(sc).forEach(f => f.enter()); ambsIn(sc).forEach(a => a.start()); bgPlay(sc, true); } });
 let wake = null;
 document.addEventListener('click', () => { if (!wake && navigator.wakeLock) navigator.wakeLock.request('screen').then(w => { wake = w; w.addEventListener('release', () => wake = null); }).catch(() => {}); }, { passive: true });
 if (!(document.documentElement.requestFullscreen && document.fullscreenEnabled)) $$('[data-action="fullscreen"]').forEach(b => b.hidden = true);

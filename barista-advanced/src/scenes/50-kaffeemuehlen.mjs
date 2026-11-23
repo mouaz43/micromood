@@ -1,4 +1,4 @@
-import { chapter, scene, inner, kicker, film, notes, tbl, why, rep, rng, defs, glass, bean, wave, splash, glint, f1 } from '../lib.mjs';
+import { chapter, scene, inner, kicker, film, notes, tbl, why, rep, rng, defs, glass, bean, wave, splash, glint, f1 , realFilm } from '../lib.mjs';
 const CH = 5;
 
 /* ---------- shared drawing parts ---------- */
@@ -519,6 +519,10 @@ film({ id: 'aufbau-muehle', ch: CH, title: '5.1 Aufbau einer Kaffeemühle', name
     ['Mahlscheiben zerkleinern die Bohnen', 16, '<b>2.</b> Der Motor treibt die Mahlscheiben an. Sie zerkleinern die Bohnen.'],
     ['Mahlgut wird ausgeworfen', 19, '<b>3.</b> Das Mahlgut wird über den Auswurfschacht ausgeworfen.']
   ], svg: aufbauSvg() }) +
+
+realFilm({ id: 'mahlen-echt', ch: CH, title: "Mahlen in echt", name: "Direkt ins Sieb", clip: 'ch5-mahlen', dur: 9, rate: 0.5,
+  lead: "Bohnen gelangen ins Mahlwerk, die Mahlscheiben zerkleinern sie, das Mahlgut fällt ins Sieb.",
+  marks: [["Siebträger in der Gabel", 0, "Der Siebträger sitzt direkt unter dem Auswurfschacht."], ["Mahlgut fällt", 1.4, "Die Mahlscheiben zerkleinern die Bohnen, das <b>Mahlgut wird ausgeworfen</b>."], ["Auswurf abklopfen", 3.2, "Ein leichtes Klopfen löst Mahlgut, das im Schacht hängen bleibt (<b>Retention</b>)."]] }) +
 
 scene({ id: 'single-dosing', ch: CH, title: '5.2 Single Dosing', light: true }, inner(`
   <div class="split">

@@ -2,13 +2,13 @@
 
 export const CHAPTERS = [
   { n: '', name: 'Start' },
-  { n: '01', name: 'Kaffeezubereitung', sub: 'Vom Filter bis zum Espresso.', amb: 'drops', items: ['Arten der Kaffeezubereitung', 'Handbrew – manuelle Filterzubereitung', 'Cold Brew – kalte Kaffeeextraktion'] },
-  { n: '02', name: 'Espresso­maschinen', sub: 'Wasser, Druck und Temperatur.', amb: 'steam', items: ['Aufbau einer Espressomaschine', 'Maschinentypen: Einkreiser, Zweikreiser und Dualboiler', 'PID-Steuerung', 'E61-Brühgruppe', 'Pre-Infusion und OPV', 'Dampfkessel und Pressostat', 'Pumpenarten: Vibrations- und Rotationspumpe'] },
-  { n: '03', name: 'Die Kaffeebohne', sub: 'Von der Kirsche bis zur Röstung.', amb: 'beans', items: ['Arabica und Robusta', 'Pflückmethoden', 'Aufbereitungsverfahren: Natural, Washed und Honey', 'Röstgrade', 'Helle Röstungen und ihre besonderen Herausforderungen'] },
-  { n: '04', name: 'Espresso­extraktion', sub: 'Was im Puck wirklich passiert.', amb: 'crema', items: ['Grundlagen der Extraktion', 'Extraktionsphasen', 'Löslichkeit der Kaffeebestandteile', 'Die vier Extraktionsparameter', 'Extraction Yield und TDS', 'Channeling', 'Puck-Widerstand und Durchfluss', 'Brew Ratio, Durchfluss und Bezugszeit'] },
-  { n: '05', name: 'Kaffeemühlen', sub: 'Jedes Partikel zählt.', amb: 'grounds', items: ['Aufbau einer Kaffeemühle', 'Single Dosing', 'Retention und Totraum', 'Partikelgrößenverteilung und Fines', 'Mahlscheiben und Geometrie', 'Temperatur und statische Aufladung', 'Mahlgradkalibrierung', 'Klarheit und Körper'] },
-  { n: '06', name: 'Puck Preparation', sub: 'Gleichmäßig schlägt kräftig.', amb: 'grounds', items: ['Grundlagen der Puck Preparation', 'Der Puck-Preparation-Prozess', 'WDT Tool', 'Leveler', 'Tampen', 'Tamper und Rillenprofile', 'Puck Screen und IMS Duschsieb', 'IMS Competition Siebe', 'Siebtypen und ihre Auswirkungen', 'Übersicht der Puck-Preparation-Tools'] },
-  { n: '07', name: 'Cupping', sub: 'Schmecken mit System.', amb: 'bubbles', items: ['Was ist Cupping?', 'Cupping-Ablauf', 'Sensorische Bewertung'] },
+  { n: '01', clip: 'ch1-presse', name: 'Kaffeezubereitung', sub: 'Vom Filter bis zum Espresso.', amb: 'drops', items: ['Arten der Kaffeezubereitung', 'Handbrew – manuelle Filterzubereitung', 'Cold Brew – kalte Kaffeeextraktion'] },
+  { n: '02', clip: 'ch2-maschine', name: 'Espresso­maschinen', sub: 'Wasser, Druck und Temperatur.', amb: 'steam', items: ['Aufbau einer Espressomaschine', 'Maschinentypen: Einkreiser, Zweikreiser und Dualboiler', 'PID-Steuerung', 'E61-Brühgruppe', 'Pre-Infusion und OPV', 'Dampfkessel und Pressostat', 'Pumpenarten: Vibrations- und Rotationspumpe'] },
+  { n: '03', clip: 'ch3-bohnen', name: 'Die Kaffeebohne', sub: 'Von der Kirsche bis zur Röstung.', amb: 'beans', items: ['Arabica und Robusta', 'Pflückmethoden', 'Aufbereitungsverfahren: Natural, Washed und Honey', 'Röstgrade', 'Helle Röstungen und ihre besonderen Herausforderungen'] },
+  { n: '04', clip: 'ch4-bezug', name: 'Espresso­extraktion', sub: 'Was im Puck wirklich passiert.', amb: 'crema', items: ['Grundlagen der Extraktion', 'Extraktionsphasen', 'Löslichkeit der Kaffeebestandteile', 'Die vier Extraktionsparameter', 'Extraction Yield und TDS', 'Channeling', 'Puck-Widerstand und Durchfluss', 'Brew Ratio, Durchfluss und Bezugszeit'] },
+  { n: '05', clip: 'ch5-mahlen', name: 'Kaffeemühlen', sub: 'Jedes Partikel zählt.', amb: 'grounds', items: ['Aufbau einer Kaffeemühle', 'Single Dosing', 'Retention und Totraum', 'Partikelgrößenverteilung und Fines', 'Mahlscheiben und Geometrie', 'Temperatur und statische Aufladung', 'Mahlgradkalibrierung', 'Klarheit und Körper'] },
+  { n: '06', clip: 'ch6-puck', name: 'Puck Preparation', sub: 'Gleichmäßig schlägt kräftig.', amb: 'grounds', items: ['Grundlagen der Puck Preparation', 'Der Puck-Preparation-Prozess', 'WDT Tool', 'Leveler', 'Tampen', 'Tamper und Rillenprofile', 'Puck Screen und IMS Duschsieb', 'IMS Competition Siebe', 'Siebtypen und ihre Auswirkungen', 'Übersicht der Puck-Preparation-Tools'] },
+  { n: '07', clip: 'ch7-dampf', name: 'Cupping', sub: 'Schmecken mit System.', amb: 'bubbles', items: ['Was ist Cupping?', 'Cupping-Ablauf', 'Sensorische Bewertung'] },
   { n: '', name: 'Abschluss' }
 ];
 
@@ -32,11 +32,36 @@ export const why = html => `<p class="why">${html}</p>`;
 export function chapter(ch) {
   const C = CHAPTERS[ch];
   return scene({ id: `kapitel-${ch}`, ch, title: `Kapitel ${ch}: ${C.name.replace('­', '')}`, cut: 'leak', cls: 'chap' }, `
-  <div class="amb" data-amb="${C.amb}"></div><div class="chap-shade"></div>
+  ${C.clip ? bgVideo(C.clip, .5) : `<div class="amb" data-amb="${C.amb}"></div>`}<div class="chap-shade"></div>
   ${inner(`<div class="chap-grid">
     <div><div class="chap-n" aria-hidden="true">${C.n}</div><h2 class="chap-t rv" style="--d:2">${C.name}</h2><p class="chap-sub rv" style="--d:4">${C.sub}</p></div>
     <ol class="chap-list rv" style="--d:6">${C.items.map((t, k) => `<li><span class="i">${ch}.${k + 1}</span><span>${t}</span></li>`).join('')}</ol>
   </div>`)}`);
+}
+
+// real footage, graded in the BUNCA look. Files live in media/: <name>.mp4 (pre-slowed 4x), <name>.jpg (poster), <name>-s.mp4 (small loop)
+export const bgVideo = (name, rate = 1, small = false) => `<div class="cine-bg real-bg"><video data-bg data-rate="${rate}" data-src="media/${name}${small ? '-s' : ''}.mp4" poster="media/${name}.jpg" muted loop playsinline preload="none" aria-hidden="true"></video></div>`;
+
+// real-footage scene in the same layout as a film scene: phases, speeds, scrub bar and subtitles drive the video
+export function realFilm({ id, ch, title, name, lead = '', clip, slow = 4, dur, rate = .5, marks = [], extra = '' }) {
+  return scene({ id, ch, title, cls: 'real' }, inner(`
+  <div class="fs">
+    <div class="fs-side">
+      ${kicker(ch)}
+      <h2 class="fs-name rv" style="--d:1">${name || title}</h2>
+      <span class="real-tag rv" style="--d:1">Echte Aufnahme</span>
+      ${lead ? `<p class="mute rv fs-extra" style="--d:2">${lead}</p>` : ''}
+      <div class="rv" style="--d:2" data-slot="phases"></div>
+      <div class="fs-foot rv" style="--d:3"><div data-slot="speeds"></div><span class="time" data-slot="time">0,0 s</span></div>
+      ${extra ? `<div class="rv fs-extra" style="--d:4">${extra}</div>` : ''}
+    </div>
+    <div class="fs-main rv-img" style="--d:1">
+      <div class="film" data-film data-dur="${dur}" data-rate="${rate}" data-slow="${slow}" data-marks='${JSON.stringify(marks).replace(/'/g, '&#39;')}'>
+        <video data-src="media/${clip}.mp4" poster="media/${clip}.jpg" muted loop playsinline preload="none" aria-label="${esc(title)}"></video>
+      </div>
+      <div data-slot="sub"></div>
+    </div>
+  </div>`));
 }
 
 // standard film scene: text + phases + speeds on the left, the motion graphic on the right

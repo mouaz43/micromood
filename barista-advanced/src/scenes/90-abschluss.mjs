@@ -1,4 +1,4 @@
-import { CHAPTERS, scene, inner, rep } from '../lib.mjs';
+import { CHAPTERS, scene, inner, rep, bgVideo } from '../lib.mjs';
 const CH = 8;
 
 const FACTORS = [
@@ -36,8 +36,8 @@ scene({ id: 'zusammenspiel', ch: CH, title: '8.1 Die wichtigsten Zusammenhänge'
 
 scene({ id: 'quiz', ch: CH, title: 'Quiz', light: true }, inner(`<div class="quiz" id="quiz"></div>`)) +
 
-scene({ id: 'finale', ch: CH, title: '8.2 Good Coffee Is No Accident', cut: 'leak', cls: 'c9-fin' }, `
-  <div class="amb" data-amb="beans"></div><div class="chap-shade"></div>
+scene({ id: 'finale', ch: CH, title: '8.2 Good Coffee Is No Accident', cut: 'leak', cls: 'c9-fin fin-v' }, `
+  ${bgVideo('milch', .6)}<div class="chap-shade"></div>
   ${inner(`<div class="stack">
     <span class="label rv" style="--d:0">BUNCA.ACADEMY · Barista Advanced</span>
     <h2 class="giant rv" style="--d:1">Good coffee is <em>no accident.</em></h2>

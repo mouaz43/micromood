@@ -1,4 +1,4 @@
-import { chapter, scene, inner, kicker, film, notes, why, rep, rng, defs, f1, wave, splash, glint } from '../lib.mjs';
+import { chapter, scene, inner, kicker, film, notes, why, rep, rng, defs, f1, wave, splash, glint , realFilm } from '../lib.mjs';
 const CH = 6;
 
 /* ---------- one basket for the whole chapter ----------
@@ -332,6 +332,10 @@ film({ id: 'puck-prozess', ch: CH, title: '6.2 Der Puck-Preparation-Prozess', na
     ['Kontrolle', S[4], '<b>5. Kontrolle.</b> Ist die Oberfläche eben und waagerecht?'],
     ['Bezug', S[5], '<b>6. Bezug.</b> Das Wasser fließt gleichmäßig durch den Puck.']
   ], svg: prozessSvg() }) +
+
+realFilm({ id: 'puck-echt', ch: CH, title: "Puck Preparation in echt", name: "Verteilen, tampen, prüfen", clip: 'ch6-puck', dur: 15.5, rate: 0.5,
+  lead: "Drei Handgriffe am Tresen, in Zeitlupe.",
+  marks: [["WDT", 0, "Dünne Nadeln lockern das Kaffeemehl und <b>brechen Klumpen auf</b>."], ["Tampen", 5, "Tamper gerade ansetzen und <b>gleichmäßig verdichten</b>."], ["Kontrolle", 11.5, "Eine ebene, stabile Oberfläche: bereit für den Bezug."]] }) +
 
 scene({ id: 'wdt', ch: CH, title: '6.3 WDT Tool', light: true }, inner(`
   <div class="split">

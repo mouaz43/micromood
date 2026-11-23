@@ -224,3 +224,24 @@ html[data-cut=step]::view-transition-new(root){animation:vt-fade-in .42s ease bo
 .stack>.tabs{align-self:flex-start}
 @media (max-height:760px) and (min-width:981px){.fs-extra .chip{min-height:30px;font-size:13px;padding:3px 10px}.fs .phases button{padding:6px 0;min-height:36px}#s-widerstand .dg{max-height:36vh}}
 @media (max-width:760px){.tbl{table-layout:fixed}.tbl td,.tbl th{overflow-wrap:anywhere;padding-right:8px;font-size:14px}.tbl td.num,.tbl th.num{white-space:normal}}
+
+/* ================= real footage ================= */
+.real-bg video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.06);animation:kb 28s ease-in-out infinite alternate}
+@keyframes kb{from{transform:scale(1.06) translate(0,0)}to{transform:scale(1.14) translate(-1.5%,-1%)}}
+.chap .real-bg{opacity:.9}
+.chap .real-bg + .chap-shade{background:linear-gradient(90deg,rgba(18,15,13,.94) 0%,rgba(18,15,13,.72) 42%,rgba(18,15,13,.3) 100%),linear-gradient(0deg,rgba(18,15,13,.65),transparent 40%)}
+.film-frame>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;background:#120f0d}
+.real-tag{display:inline-flex;align-self:flex-start;align-items:center;gap:8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;color:var(--peach)}
+.real-tag::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--peach);box-shadow:0 0 0 4px rgba(248,203,173,.18);animation:pulse 1.8s ease-in-out infinite}
+.agenda.seven .ag .ag-v{position:absolute;inset:0;z-index:-2;overflow:hidden;border-radius:inherit}
+.agenda.seven .ag .ag-v video{width:100%;height:100%;object-fit:cover;opacity:.5;transition:opacity .6s,transform 1.4s var(--ease)}
+.agenda.seven .ag:hover .ag-v video{opacity:.75;transform:scale(1.06)}
+.agenda.seven .ag.has-v::before{display:block;content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(18,15,13,.15) 20%,rgba(18,15,13,.92))}
+.fin-v .real-bg{opacity:.75}
+#trailer .tr-v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.1s ease;z-index:1}
+#trailer .tr-v.on{opacity:.62}
+#trailer .tr-v{filter:brightness(.72) saturate(.9)}
+#trailer::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(60% 55% at 50% 50%,rgba(18,15,13,.55),rgba(18,15,13,.15) 70%,transparent)}
+#trailer .ttl{z-index:4}
+@media (prefers-reduced-motion:reduce){.real-bg video{animation:none}}
+@media (max-width:980px),(max-aspect-ratio:1/1){.fs .real-tag{order:2}}

@@ -1,4 +1,5 @@
 import { CHAPTERS, scene, inner, rep } from '../lib.mjs';
+const agVideo = name => `<span class="ag-v" aria-hidden="true"><video data-bg data-rate="1" data-src="media/${name}-s.mp4" poster="media/${name}.jpg" muted loop playsinline preload="none"></video></span>`;
 
 const letters = (w, from = 0) => [...w].map((c, i) => `<span style="--i:${from + i}">${c}</span>`).join('');
 
@@ -45,7 +46,7 @@ scene({ id: 'agenda', ch: 0, title: 'Die sieben Kapitel' }, inner(`
   <div class="stack">
     <div class="kicker rv" style="--d:0">Agenda</div>
     <div class="agenda seven">
-      ${rep(7, k => { const C = CHAPTERS[k + 1]; return `<button class="ag rv" style="--d:${k + 1}" data-goto="kapitel-${k + 1}">
+      ${rep(7, k => { const C = CHAPTERS[k + 1]; return `<button class="ag has-v rv" style="--d:${k + 1}" data-goto="kapitel-${k + 1}">${agVideo(C.clip)}
         <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k + 1]}</svg>
         <span class="n">${C.n}</span><h3>${C.name}</h3><p>${C.items.length} Themen · ${C.sub}</p></button>`; })}
       <button class="ag fin rv" style="--d:8" data-goto="zusammenspiel"><span class="n">→</span><h3>Abschluss &amp; Quiz</h3><p>Die wichtigsten Zusammenhänge. Good coffee is no accident.</p></button>
@@ -53,13 +54,13 @@ scene({ id: 'agenda', ch: 0, title: 'Die sieben Kapitel' }, inner(`
   </div>`));
 
 export const shots = [
-  { text: '<div class="sm">BUNCA.ACADEMY</div>', dur: 1900, amb: 'beans' },
-  { text: '<div class="line">Eine Bohne.</div>', dur: 2200, amb: 'beans' },
-  { text: '<div class="line">Tausend Entscheidungen.</div>', dur: 2400, amb: 'grounds' },
-  { text: '<div class="line">Röstung. Mühle. Puck.</div>', dur: 2400, amb: 'grounds' },
-  { text: '<div class="line">Druck. Temperatur. Zeit.</div>', dur: 2400, amb: 'steam' },
-  { text: '<div class="line">Jeder Tropfen zählt.</div>', dur: 2400, amb: 'drops' },
-  { text: '<div class="big">Barista Advanced</div><div class="tg">Good coffee is no accident.</div>', dur: 4200, hold: true, amb: 'crema' }
+  { text: '<div class="sm">BUNCA.ACADEMY</div>', dur: 2200, amb: 'beans' },
+  { text: '<div class="line">Eine Bohne.</div>', dur: 2600, amb: 'beans', vid: 'ch3-bohnen', from: 2 },
+  { text: '<div class="line">Tausend Entscheidungen.</div>', dur: 2600, amb: 'grounds', vid: 'ch5-mahlen', from: 6 },
+  { text: '<div class="line">Mühle. Verteilung. Puck.</div>', dur: 2800, amb: 'grounds', vid: 'ch6-puck', from: 24 },
+  { text: '<div class="line">Druck. Temperatur. Zeit.</div>', dur: 2800, amb: 'steam', vid: 'ch2-maschine', from: 8 },
+  { text: '<div class="line">Jeder Tropfen zählt.</div>', dur: 2800, amb: 'drops', vid: 'ch4-bezug', from: 4 },
+  { text: '<div class="big">Barista Advanced</div><div class="tg">Good coffee is no accident.</div>', dur: 4600, hold: true, amb: 'crema', vid: 'milch', from: 3 }
 ];
 
 export const js = `

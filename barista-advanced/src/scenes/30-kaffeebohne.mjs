@@ -1,4 +1,4 @@
-import { chapter, scene, inner, kicker, film, notes, why, rep, rng, defs, f1, wave, steam, splash } from '../lib.mjs';
+import { chapter, scene, inner, kicker, film, notes, why, rep, rng, defs, f1, wave, steam, splash , realFilm } from '../lib.mjs';
 const CH = 3;
 const f2 = v => Math.round(v * 100) / 100;
 const bz = (P, t) => { const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t; return [a * P[0][0] + b * P[1][0] + c * P[2][0] + d * P[3][0], a * P[0][1] + b * P[1][1] + c * P[2][1] + d * P[3][1]]; };
@@ -377,6 +377,10 @@ film({ id: 'roesten', ch: CH, title: '3.4 Röstgrade: was beim Rösten passiert'
     ['Abbau organischer Säuren', 13.5, '<b>Abbau organischer Säuren:</b> je länger geröstet wird, desto weniger Säure bleibt.'],
     ['Veränderung der Zellstruktur', 16.5, '<b>Veränderung der Zellstruktur:</b> die Bohne dehnt sich aus, wird poröser und verliert an Dichte.']
   ], svg: roastSvg() }) +
+
+realFilm({ id: 'bohnen-echt', ch: CH, title: "Geröstete Bohnen in echt", name: "Die Bohne in der Hand", clip: 'ch3-bohnen', dur: 6.4, rate: 0.5,
+  lead: "Nach der Röstung: Farbe, Größe und Oberfläche zeigen, wie die Bohne geröstet wurde.",
+  marks: [["Bohnen aufnehmen", 0, "Geröstete Kaffeebohnen, direkt aus dem Behälter."], ["Genau hinsehen", 2.4, "Farbe und Oberfläche zeigen den <b>Röstgrad</b>."], ["Durch die Finger", 4.6, "Eine gleichmäßige Farbe spricht für eine gleichmäßige Röstung."]] }) +
 
 scene({ id: 'roestgrade', ch: CH, title: 'Röstgrade: Light, Medium und Dark Roast', light: true }, inner(`
   <div class="stack c3-rg">
