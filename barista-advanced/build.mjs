@@ -12,7 +12,9 @@ let html = '', js = '', css = '', quiz = [], shots = [];
 for (const f of files) {
   const m = await import(new URL('scenes/' + f, dir));
   html += m.html || ''; css += m.css || ''; js += m.js ? `\n/* ${f} */\n${m.js}\n` : '';
-  if (m.quiz) quiz = quiz.concat(m.quiz); if (m.shots) shots = m.shots;
+  const chN = +f[0];
+  if (m.quiz) quiz = quiz.concat(m.quiz.map(q => ({ ...q, ch: chN })));
+  if (m.quiz && chN >= 1 && chN <= 7) html += `\n<section class="scene light" id="s-check-${chN}" data-id="check-${chN}" data-ch="${chN}" data-title="Kurz-Check Kapitel ${chN}"><div class="inner"><div class="quiz" data-quiz="${chN}"></div></div></section>`; if (m.shots) shots = m.shots;
 }
 const data = { chapters: CHAPTERS.map(c => ({ n: c.n, name: c.name.replace('\u00ad', '') })), quiz, shots };
 const ids = [...html.matchAll(/data-id="([^"]+)"/g)].map(m => m[1]);

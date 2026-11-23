@@ -32,7 +32,7 @@ export const why = html => `<p class="why">${html}</p>`;
 export function chapter(ch) {
   const C = CHAPTERS[ch];
   return scene({ id: `kapitel-${ch}`, ch, title: `Kapitel ${ch}: ${C.name.replace('­', '')}`, cut: 'leak', cls: 'chap' }, `
-  ${C.clip ? bgVideo(C.clip, .5) : `<div class="amb" data-amb="${C.amb}"></div>`}<div class="chap-shade"></div>
+  <div class="amb" data-amb="${C.amb}"></div><div class="chap-shade"></div>
   ${inner(`<div class="chap-grid">
     <div><div class="chap-n" aria-hidden="true">${C.n}</div><h2 class="chap-t rv" style="--d:2">${C.name}</h2><p class="chap-sub rv" style="--d:4">${C.sub}</p></div>
     <ol class="chap-list rv" style="--d:6">${C.items.map((t, k) => `<li><span class="i">${ch}.${k + 1}</span><span>${t}</span></li>`).join('')}</ol>

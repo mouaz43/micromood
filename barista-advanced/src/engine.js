@@ -279,39 +279,41 @@ class Amb {
 }
 
 /* ---------------- quiz ---------------- */
-const QUIZ = DATA.quiz;
-const quiz = { i: 0, res: [], el: $('#quiz') };
-function quizRender() {
-  const el = quiz.el; if (!el) return;
-  const prog = `<div class="qprog" aria-hidden="true">${QUIZ.map((_, k) => `<i class="${k < quiz.res.length ? (quiz.res[k] ? 'ok' : 'no') : k === quiz.i ? 'cur' : ''}"></i>`).join('')}</div>`;
-  if (quiz.i >= QUIZ.length) {
-    const n = quiz.res.filter(Boolean).length;
-    const msg = n === QUIZ.length ? 'Alles richtig. Ab an die Maschine.' : n >= QUIZ.length * .7 ? 'Stark. Die Theorie sitzt, jetzt kommt die Praxis.' : n >= QUIZ.length * .4 ? 'Guter Anfang. Schau dir die markierten Szenen nochmal an.' : 'Noch mal durch die Szenen, dann klappt es.';
-    const wrong = QUIZ.map((q, k) => quiz.res[k] ? null : q).filter(Boolean);
-    el.innerHTML = `<div class="qhead"><span class="label">Quiz · Ergebnis</span>${prog}</div>
-      <div class="score">${n}<span style="font-size:.4em;color:var(--mute)"> / ${QUIZ.length}</span></div>
-      <p class="qtext">${msg}</p>
-      ${wrong.length ? `<div class="stack" style="gap:8px"><span class="label">Nochmal ansehen</span><div style="display:flex;flex-wrap:wrap;gap:8px">${[...new Set(wrong.map(w => w.go))].map(g => `<button class="chip" data-goto="${g}">${scenes[ids.indexOf(g)].dataset.title}</button>`).join('')}</div></div>` : ''}
-      <div class="qfoot"><button class="btn" id="q-again">Nochmal</button><button class="btn pri" data-action="next">Zum Abschluss</button></div>`;
-    $('#q-again').addEventListener('click', () => { quiz.i = 0; quiz.res = []; quizRender(); });
-    return;
+// The closing quiz asks everything; a "Kurz-Check" at the end of each chapter asks that chapter's questions.
+class Quiz {
+  constructor(el) { this.el = el; this.ch = el.dataset.quiz ? +el.dataset.quiz : 0; this.Q = this.ch ? DATA.quiz.filter(q => q.ch === this.ch) : DATA.quiz; this.i = 0; this.res = []; this.render(); }
+  render() {
+    const el = this.el, Q = this.Q, short = !!this.ch, name = short ? 'Kurz-Check' : 'Quiz';
+    const prog = `<div class="qprog" aria-hidden="true">${Q.map((_, k) => `<i class="${k < this.res.length ? (this.res[k] ? 'ok' : 'no') : k === this.i ? 'cur' : ''}"></i>`).join('')}</div>`;
+    if (this.i >= Q.length) {
+      const n = this.res.filter(Boolean).length;
+      const msg = n === Q.length ? (short ? 'Sitzt. Weiter zum nächsten Kapitel.' : 'Alles richtig. Ab an die Maschine.') : n >= Q.length * .7 ? 'Stark. Die Theorie sitzt, jetzt kommt die Praxis.' : n >= Q.length * .4 ? 'Guter Anfang. Schau dir die markierten Szenen nochmal an.' : 'Noch mal durch die Szenen, dann klappt es.';
+      const wrong = Q.filter((q, k) => !this.res[k]);
+      el.innerHTML = `<div class="qhead"><span class="label">${name} · Ergebnis</span>${prog}</div>
+        <div class="score">${n}<span style="font-size:.4em;color:var(--mute)"> / ${Q.length}</span></div>
+        <p class="qtext">${msg}</p>
+        ${wrong.length ? `<div class="stack" style="gap:8px"><span class="label">Nochmal ansehen</span><div style="display:flex;flex-wrap:wrap;gap:8px">${[...new Set(wrong.map(w => w.go))].map(g => `<button class="chip" data-goto="${g}">${scenes[ids.indexOf(g)].dataset.title}</button>`).join('')}</div></div>` : ''}
+        <div class="qfoot"><button class="btn" data-again>Nochmal</button><button class="btn pri" data-action="next">${short ? 'Weiter' : 'Zum Abschluss'}</button></div>`;
+      $('[data-again]', el).addEventListener('click', () => { this.i = 0; this.res = []; this.render(); });
+      return;
+    }
+    const q = Q[this.i];
+    el.innerHTML = `<div class="qhead"><span class="label">${name} · Frage ${this.i + 1} von ${Q.length}</span>${prog}</div>
+      <p class="qtext">${q.q}</p>
+      <div class="opts">${q.o.map((o, k) => `<button class="opt" data-k="${k}"><span class="k">${'ABC'[k]}</span><span>${o}</span></button>`).join('')}</div>
+      <p class="explain" data-ex></p>
+      <div class="qfoot"><button class="btn pri" data-nx hidden>${this.i === Q.length - 1 ? 'Ergebnis' : 'Nächste Frage'}</button><button class="chip" data-goto="${q.go}" data-gs hidden>Szene ansehen</button></div>`;
+    $$('.opt', el).forEach(b => b.addEventListener('click', () => {
+      const k = +b.dataset.k, ok = k === q.a;
+      this.res[this.i] = ok;
+      $$('.opt', el).forEach(x => { x.disabled = true; if (+x.dataset.k === q.a) x.classList.add('ok'); });
+      if (!ok) b.classList.add('no');
+      $('[data-ex]', el).innerHTML = (ok ? 'Richtig. ' : 'Nicht ganz. ') + q.e;
+      $('[data-nx]', el).hidden = false; $('[data-gs]', el).hidden = false; $('[data-nx]', el).focus({ preventScroll: true });
+      if (ok) sfx.whoosh(.03);
+    }));
+    $('[data-nx]', el).addEventListener('click', () => { this.i++; this.render(); });
   }
-  const Q = QUIZ[quiz.i];
-  el.innerHTML = `<div class="qhead"><span class="label">Quiz · Frage ${quiz.i + 1} von ${QUIZ.length}</span>${prog}</div>
-    <p class="qtext">${Q.q}</p>
-    <div class="opts">${Q.o.map((o, k) => `<button class="opt" data-k="${k}"><span class="k">${'ABC'[k]}</span><span>${o}</span></button>`).join('')}</div>
-    <p class="explain" id="q-ex"></p>
-    <div class="qfoot"><button class="btn pri" id="q-next" hidden>${quiz.i === QUIZ.length - 1 ? 'Ergebnis' : 'Nächste Frage'}</button><button class="chip" data-goto="${Q.go}" id="q-go" hidden>Szene ansehen</button></div>`;
-  $$('.opt', el).forEach(b => b.addEventListener('click', () => {
-    const k = +b.dataset.k, ok = k === Q.a;
-    quiz.res[quiz.i] = ok;
-    $$('.opt', el).forEach(x => { x.disabled = true; if (+x.dataset.k === Q.a) x.classList.add('ok'); });
-    if (!ok) b.classList.add('no');
-    $('#q-ex').innerHTML = (ok ? 'Richtig. ' : 'Nicht ganz. ') + Q.e;
-    $('#q-next').hidden = false; $('#q-go').hidden = false; $('#q-next').focus({ preventScroll: true });
-    if (ok) sfx.whoosh(.03);
-  }));
-  $('#q-next').addEventListener('click', () => { quiz.i++; quizRender(); });
 }
 
 /* ---------------- scene hooks (filled by the scene files) ---------------- */
@@ -322,7 +324,7 @@ $$('[data-film]').forEach(r => films.set(r, new Film(r)));
 $$('[data-amb]').forEach(el => { if (!el.closest('#trailer')) ambs.set(el, new Amb(el)); });
 const filmsIn = sc => [...films.values()].filter(f => f.scene === sc);
 const ambsIn = sc => [...ambs.values()].filter(a => a.el.closest('.scene') === sc);
-quizRender();
+$$('.quiz').forEach(el => new Quiz(el));
 
 /* ---------------- progress & overview ---------------- */
 const prog = $('#prog');

@@ -33,6 +33,7 @@ scene({ id: 'start', ch: 0, title: 'Start' }, `
         <button class="btn pri" data-action="trailer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>Intro abspielen</button>
         <button class="btn" data-action="next">Direkt starten</button>
       </div>
+      <p class="start-hint rv" style="--d:13">Blättern mit den Pfeiltasten, per Wisch oder mit dem Pfeil unten rechts. <kbd>O</kbd> öffnet die Übersicht.</p>
     </div>
     <div class="hero-video rv-img" style="--d:3">
       <div data-film data-bare data-dur="27" data-draw="pour" data-rate="1" data-still="14">
@@ -46,7 +47,7 @@ scene({ id: 'agenda', ch: 0, title: 'Die sieben Kapitel' }, inner(`
   <div class="stack">
     <div class="kicker rv" style="--d:0">Agenda</div>
     <div class="agenda seven">
-      ${rep(7, k => { const C = CHAPTERS[k + 1]; return `<button class="ag has-v rv" style="--d:${k + 1}" data-goto="kapitel-${k + 1}">${agVideo(C.clip)}
+      ${rep(7, k => { const C = CHAPTERS[k + 1]; return `<button class="ag rv" style="--d:${k + 1}" data-goto="kapitel-${k + 1}">
         <svg class="ico" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k + 1]}</svg>
         <span class="n">${C.n}</span><h3>${C.name}</h3><p>${C.items.length} Themen · ${C.sub}</p></button>`; })}
       <button class="ag fin rv" style="--d:8" data-goto="zusammenspiel"><span class="n">→</span><h3>Abschluss &amp; Quiz</h3><p>Die wichtigsten Zusammenhänge. Good coffee is no accident.</p></button>

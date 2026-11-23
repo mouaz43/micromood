@@ -276,3 +276,16 @@ body[data-tone="light"]{--hud-bg:188,179,172}
 .phases button{color:#b9b0a8}
 .chap .real-bg ~ .inner .chap-list{background:rgba(29,24,21,.58);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding:4px 18px;border-radius:16px}
 .chap .real-bg ~ .inner .chap-list li:first-child{border-top:0}.chap .real-bg ~ .inner .chap-list li:last-child{border-bottom:0}
+
+/* ================= second brighter pass, footage only in the intro ================= */
+:root{--night:#221c18;--roast:#2f2720;--greige:#c1b8b1;--frame:#28201a}
+body{--hud-bg:34,28,24}
+body[data-tone="light"]{--hud-bg:193,184,177}
+.scene{--mute:#cbc2ba;--card:rgba(243,238,232,.095)}
+.vignette{background:radial-gradient(120% 90% at 50% 50%,transparent 72%,rgba(0,0,0,.14))}
+.amb{background:radial-gradient(85% 75% at 70% 30%,rgba(176,122,82,.46),transparent 74%),var(--night)}
+.chap-shade{background:linear-gradient(90deg,rgba(34,28,24,.86) 0%,rgba(34,28,24,.5) 45%,rgba(34,28,24,.15))}
+#overview{background:rgba(34,28,24,.96)}
+.start-hint{font-size:13px;color:var(--mute);max-width:52ch}
+.start-hint kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin:0 2px;color:var(--fg)}
+@media (max-height:760px) and (min-width:981px){#s-widerstand .dg{max-height:30vh}#s-widerstand .title{font-size:clamp(24px,1.9vw + 11px,40px)}}
